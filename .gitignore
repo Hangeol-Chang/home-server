@@ -206,5 +206,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# repo로 들어오는 모듈들 제거
 modules/
+.repo/
+repo/

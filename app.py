@@ -11,7 +11,7 @@ import logging
 import threading
 import importlib
 from pathlib import Path
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, session, render_template_string, redirect
 from werkzeug.exceptions import NotFound
 
 # 현재 디렉토리를 Python path에 추가
@@ -19,7 +19,13 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'home-server-secret-key'
+app.config['SECRET_KEY'] = 'home-server-secret-key-change-in-production'
+app.config['PERMANENT_SESSION_LIFETIME'] = 24 * 60 * 60  # 24시간
+
+# Google OAuth 인증 관리자 초기화
+from auth.google_auth import GoogleAuthManager, require_auth, get_login_page_template
+auth_manager = GoogleAuthManager(app, current_dir)
+app.auth_manager = auth_manager  # 전역 접근을 위해 앱에 등록
 
 # 로깅 설정
 logging.basicConfig(
@@ -104,7 +110,7 @@ def load_module(module_name, module_path):
         raise
 
 def register_module_routes(module_name, sub_app_instance):
-    """모듈의 라우트들을 메인 앱에 등록"""
+    """모듈의 라우트들을 메인 앱에 등록 (인증 적용)"""
     try:
         # Flask 앱의 URL 맵에서 라우트들을 가져와서 등록
         for rule in sub_app_instance.url_map.iter_rules():
@@ -113,17 +119,20 @@ def register_module_routes(module_name, sub_app_instance):
                 new_rule = f"/{module_name}{rule.rule}"
                 
                 # view function 가져오기
-                view_func = sub_app_instance.view_functions[rule.endpoint]
+                original_view_func = sub_app_instance.view_functions[rule.endpoint]
+                
+                # 인증이 필요한 view function으로 래핑
+                authenticated_view_func = require_auth(original_view_func)
                 
                 # 메인 앱에 라우트 등록
                 app.add_url_rule(
                     new_rule,
                     endpoint=f"{module_name}_{rule.endpoint}",
-                    view_func=view_func,
+                    view_func=authenticated_view_func,
                     methods=list(rule.methods)
                 )
                 
-                logger.debug("라우트 등록: %s -> %s", new_rule, rule.endpoint)
+                logger.debug("라우트 등록 (인증 적용): %s -> %s", new_rule, rule.endpoint)
                 
     except Exception as e:
         logger.error("모듈 '%s' 라우트 등록 중 오류: %s", module_name, e)
@@ -151,17 +160,153 @@ def start_module_processes(module_name, start_function):
 # 메인 앱 라우트들
 @app.route('/')
 def index():
-    """홈 페이지"""
-    return jsonify({
-        "status": "ok",
-        "message": "Home Server is running",
-        "loaded_modules": list(sub_apps.keys()),
-        "active_processes": [name for name, thread in module_processes.items() if thread.is_alive()]
-    })
+    """홈 페이지 - 인증 필요"""
+    if not auth_manager.is_authenticated():
+        return render_template_string(get_login_page_template())
+    
+    user_email = auth_manager.get_current_user_email()
+    user_name = session.get('user_name', 'Unknown')
+    
+    # 인증된 사용자를 위한 홈 페이지
+    home_template = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Home Server Dashboard</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 1000px;
+                margin: 20px auto;
+                padding: 20px;
+                background-color: #f5f5f5;
+            }
+            .header {
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .user-info {
+                color: #666;
+            }
+            .logout-btn {
+                background-color: #dc3545;
+                color: white;
+                padding: 8px 16px;
+                border: none;
+                border-radius: 5px;
+                text-decoration: none;
+                font-size: 14px;
+            }
+            .logout-btn:hover {
+                background-color: #c82333;
+            }
+            .dashboard {
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            .module-list {
+                list-style: none;
+                padding: 0;
+            }
+            .module-item {
+                background: #f8f9fa;
+                margin: 10px 0;
+                padding: 15px;
+                border-radius: 5px;
+                border-left: 4px solid #007bff;
+            }
+            .module-name {
+                font-weight: bold;
+                color: #007bff;
+                font-size: 18px;
+            }
+            .api-links {
+                margin-top: 20px;
+            }
+            .api-link {
+                display: inline-block;
+                margin: 5px 10px 5px 0;
+                padding: 8px 12px;
+                background: #17a2b8;
+                color: white;
+                text-decoration: none;
+                border-radius: 3px;
+                font-size: 14px;
+            }
+            .api-link:hover {
+                background: #138496;
+                color: white;
+                text-decoration: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div>
+                <h1>🏠 Home Server Dashboard</h1>
+                <div class="user-info">
+                    환영합니다, {{ user_name }} ({{ user_email }})
+                </div>
+            </div>
+            <div>
+                <a href="/auth/logout" class="logout-btn">로그아웃</a>
+            </div>
+        </div>
+        
+        <div class="dashboard">
+            <h2>서버 상태</h2>
+            <p><strong>로드된 모듈:</strong> {{ modules|length }}개</p>
+            <p><strong>활성 프로세스:</strong> {{ active_processes|length }}개</p>
+            
+            {% if modules %}
+            <h3>모듈 목록</h3>
+            <ul class="module-list">
+                {% for module in modules %}
+                <li class="module-item">
+                    <div class="module-name">{{ module }}</div>
+                    <div>프로세스 상태: 
+                        {% if module in active_processes %}
+                            <span style="color: green;">✓ 활성</span>
+                        {% else %}
+                            <span style="color: gray;">○ 비활성</span>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            
+            <div class="api-links">
+                <h3>API 엔드포인트</h3>
+                <a href="/health" class="api-link">헬스 체크</a>
+                <a href="/modules" class="api-link">모듈 정보</a>
+                <a href="/auth/status" class="api-link">인증 상태</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return render_template_string(home_template, 
+                                user_name=user_name,
+                                user_email=user_email,
+                                modules=list(sub_apps.keys()),
+                                active_processes=[name for name, thread in module_processes.items() if thread.is_alive()])
 
 @app.route('/health')
+@require_auth
 def health():
-    """헬스 체크"""
+    """헬스 체크 - 인증 필요"""
     module_status = {}
     for module_name, thread in module_processes.items():
         module_status[module_name] = {
@@ -172,12 +317,14 @@ def health():
     return jsonify({
         "status": "up",
         "modules": module_status,
-        "total_modules": len(sub_apps)
+        "total_modules": len(sub_apps),
+        "authenticated_user": auth_manager.get_current_user_email()
     })
 
 @app.route('/modules')
+@require_auth
 def list_modules():
-    """로드된 모듈 목록"""
+    """로드된 모듈 목록 - 인증 필요"""
     module_info = {}
     
     for module_name, sub_app_instance in sub_apps.items():
@@ -197,7 +344,8 @@ def list_modules():
     
     return jsonify({
         "status": "ok",
-        "modules": module_info
+        "modules": module_info,
+        "authenticated_user": auth_manager.get_current_user_email()
     })
 
 @app.errorhandler(404)

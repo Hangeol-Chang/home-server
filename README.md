@@ -26,7 +26,27 @@ home-server/
 
 ## 🚀 빠른 시작
 
-### 1. 환경 설정 및 패키지 설치
+### 1. Google OAuth 설정 (필수)
+
+Home Server는 Google OAuth 인증을 통해 허용된 Gmail 계정만 접근할 수 있습니다.
+
+#### 1.1 설정 파일 준비
+```bash
+# 설정 파일 템플릿 복사
+cp config/google_oauth.json.example config/google_oauth.json
+cp config/allowed_emails.json.example config/allowed_emails.json
+```
+
+#### 1.2 Google Cloud Console 설정
+자세한 설정 방법은 [`GOOGLE_OAUTH_SETUP.md`](./GOOGLE_OAUTH_SETUP.md)를 참조하세요.
+
+#### 1.3 설정 테스트
+```bash
+# OAuth 설정 확인
+./test_oauth_setup.sh
+```
+
+### 2. 환경 설정 및 패키지 설치
 
 ```bash
 # 모든 모듈의 requirements.txt를 가상환경에 설치
@@ -36,7 +56,7 @@ python3 install_req.py --venv
 python3 install_req.py
 ```
 
-### 2. 서버 실행
+### 3. 서버 실행
 
 #### 방법 1: 시작 스크립트 사용 (권장)
 ```bash
@@ -52,30 +72,39 @@ source venv/bin/activate
 python3 app.py
 ```
 
-### 3. 서버 확인
+### 4. 서버 확인
 
 ```bash
-# 메인 페이지 확인
+# 메인 페이지 확인 (브라우저 접속 권장)
 curl http://localhost:5000/
 
-# 로드된 모듈 확인
-curl http://localhost:5000/modules
-
-# 헬스 체크
-curl http://localhost:5000/health
+# 인증 후 API 접근 (브라우저에서 로그인 후)
+curl -b cookies.txt http://localhost:5000/health
+curl -b cookies.txt http://localhost:5000/modules
 ```
+
+**⚠️ 주의:** 웹 브라우저에서 `http://localhost:5000`에 접속하여 Google 계정으로 로그인해야 합니다.
 
 ## 📚 API 엔드포인트
 
-### 메인 서버 엔드포인트
+### 인증 관련 엔드포인트
 
 | 경로 | 메소드 | 설명 |
 |------|--------|------|
-| `/` | GET | 서버 상태 및 로드된 모듈 정보 |
+| `/` | GET | 메인 대시보드 (인증 필요) |
+| `/auth/login` | GET | Google OAuth 로그인 |
+| `/auth/logout` | GET | 로그아웃 |
+| `/auth/callback` | GET | OAuth 콜백 (자동 처리) |
+| `/auth/status` | GET | 인증 상태 확인 |
+
+### 메인 서버 엔드포인트 (모두 인증 필요)
+
+| 경로 | 메소드 | 설명 |
+|------|--------|------|
 | `/health` | GET | 헬스 체크 |
 | `/modules` | GET | 로드된 모듈과 라우트 목록 |
 
-### Auto-trader 모듈 엔드포인트
+### Auto-trader 모듈 엔드포인트 (모두 인증 필요)
 
 모든 auto-trader 엔드포인트는 `/auto-trader` 프리픽스가 붙습니다.
 

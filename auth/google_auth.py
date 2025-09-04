@@ -26,10 +26,14 @@ class GoogleAuthManager:
         self.config_dir = config_dir
         self.client_secrets_file = os.path.join(config_dir, 'config', 'google_oauth.json')
         self.allowed_emails_file = os.path.join(config_dir, 'config', 'allowed_emails.json')
-        
+
         # OAuth 스코프 설정 (Google 공식 권장 스코프)
-        self.scopes = ['email', 'profile', 'openid']
-        
+        self.scopes = [
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+            'openid'
+        ]
+
         # 환경 변수 또는 설정에서 redirect URI 가져오기
         self.base_url = os.environ.get('HOME_SERVER_BASE_URL', 'http://localhost:5000')
         self.redirect_uri = f"{self.base_url}/auth/callback"
@@ -94,7 +98,11 @@ class GoogleAuthManager:
                 # Google OAuth 공식 예제 방식으로 Flow 생성
                 flow = Flow.from_client_config(
                     oauth_config,
-                    scopes=['openid']
+                    scopes=[
+                        "https://www.googleapis.com/auth/userinfo.email",
+                        "https://www.googleapis.com/auth/userinfo.profile",
+                        'openid'
+                    ],
                 )
                 
                 # Required, redirect URI 설정 (정확히 일치해야 함)
@@ -134,7 +142,11 @@ class GoogleAuthManager:
                 # Google OAuth 공식 예제 방식으로 Flow 생성
                 flow = Flow.from_client_config(
                     oauth_config,
-                    scopes=['email', 'profile', 'openid'],
+                    scopes=[
+                        "https://www.googleapis.com/auth/userinfo.email",
+                        "https://www.googleapis.com/auth/userinfo.profile",
+                        'openid'
+                    ],
                     state=session['state']
                 )
                 flow.redirect_uri = self.redirect_uri

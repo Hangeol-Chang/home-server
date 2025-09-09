@@ -97,6 +97,12 @@ def load_module(module_name, module_path):
             # 라우트를 메인 앱에 등록
             register_module_routes(module_name, sub_app_instance)
             
+            # 모듈을 활성 프로세스로 등록 (Blueprint는 항상 활성 상태)
+            if hasattr(sub_app_instance, 'name'):  # Blueprint인 경우
+                module_processes[module_name] = {'type': 'blueprint', 'active': True}
+            else:
+                module_processes[module_name] = {'type': 'flask_app', 'active': True}
+            
             # 모듈의 백그라운드 프로세스 시작
             if hasattr(sub_app_module, 'start_background_processes'):
                 start_module_processes(module_name, sub_app_module.start_background_processes)
@@ -110,29 +116,43 @@ def load_module(module_name, module_path):
         raise
 
 def register_module_routes(module_name, sub_app_instance):
-    """모듈의 라우트들을 메인 앱에 등록 (인증 적용)"""
+    """모듈의 Blueprint를 메인 앱에 등록 (인증 적용)"""
     try:
-        # Flask 앱의 URL 맵에서 라우트들을 가져와서 등록
-        for rule in sub_app_instance.url_map.iter_rules():
-            if rule.endpoint != 'static':  # static 파일 라우트는 제외
-                # 모듈 이름을 prefix로 사용
-                new_rule = f"/{module_name}{rule.rule}"
-                
-                # view function 가져오기
-                original_view_func = sub_app_instance.view_functions[rule.endpoint]
-                
-                # 인증이 필요한 view function으로 래핑
-                authenticated_view_func = require_auth(original_view_func)
-                
-                # 메인 앱에 라우트 등록
-                app.add_url_rule(
-                    new_rule,
-                    endpoint=f"{module_name}_{rule.endpoint}",
-                    view_func=authenticated_view_func,
-                    methods=list(rule.methods)
-                )
-                
-                logger.debug("라우트 등록 (인증 적용): %s -> %s", new_rule, rule.endpoint)
+        # Blueprint인 경우 직접 등록
+        if hasattr(sub_app_instance, 'name'):  # Blueprint 확인
+            # Blueprint를 메인 앱에 등록
+            app.register_blueprint(sub_app_instance)
+            logger.info("Blueprint '%s' 등록 완료", module_name)
+            
+            # 등록된 Blueprint의 모든 엔드포인트에 인증 적용
+            for endpoint in app.view_functions:
+                if endpoint.startswith(f'{sub_app_instance.name}.'):
+                    original_func = app.view_functions[endpoint]
+                    app.view_functions[endpoint] = require_auth(original_func)
+                    
+        else:
+            # 기존 Flask 앱 방식 (하위 호환성)
+            # Flask 앱의 URL 맵에서 라우트들을 가져와서 등록
+            for rule in sub_app_instance.url_map.iter_rules():
+                if rule.endpoint != 'static':  # static 파일 라우트는 제외
+                    # 모듈 이름을 prefix로 사용
+                    new_rule = f"/{module_name}{rule.rule}"
+                    
+                    # view function 가져오기
+                    original_view_func = sub_app_instance.view_functions[rule.endpoint]
+                    
+                    # 인증이 필요한 view function으로 래핑
+                    authenticated_view_func = require_auth(original_view_func)
+                    
+                    # 메인 앱에 라우트 등록
+                    app.add_url_rule(
+                        new_rule,
+                        endpoint=f"{module_name}_{rule.endpoint}",
+                        view_func=authenticated_view_func,
+                        methods=list(rule.methods)
+                    )
+                    
+                    logger.debug("라우트 등록 (인증 적용): %s -> %s", new_rule, rule.endpoint)
                 
     except Exception as e:
         logger.error("모듈 '%s' 라우트 등록 중 오류: %s", module_name, e)
@@ -151,7 +171,12 @@ def start_module_processes(module_name, start_function):
         process_thread.name = f"Process-{module_name}"
         process_thread.start()
         
-        module_processes[module_name] = process_thread
+        # 기존 모듈 정보 업데이트 (백그라운드 프로세스 추가)
+        if module_name in module_processes:
+            module_processes[module_name]['background_thread'] = process_thread
+        else:
+            module_processes[module_name] = {'type': 'background_process', 'active': True, 'background_thread': process_thread}
+            
         logger.info("모듈 '%s' 프로세스 스레드 시작됨", module_name)
         
     except Exception as e:
@@ -248,6 +273,26 @@ def index():
                 color: white;
                 text-decoration: none;
             }
+            .module-access-btn {
+                display: inline-block;
+                margin-top: 10px;
+                padding: 8px 16px;
+                background: #28a745;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 14px;
+                transition: background 0.3s;
+            }
+            .module-access-btn:hover {
+                background: #218838;
+                color: white;
+                text-decoration: none;
+            }
+            .module-access-btn:disabled {
+                background: #6c757d;
+                cursor: not-allowed;
+            }
         </style>
     </head>
     <body>
@@ -281,6 +326,9 @@ def index():
                             <span style="color: gray;">○ 비활성</span>
                         {% endif %}
                     </div>
+                    {% if module in active_processes %}
+                    <a href="/{{ module }}/" class="module-access-btn">📱 {{ module|title }} 접속</a>
+                    {% endif %}
                 </li>
                 {% endfor %}
             </ul>
@@ -301,7 +349,8 @@ def index():
                                 user_name=user_name,
                                 user_email=user_email,
                                 modules=list(sub_apps.keys()),
-                                active_processes=[name for name, thread in module_processes.items() if thread.is_alive()])
+                                active_processes=[name for name, info in module_processes.items() 
+                                                if isinstance(info, dict) and info.get('active', False)])
 
 @app.route('/health')
 @require_auth

@@ -26,6 +26,27 @@ home-server/
 
 ## 🚀 빠른 시작
 
+### ⚡ 빠른 설정 (새 장치에서)
+```bash
+# 1. 저장소 클론
+git clone <repository-url> home-server
+cd home-server
+
+# 2. Requirements.txt 자동 생성 (선택사항)
+python3 install_dependencies.py --generate-requirements
+
+# 3. 의존성 자동 설치 (가상환경 포함)
+python3 install_dependencies.py
+
+# 4. OAuth 설정 파일 준비
+cp config/google_oauth.json.example config/google_oauth.json
+cp config/allowed_emails.json.example config/allowed_emails.json
+# (실제 OAuth 설정은 GOOGLE_OAUTH_SETUP.md 참조)
+
+# 5. 서버 실행
+./activate_venv.sh && python3 app.py
+```
+
 ### 1. Google OAuth 설정 (필수)
 
 Home Server는 Google OAuth 인증을 통해 허용된 Gmail 계정만 접근할 수 있습니다.
@@ -48,6 +69,19 @@ cp config/allowed_emails.json.example config/allowed_emails.json
 
 ### 2. 환경 설정 및 패키지 설치
 
+#### 방법 1: 새로운 통합 설치 스크립트 (권장)
+```bash
+# 모든 모듈의 dependencies를 가상환경에 자동 설치
+python3 install_dependencies.py
+
+# 또는 기존 패키지 업그레이드와 함께 설치
+python3 install_dependencies.py --upgrade
+
+# 기존 가상환경 초기화 후 재설치
+python3 install_dependencies.py --clean
+```
+
+#### 방법 2: 기존 설치 스크립트 사용
 ```bash
 # 모든 모듈의 requirements.txt를 가상환경에 설치
 python3 install_req.py --venv
@@ -58,12 +92,22 @@ python3 install_req.py
 
 ### 3. 서버 실행
 
-#### 방법 1: 시작 스크립트 사용 (권장)
+#### 방법 1: 활성화 스크립트 사용 (권장)
+```bash
+# 가상환경 자동 활성화 (install_dependencies.py로 설치한 경우)
+./activate_venv.sh    # Linux/macOS
+activate_venv.bat     # Windows
+
+# 서버 실행
+python3 app.py
+```
+
+#### 방법 2: 시작 스크립트 사용
 ```bash
 ./start_server.sh
 ```
 
-#### 방법 2: 수동 실행
+#### 방법 3: 수동 실행
 ```bash
 # 가상환경 활성화
 source venv/bin/activate
@@ -119,7 +163,40 @@ curl -b cookies.txt http://localhost:5000/modules
 | `/auto-trader/trading-config` | GET | 매매 설정 조회 |
 | `/auto-trader/control/stop` | GET | 트레이더 중지 |
 
-## 🔧 모듈 개발 가이드
+## � Dependencies 구조
+
+각 모듈은 독립적인 `requirements.txt` 파일을 가지며, 설치 스크립트가 자동으로 모든 의존성을 관리합니다.
+
+### 의존성 파일들
+```
+home-server/
+├── requirements.txt              # 메인 서버 의존성
+├── install_dependencies.py       # 통합 설치 스크립트 (권장)
+├── install_req.py               # 기존 설치 스크립트
+└── modules/
+    ├── auto-trader/
+    │   └── requirements.txt     # 자동 트레이딩 모듈 의존성
+    └── asset-manager/
+        └── requirements.txt     # 자산 관리 모듈 의존성
+```
+
+### 메인 서버 Dependencies
+- **Flask**: 웹 프레임워크
+- **Google OAuth**: 인증 시스템
+- **기타**: JWT, 암호화, HTTP 요청 등
+
+### Auto-trader 모듈 Dependencies
+- **Data Analysis**: pandas, numpy
+- **Technical Analysis**: ta-lib
+- **WebSocket**: websocket-client
+- **Web Framework**: Flask (공통)
+
+### Asset-manager 모듈 Dependencies  
+- **Database**: SQLite (Python 표준 라이브러리)
+- **Web Framework**: Flask (공통)
+- **기타**: 표준 라이브러리만 사용
+
+## �🔧 모듈 개발 가이드
 
 ### 새로운 모듈 추가하기
 
@@ -160,7 +237,78 @@ def start_background_processes():
 
 ## 🛠️ 개발 도구
 
-### install_req.py 옵션
+### install_dependencies.py 옵션
+
+```bash
+# 기본 설치 (가상환경 생성 및 모든 패키지 설치)
+python3 install_dependencies.py
+
+# Requirements.txt 자동 생성 (pipreqs 사용)
+python3 install_dependencies.py --generate-requirements
+
+# 기존 requirements.txt 덮어쓰고 새로 생성
+python3 install_dependencies.py --generate-requirements --force-generate
+
+# 시스템 Python 사용 (권장하지 않음)
+python3 install_dependencies.py --no-venv
+
+# 기존 패키지 업그레이드
+python3 install_dependencies.py --upgrade
+
+# 가상환경 초기화 후 재설치
+python3 install_dependencies.py --clean
+
+# 도움말
+python3 install_dependencies.py --help
+```
+
+### 📦 Requirements.txt 자동 생성 방법들
+
+프로젝트에서 실제로 사용되는 패키지들을 자동으로 탐지하여 requirements.txt를 생성하는 방법들:
+
+#### 1. 내장 자동 생성 기능 (권장)
+```bash
+# 모든 모듈의 requirements.txt 자동 생성
+python3 install_dependencies.py --generate-requirements
+
+# 기존 파일 덮어쓰기
+python3 install_dependencies.py --generate-requirements --force-generate
+```
+
+#### 2. pipreqs 직접 사용
+```bash
+# pipreqs 설치
+pip3 install pipreqs
+
+# 특정 모듈에 대해 생성
+pipreqs modules/auto-trader --force
+
+# 메인 프로젝트에 대해 생성 (modules 디렉토리 제외)
+pipreqs . --ignore=modules,venv,.venv,logs,config --force
+```
+
+#### 3. pip freeze (현재 환경의 모든 패키지)
+```bash
+# 현재 환경의 모든 설치된 패키지 (권장하지 않음)
+pip freeze > requirements.txt
+
+# 가상환경에서만 사용 권장
+source venv/bin/activate
+pip freeze > requirements_freeze.txt
+```
+
+#### 4. 기타 도구들
+```bash
+# pip-tools (더 정교한 의존성 관리)
+pip install pip-tools
+pip-compile requirements.in
+
+# pipenv (Pipfile 사용)
+pipenv install
+pipenv requirements > requirements.txt
+```
+
+### install_req.py 옵션 (기존 스크립트)
 
 ```bash
 # 가상환경 생성 및 패키지 설치

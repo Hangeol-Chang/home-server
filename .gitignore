@@ -6,6 +6,16 @@ __pycache__/
 # C extensions
 *.so
 
+# OAuth and security files
+config/google_oauth.json
+config/allowed_emails.json
+server/config/google_oauth.json
+server/config/allowed_emails.json
+
+# Logs
+logs/
+*.log
+
 # Distribution / packaging
 .Python
 build/
@@ -205,3 +215,7 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+modules/
+.repo/
+repo/

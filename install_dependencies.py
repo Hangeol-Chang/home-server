@@ -184,6 +184,9 @@ def generate_all_requirements(script_dir, force=False):
     """모든 모듈에 대해 requirements.txt 생성"""
     print_step(2, "Requirements.txt 자동 생성")
     
+    # 프로젝트 루트 디렉토리
+    project_root = script_dir.parent
+    
     # pipreqs 설치 확인
     if not install_pipreqs_if_needed():
         return False
@@ -220,7 +223,7 @@ def generate_all_requirements(script_dir, force=False):
         total_count += 1
     
     # 모듈들의 requirements.txt 생성
-    modules_dir = script_dir / "modules"
+    modules_dir = project_root / "modules"
     if modules_dir.exists():
         for module_path in modules_dir.iterdir():
             if module_path.is_dir() and not module_path.name.startswith('.'):
@@ -242,18 +245,19 @@ def generate_all_requirements(script_dir, force=False):
     return success_count > 0
 
 
-def find_requirements_files(base_dir):
+def find_requirements_files(project_root, script_dir):
     """requirements.txt 파일들을 찾아서 반환"""
     requirements_files = []
-    base_path = Path(base_dir)
+    project_path = Path(project_root)
+    script_path = Path(script_dir)
     
-    # 메인 디렉토리의 requirements.txt
-    main_req = base_path / "requirements.txt"
+    # main 디렉토리의 requirements.txt
+    main_req = script_path / "requirements.txt"
     if main_req.exists():
         requirements_files.append(("main", main_req))
     
     # 모듈들의 requirements.txt
-    modules_dir = base_path / "modules"
+    modules_dir = project_path / "modules"
     if modules_dir.exists():
         for module_path in modules_dir.iterdir():
             if module_path.is_dir() and not module_path.name.startswith('.'):
@@ -476,7 +480,9 @@ def main():
     
     # 작업 디렉토리 설정
     script_dir = Path(__file__).parent.absolute()
+    project_root = script_dir.parent  # 프로젝트 루트 디렉토리
     print_info(f"작업 디렉토리: {script_dir}")
+    print_info(f"프로젝트 루트: {project_root}")
     
     # Requirements.txt 자동 생성 옵션 처리
     if args.generate_requirements:
@@ -486,7 +492,7 @@ def main():
         return 0
     
     # requirements.txt 파일들 찾기
-    requirements_files = find_requirements_files(script_dir)
+    requirements_files = find_requirements_files(project_root, script_dir)
     
     if not requirements_files:
         print_error("requirements.txt 파일을 찾을 수 없습니다.")
@@ -494,14 +500,19 @@ def main():
     
     print_info(f"발견된 requirements.txt 파일들:")
     for module_name, req_file in requirements_files:
-        print(f"   - {module_name}: {req_file.relative_to(script_dir)}")
+        try:
+            rel_path = req_file.relative_to(project_root)
+        except ValueError:
+            rel_path = req_file
+        print(f"   - {module_name}: {rel_path}")
     print()
     
     # 가상환경 사용 여부 결정
     use_venv = not args.no_venv
     
     if use_venv:
-        venv_path = script_dir / ".venv"
+        # 프로젝트 루트에 .venv 생성 (main 폴더의 부모 디렉토리)
+        venv_path = project_root / ".venv"
         
         # 가상환경 설정
         if not setup_virtual_environment(venv_path, args.clean):

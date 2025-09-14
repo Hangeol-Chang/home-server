@@ -11,12 +11,14 @@ import logging
 import threading
 import importlib
 from pathlib import Path
-from flask import Flask, jsonify, request, session, render_template, render_template_string, redirect
+from flask import Flask, jsonify, request, session, render_template, redirect
 from werkzeug.exceptions import NotFound
 
-# 현재 디렉토리를 Python path에 추가
+# 현재 디렉토리와 프로젝트 루트를 Python path에 추가
 current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)  # home-server 루트 디렉토리
 sys.path.insert(0, current_dir)
+sys.path.insert(0, project_root)
 
 app = Flask(__name__, 
             static_folder='web/static',
@@ -56,7 +58,7 @@ def setup_logging():
 
 def discover_and_load_modules():
     """modules 디렉토리에서 모듈들을 발견하고 로드"""
-    modules_dir = Path(current_dir) / "modules"
+    modules_dir = Path(current_dir).parent / "modules"
     
     if not modules_dir.exists():
         logger.warning("modules 디렉토리가 존재하지 않습니다: %s", modules_dir)

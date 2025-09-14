@@ -219,3 +219,11 @@ __marimo__/
 modules/
 .repo/
 repo/
+
+# 각 모듈 특수
+
+# asset-manager
+
+# auto-trader
+model
+data

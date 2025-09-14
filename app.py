@@ -11,7 +11,7 @@ import logging
 import threading
 import importlib
 from pathlib import Path
-from flask import Flask, jsonify, request, session, render_template, redirect
+from flask import Flask, jsonify, request, session, render_template, render_template_string, redirect
 from werkzeug.exceptions import NotFound
 
 # 현재 디렉토리와 프로젝트 루트를 Python path에 추가

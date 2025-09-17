@@ -11,8 +11,9 @@ import logging
 import threading
 import importlib
 from pathlib import Path
-from flask import Flask, jsonify, request, session, render_template, render_template_string, redirect
+from flask import Flask, jsonify, request, session, render_template, redirect
 from werkzeug.exceptions import NotFound
+from jinja2 import ChoiceLoader, FileSystemLoader
 
 # 현재 디렉토리와 프로젝트 루트를 Python path에 추가
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -26,8 +27,16 @@ app = Flask(__name__,
 app.config['SECRET_KEY'] = 'home-server-secret-key-change-in-production'
 app.config['PERMANENT_SESSION_LIFETIME'] = 24 * 60 * 60  # 24시간
 
+# 개발 모드 설정 - 템플릿 자동 리로딩
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # 정적 파일 캐시 비활성화
+
+# 템플릿 로더 설정 - 메인 템플릿 폴더를 기본으로 설정
+main_template_loader = FileSystemLoader(os.path.join(current_dir, 'web', 'templates'))
+app.jinja_loader = ChoiceLoader([main_template_loader])
+
 # Google OAuth 인증 관리자 초기화
-from auth.google_auth import GoogleAuthManager, require_auth, get_login_page_template
+from auth.google_auth import GoogleAuthManager, require_auth
 auth_manager = GoogleAuthManager(app, current_dir)
 app.auth_manager = auth_manager  # 전역 접근을 위해 앱에 등록
 
@@ -42,6 +51,21 @@ logger = logging.getLogger(__name__)
 sub_apps = {}
 module_processes = {}
 
+@app.context_processor
+def inject_user_info():
+    """모든 템플릿에 사용자 정보 주입"""
+    if auth_manager.is_authenticated():
+        return {
+            'user_email': auth_manager.get_current_user_email(),
+            'user_name': session.get('user_name', 'Unknown'),
+            'is_authenticated': True
+        }
+    return {
+        'user_email': None,
+        'user_name': None,
+        'is_authenticated': False
+    }
+
 def setup_logging():
     """로깅 설정"""
     log_dir = Path("logs")
@@ -55,6 +79,18 @@ def setup_logging():
     
     app.logger.addHandler(file_handler)
     app.logger.setLevel(logging.INFO)
+
+def add_template_folder_for_module(module_path):
+    """모듈의 템플릿 폴더를 전역 템플릿 로더에 추가"""
+    template_folder = module_path / "web" / "templates"
+    if template_folder.exists():
+        # 새로운 FileSystemLoader 생성
+        module_loader = FileSystemLoader(str(template_folder))
+        # 기존 로더 리스트에 추가
+        current_loaders = list(app.jinja_loader.loaders)
+        current_loaders.append(module_loader)
+        app.jinja_loader = ChoiceLoader(current_loaders)
+        logger.info("템플릿 폴더 추가됨: %s", template_folder)
 
 def discover_and_load_modules():
     """modules 디렉토리에서 모듈들을 발견하고 로드"""
@@ -97,6 +133,9 @@ def load_module(module_name, module_path):
         if hasattr(sub_app_module, 'sub_app'):
             sub_app_instance = sub_app_module.sub_app
             sub_apps[module_name] = sub_app_instance
+            
+            # 모듈의 템플릿 폴더를 전역 템플릿 로더에 추가
+            add_template_folder_for_module(module_path)
             
             # 라우트를 메인 앱에 등록
             register_module_routes(module_name, sub_app_instance)
@@ -191,7 +230,7 @@ def start_module_processes(module_name, start_function):
 def index():
     """홈 페이지 - 인증 필요"""
     if not auth_manager.is_authenticated():
-        return render_template_string(get_login_page_template())
+        return render_template('login.html')
     
     user_email = auth_manager.get_current_user_email()
     user_name = session.get('user_name', 'Unknown')
@@ -290,7 +329,7 @@ if __name__ == '__main__':
         app.run(
             host='0.0.0.0', 
             port=5000, 
-            debug=False,
+            debug=True,  # 개발 모드 활성화 - 템플릿 자동 리로드
             use_reloader=False  # 모듈 로딩 중복 방지
         )
         

@@ -1,56 +1,93 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Home Server Dashboard</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
-</head>
-<body>
-    <div class="header">
-        <div>
-            <h1>🏠 Home Server Dashboard</h1>
-            <div class="user-info">
-                환영합니다, {{ user_name }} ({{ user_email }})
-            </div>
-        </div>
-        <div>
-            <a href="/auth/logout" class="logout-btn">로그아웃</a>
-        </div>
+{% extends "base.html" %}
+
+{% block title %}Home Server - Dashboard{% endblock %}
+
+{% block header_title %}Home Server Dashboard{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 30px;">
+    <h2>📊 서버 대시보드</h2>
+    <p style="color: #666; margin-top: 10px;">
+        현재 시스템 상태와 활성화된 모듈들을 확인할 수 있습니다.
+    </p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+        <h3 style="margin-bottom: 10px; color: #333;">📦 로드된 모듈</h3>
+        <div style="font-size: 2rem; font-weight: bold; color: #667eea;">{{ modules|length }}</div>
+        <p style="color: #666; margin-top: 5px;">개의 모듈이 활성화됨</p>
     </div>
     
-    <div class="dashboard">
-        <h2>서버 상태</h2>
-        <p><strong>로드된 모듈:</strong> {{ modules|length }}개</p>
-        <p><strong>활성 프로세스:</strong> {{ active_processes|length }}개</p>
-        
-        {% if modules %}
-        <h3>모듈 목록</h3>
-        <ul class="module-list">
-            {% for module in modules %}
-            <li class="module-item">
-                <div class="module-name">{{ module }}</div>
-                <div>프로세스 상태: 
-                    {% if module in active_processes %}
-                        <span style="color: green;">✓ 활성</span>
-                    {% else %}
-                        <span style="color: gray;">○ 비활성</span>
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+        <h3 style="margin-bottom: 10px; color: #333;">⚡ 활성 프로세스</h3>
+        <div style="font-size: 2rem; font-weight: bold; color: #28a745;">{{ active_processes|length }}</div>
+        <p style="color: #666; margin-top: 5px;">개의 프로세스가 실행 중</p>
+    </div>
+</div>
+
+{% if modules %}
+<div style="margin-bottom: 30px;">
+    <h3 style="margin-bottom: 20px;">🚀 활성화된 모듈들</h3>
+    <div style="display: grid; gap: 15px;">
+        {% for module in modules %}
+        <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; transition: box-shadow 0.3s; cursor: pointer;" 
+             onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,0.1)'" 
+             onmouseout="this.style.boxShadow='none'">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h4 style="margin-bottom: 8px; color: #333;">
+                        📦 {{ module }}
+                        {% if module in active_processes %}
+                            <span style="background: #28a745; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; margin-left: 10px;">
+                                ● 실행 중
+                            </span>
+                        {% endif %}
+                    </h4>
+                    <p style="color: #666; font-size: 0.9rem;">
+                        {{ module }} 모듈의 웹 인터페이스에 접속할 수 있습니다.
+                    </p>
+                </div>
+                <div>
+                    <a href="/{{ module }}" class="btn" style="margin-right: 10px;">접속하기</a>
+                    {% if module == 'auto-trader' %}
+                        <a href="/{{ module }}/api" class="btn btn-secondary">API 정보</a>
                     {% endif %}
                 </div>
-                {% if module in active_processes %}
-                <a href="/{{ module }}/" class="module-access-btn">📱 {{ module|title }} 접속</a>
-                {% endif %}
-            </li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        
-        <div class="api-links">
-            <h3>API 엔드포인트</h3>
-            <a href="/health" class="api-link">헬스 체크</a>
-            <a href="/modules" class="api-link">모듈 정보</a>
-            <a href="/auth/status" class="api-link">인증 상태</a>
+            </div>
         </div>
+        {% endfor %}
     </div>
-</body>
-</html>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <h4>📭 모듈이 없습니다</h4>
+    <p>현재 로드된 모듈이 없습니다. modules 디렉토리에 모듈을 추가해주세요.</p>
+</div>
+{% endif %}
+
+<div style="margin-top: 40px;">
+    <h3 style="margin-bottom: 20px;">🔧 시스템 관리</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+        <a href="/health" style="text-decoration: none; color: inherit;">
+            <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; text-align: center; transition: all 0.3s;"
+                 onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.1)'" 
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                <div style="font-size: 2rem; margin-bottom: 10px;">💚</div>
+                <h4 style="margin-bottom: 8px;">헬스 체크</h4>
+                <p style="color: #666; font-size: 0.9rem;">시스템 상태 확인</p>
+            </div>
+        </a>
+        
+        <a href="/modules" style="text-decoration: none; color: inherit;">
+            <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; text-align: center; transition: all 0.3s;"
+                 onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.1)'" 
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                <div style="font-size: 2rem; margin-bottom: 10px;">📋</div>
+                <h4 style="margin-bottom: 8px;">모듈 상세정보</h4>
+                <p style="color: #666; font-size: 0.9rem;">라우트 및 프로세스 정보</p>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

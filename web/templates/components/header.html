@@ -1,95 +1,4 @@
 <!-- Header Component with Dropdown and Hamburger Menu -->
-<header class="header">
-    <div class="header-content">
-        <div class="header-left">
-            <a href="/" style="font-size: 30px">🏠</a>
-            <div class="header-names">
-                <h1 class="logo">{{ header_title_content.strip() if header_title_content else 'Home Server' }}</h1>
-                {% if user_email %}
-                <div class="user-info">
-                    {{ user_name }} | ({{ user_email }})
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        
-        <!-- Desktop Navigation -->
-        <nav class="header-nav desktop-nav">
-            <a href="/" class="nav-item">🏠 홈</a>
-            
-            <!-- Modules Dropdown -->
-            <div class="dropdown">
-                <button class="dropdown-btn nav-item">📦 모듈 <span class="dropdown-arrow">▼</span></button>
-                <div class="dropdown-content">
-                    <a href="/auto-trader/">🚀 Auto Trader</a>
-                    <a href="/asset-manager/">💰 자산관리</a>
-                    <a href="/modules">📦 전체 모듈</a>
-                </div>
-            </div>
-            
-            <!-- System Dropdown -->
-            <div class="dropdown">
-                <button class="dropdown-btn nav-item">⚙️ 시스템 <span class="dropdown-arrow">▼</span></button>
-                <div class="dropdown-content">
-                    <a href="/health">💚 상태</a>
-                    <a href="/logs">📋 로그</a>
-                    <a href="/settings">⚙️ 설정</a>
-                </div>
-            </div>
-            
-            {% if user_email %}
-                <a href="/auth/logout" class="nav-item logout-btn">로그아웃</a>
-            {% endif %}
-        </nav>
-        
-        <!-- Hamburger Menu Button -->
-        <button class="hamburger-menu" onclick="toggleMobileMenu()">
-            <span class="hamburger-line"></span>
-            <span class="hamburger-line"></span>
-            <span class="hamburger-line"></span>
-        </button>
-    </div>
-</header>
-
-<!-- Mobile Menu Overlay -->
-<div class="mobile-menu-overlay" onclick="toggleMobileMenu()"></div>
-
-<!-- Mobile Side Menu -->
-<div class="mobile-menu">
-    <div class="mobile-menu-header">
-        <h3>Menu</h3>
-        <button class="close-btn" onclick="toggleMobileMenu()">×</button>
-    </div>
-    <nav class="mobile-nav">
-        <a href="/" onclick="toggleMobileMenu()">🏠 홈</a>
-        
-        <div class="mobile-dropdown">
-            <button class="mobile-dropdown-btn" onclick="toggleMobileDropdown('modules')">
-                📦 모듈 <span class="mobile-arrow" id="modules-arrow">▼</span>
-            </button>
-            <div class="mobile-dropdown-content" id="modules-dropdown">
-                <a href="/auto-trader/" onclick="toggleMobileMenu()">🚀 Auto Trader</a>
-                <a href="/asset-manager/" onclick="toggleMobileMenu()">💰 자산관리</a>
-                <a href="/modules" onclick="toggleMobileMenu()">📦 전체 모듈</a>
-            </div>
-        </div>
-        
-        <div class="mobile-dropdown">
-            <button class="mobile-dropdown-btn" onclick="toggleMobileDropdown('system')">
-                ⚙️ 시스템 <span class="mobile-arrow" id="system-arrow">▼</span>
-            </button>
-            <div class="mobile-dropdown-content" id="system-dropdown">
-                <a href="/health" onclick="toggleMobileMenu()">💚 상태</a>
-                <a href="/logs" onclick="toggleMobileMenu()">📋 로그</a>
-                <a href="/settings" onclick="toggleMobileMenu()">⚙️ 설정</a>
-            </div>
-        </div>
-        
-        {% if user_email %}
-            <a href="/auth/logout" class="logout-btn" onclick="toggleMobileMenu()">로그아웃</a>
-        {% endif %}
-    </nav>
-</div>
 
 <style>
 /* Header Styles */
@@ -98,9 +7,10 @@
     top: 0;
     width: 100%;
     z-index: 100;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    background: rgba(255, 255, 255, 0.9);
+    color: black;
+    padding: 4px 0 10px 0;
+    border-bottom: 1px solid #e7e7e7;
 }
 
 .header-content {
@@ -138,6 +48,10 @@
     opacity: 0.9;
 }
 
+.user-info-container {
+    display: flex;
+}
+
 /* Desktop Navigation */
 .desktop-nav {
     display: flex;
@@ -146,7 +60,7 @@
 }
 
 .nav-item {
-    color: white;
+    color: black;
     text-decoration: none;
     padding: 8px 12px;
     border-radius: 4px;
@@ -192,7 +106,6 @@
     border-radius: 4px;
     z-index: 1000;
     top: 100%;
-    /* margin-top: 5px; */
 }
 
 .dropdown:hover .dropdown-content {
@@ -211,6 +124,12 @@
     background-color: #f5f5f5;
 }
 
+.dropdown-divider {
+    height: 1px;
+    background-color: #e9ecef;
+    margin: 5px 0;
+}
+
 /* Hamburger Menu */
 .hamburger-menu {
     display: none;
@@ -227,7 +146,7 @@
 .hamburger-line {
     width: 100%;
     height: 3px;
-    background-color: white;
+    background-color: black;
     border-radius: 2px;
     transition: all 0.3s;
 }
@@ -348,9 +267,24 @@
     border-bottom: 1px solid #e9ecef;
 }
 
+.mobile-dropdown-divider {
+    height: 1px;
+    background-color: #e9ecef;
+    margin: 8px 40px;
+}
+
 .logout-btn {
-    color: #dc3545 !important;
-    font-weight: 500;
+    border-radius: 4px;
+    color: white;
+    background-color: #000;
+    padding: 0px 10px;
+    margin: 0px 4px;
+    font-weight: 400;
+    font-size: 12px;
+    align-content: center;
+}
+.logout-btn:hover {
+    background-color: #aaa;
 }
 
 /* Responsive */
@@ -369,6 +303,104 @@ body {
     padding-top: 60px;
 }
 </style>
+
+<header class="header">
+    <div class="header-content">
+        <div class="header-left">
+            <a href="/" style="font-size: 30px; text-decoration: none;">🏠</a>
+            <div class="header-names">
+                <h1 class="logo">{{ header_title_content.strip() if header_title_content else 'Home Server' }}</h1>
+                {% if user_email %}
+                <div class="user-info-container">
+                    <div class="user-info">
+                        {{ user_name }} | ({{ user_email }})
+                    </div>
+                    <a href="/auth/logout" class="nav-item logout-btn">logout</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Desktop Navigation -->
+        <nav class="desktop-nav">
+            <!-- Modules Dropdown (Dynamic) -->
+            {% if loaded_modules %}
+            <div class="dropdown">
+                <button class="dropdown-btn nav-item">📦 모듈 <span class="dropdown-arrow">▼</span></button>
+                <div class="dropdown-content">
+                    {% for module in loaded_modules %}
+                        <a href="{{ module.url }}">{{ module.emoji }} {{ module.display_name }}</a>
+                    {% endfor %}
+                    <div class="dropdown-divider"></div>
+                    <a href="/modules">📦 전체 모듈</a>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- System Dropdown -->
+            <div class="dropdown">
+                <button class="dropdown-btn nav-item">⚙️ 시스템 <span class="dropdown-arrow">▼</span></button>
+                <div class="dropdown-content">
+                    <a href="/health">💚 상태</a>
+                    <a href="/logs">📋 로그</a>
+                    <a href="/settings">⚙️ 설정</a>
+                </div>
+            </div>            
+        </nav>
+        
+        <!-- Hamburger Menu Button -->
+        <button class="hamburger-menu" onclick="toggleMobileMenu()">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+    </div>
+</header>
+
+<!-- Mobile Menu Overlay -->
+<div class="mobile-menu-overlay" onclick="toggleMobileMenu()"></div>
+
+<!-- Mobile Side Menu -->
+<div class="mobile-menu">
+    <div class="mobile-menu-header">
+        <h3>Menu</h3>
+        <button class="close-btn" onclick="toggleMobileMenu()">×</button>
+    </div>
+    <nav class="mobile-nav">
+        <a href="/" onclick="toggleMobileMenu()">🏠 홈</a>
+        
+        <!-- Mobile Modules Dropdown (Dynamic) -->
+        {% if loaded_modules %}
+        <div class="mobile-dropdown">
+            <button class="mobile-dropdown-btn" onclick="toggleMobileDropdown('modules')">
+                📦 모듈 <span class="mobile-arrow" id="modules-arrow">▼</span>
+            </button>
+            <div class="mobile-dropdown-content" id="modules-dropdown">
+                {% for module in loaded_modules %}
+                    <a href="{{ module.url }}" onclick="toggleMobileMenu()">{{ module.emoji }} {{ module.display_name }}</a>
+                {% endfor %}
+                <div class="mobile-dropdown-divider"></div>
+                <a href="/modules" onclick="toggleMobileMenu()">📦 전체 모듈</a>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="mobile-dropdown">
+            <button class="mobile-dropdown-btn" onclick="toggleMobileDropdown('system')">
+                ⚙️ 시스템 <span class="mobile-arrow" id="system-arrow">▼</span>
+            </button>
+            <div class="mobile-dropdown-content" id="system-dropdown">
+                <a href="/health" onclick="toggleMobileMenu()">💚 상태</a>
+                <a href="/logs" onclick="toggleMobileMenu()">📋 로그</a>
+                <a href="/settings" onclick="toggleMobileMenu()">⚙️ 설정</a>
+            </div>
+        </div>
+        
+        {% if user_email %}
+            <a href="/auth/logout" class="logout-btn" onclick="toggleMobileMenu()">logout</a>
+        {% endif %}
+    </nav>
+</div>
 
 <script>
 function toggleMobileMenu() {

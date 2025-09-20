@@ -53,18 +53,60 @@ module_processes = {}
 
 @app.context_processor
 def inject_user_info():
-    """모든 템플릿에 사용자 정보 주입"""
+    """모든 템플릿에 사용자 정보와 로드된 모듈 정보 주입"""
+    # 로드된 모듈들 정보 생성
+    loaded_modules = []
+    for module_name, module_data in module_processes.items():
+        if module_data.get('active', False):
+            # 모듈명을 기반으로 한국어 이름과 이모지 매핑
+            module_info = {
+                'name': module_name,
+                'url': f'/{module_name}/',
+                'display_name': get_module_display_name(module_name),
+                'emoji': get_module_emoji(module_name)
+            }
+            loaded_modules.append(module_info)
+    
+    # 사용자 인증 정보
+    user_data = {}
     if auth_manager.is_authenticated():
-        return {
+        user_data = {
             'user_email': auth_manager.get_current_user_email(),
             'user_name': session.get('user_name', 'Unknown'),
             'is_authenticated': True
         }
-    return {
-        'user_email': None,
-        'user_name': None,
-        'is_authenticated': False
+    else:
+        user_data = {
+            'user_email': None,
+            'user_name': None,
+            'is_authenticated': False
+        }
+    
+    # 모든 데이터 결합
+    user_data['loaded_modules'] = loaded_modules
+    return user_data
+
+def get_module_display_name(module_name):
+    """모듈명을 한국어 표시명으로 변환"""
+    display_names = {
+        'auto-trader': 'Auto Trader',
+        'asset-manager': '자산관리',
+        'schedule-manager': '일정관리',
+        'file-manager': '파일관리',
+        'note-manager': '노트관리'
     }
+    return display_names.get(module_name, module_name.replace('-', ' ').title())
+
+def get_module_emoji(module_name):
+    """모듈명에 따른 이모지 반환"""
+    emojis = {
+        'auto-trader': '🚀',
+        'asset-manager': '💰',
+        'schedule-manager': '📅',
+        'file-manager': '📁',
+        'note-manager': '📝'
+    }
+    return emojis.get(module_name, '📦')
 
 def setup_logging():
     """로깅 설정"""
@@ -247,9 +289,16 @@ def index():
 def health():
     """헬스 체크 - 인증 필요"""
     module_status = {}
-    for module_name, thread in module_processes.items():
+    for module_name, module_data in module_processes.items():
+        # 백그라운드 스레드가 있는 경우에만 is_alive() 확인
+        process_alive = False
+        if isinstance(module_data, dict) and 'background_thread' in module_data:
+            process_alive = module_data['background_thread'].is_alive()
+        elif isinstance(module_data, dict):
+            process_alive = module_data.get('active', False)
+        
         module_status[module_name] = {
-            "process_alive": thread.is_alive(),
+            "process_alive": process_alive,
             "routes_loaded": module_name in sub_apps
         }
     
@@ -268,17 +317,29 @@ def list_modules():
     
     for module_name, sub_app_instance in sub_apps.items():
         routes = []
-        for rule in sub_app_instance.url_map.iter_rules():
-            if rule.endpoint != 'static':
-                routes.append({
-                    "path": f"/{module_name}{rule.rule}",
-                    "methods": list(rule.methods),
-                    "endpoint": rule.endpoint
-                })
+        
+        # Blueprint인 경우와 Flask 앱인 경우를 구분
+        if hasattr(sub_app_instance, 'name'):  # Blueprint인 경우
+            # 메인 앱에서 해당 Blueprint의 라우트들을 찾기
+            for rule in app.url_map.iter_rules():
+                if rule.endpoint.startswith(f'{sub_app_instance.name}.'):
+                    routes.append({
+                        "path": rule.rule,
+                        "methods": list(rule.methods),
+                        "endpoint": rule.endpoint
+                    })
+        else:  # Flask 앱인 경우 (하위 호환성)
+            for rule in sub_app_instance.url_map.iter_rules():
+                if rule.endpoint != 'static':
+                    routes.append({
+                        "path": f"/{module_name}{rule.rule}",
+                        "methods": list(rule.methods),
+                        "endpoint": rule.endpoint
+                    })
         
         module_info[module_name] = {
             "routes": routes,
-            "process_status": module_processes.get(module_name, {}).is_alive() if module_name in module_processes else "No process"
+            "process_status": _get_module_process_status(module_name)
         }
     
     return jsonify({
@@ -310,10 +371,26 @@ def shutdown_all_processes():
     """모든 모듈 프로세스 종료"""
     logger.info("모든 모듈 프로세스 종료 중...")
     
-    for module_name, thread in module_processes.items():
-        if thread.is_alive():
-            logger.info("모듈 '%s' 프로세스 종료 대기 중...", module_name)
-            # 데몬 스레드이므로 메인 프로세스 종료 시 자동으로 종료됨
+    for module_name, module_data in module_processes.items():
+        if isinstance(module_data, dict) and 'background_thread' in module_data:
+            thread = module_data['background_thread']
+            if thread.is_alive():
+                logger.info("모듈 '%s' 프로세스 종료 대기 중...", module_name)
+                # 데몬 스레드이므로 메인 프로세스 종료 시 자동으로 종료됨
+
+def _get_module_process_status(module_name):
+    """모듈의 프로세스 상태를 반환하는 헬퍼 함수"""
+    if module_name not in module_processes:
+        return "No process"
+    
+    module_data = module_processes[module_name]
+    if isinstance(module_data, dict):
+        if 'background_thread' in module_data:
+            return "Running" if module_data['background_thread'].is_alive() else "Stopped"
+        else:
+            return "Active (Blueprint)" if module_data.get('active', False) else "Inactive"
+    
+    return "Unknown status"
 
 if __name__ == '__main__':
     try:

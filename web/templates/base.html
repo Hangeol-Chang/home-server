@@ -4,22 +4,22 @@
     <title>{% block title %}Home Server{% endblock %}</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- Global CSS Import -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/global.css') }}">
+    
+    {% block extra_css %}{% endblock %}
+
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
+            background-color: white;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            line-height: 1.6;
         }
-        
-        /* Main content 스타일 */
+
         .main-content {
             flex: 1;
             max-width: 1200px;
@@ -31,46 +31,11 @@
         .content-wrapper {
             background: white;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            /* box-shadow: 0 2px 10px rgba(0,0,0,0.1); */
             padding: 30px;
             min-height: 400px;
         }
-        
-        /* Footer 스타일 */
-        .footer {
-            background-color: #333;
-            color: white;
-            text-align: center;
-            padding: 20px 0;
-            margin-top: auto;
-        }
-        
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        
-        .footer p {
-            margin: 5px 0;
-            font-size: 0.9rem;
-        }
-        
-        .footer-links {
-            margin-top: 10px;
-        }
-        
-        .footer-links a {
-            color: #ccc;
-            text-decoration: none;
-            margin: 0 15px;
-            font-size: 0.9rem;
-        }
-        
-        .footer-links a:hover {
-            color: white;
-        }
-        
+
         /* 반응형 디자인 */
         @media (max-width: 768px) {
             .main-content {
@@ -82,57 +47,7 @@
                 padding: 20px;
             }
         }
-        
-        /* 추가 유틸리티 스타일 */
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #667eea;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        
-        .btn:hover {
-            background-color: #5a67d8;
-        }
-        
-        .btn-secondary {
-            background-color: #6c757d;
-        }
-        
-        .btn-secondary:hover {
-            background-color: #545b62;
-        }
-        
-        .alert {
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-        
-        .alert-info {
-            background-color: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
-        }
-        
-        .alert-success {
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-        }
-        
-        .alert-warning {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-        }
     </style>
-    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- Header Component -->

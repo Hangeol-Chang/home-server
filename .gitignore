@@ -220,6 +220,49 @@ modules/
 .repo/
 repo/
 
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# SvelteKit
+.build/
+.cache/
+.svelte-kit/
+
+# Production build
+public/build/
+
+# Environment files
+.env
+.env.*.local
+
+# Editor files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Optional npm cache
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+
 # 각 모듈 특수
 
 # asset-manager

@@ -1,10 +1,27 @@
 <script>
-	import '../app.css';
+	import favicon from '$lib/assets/favicon.svg';
+	import { routes } from '$lib/routes.js';
+	import Header from '$lib/components/Header.svelte';
+
 	let { children } = $props();
 </script>
 
-<svelte:head>
-	<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🏠</text></svg>" />
-</svelte:head>
+<Header />
 
-{@render children?.()}
+<nav class="menu">
+  {#each routes as r}
+    <a href={r.path}>{r.name}</a>
+  {/each}
+</nav>
+
+<main>
+  <render children={children}></render>	
+</main>
+
+<style>
+  .menu {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+  }
+</style>

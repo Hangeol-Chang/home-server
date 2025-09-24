@@ -5,10 +5,10 @@ const modules = import.meta.glob('../../../../modules/*/web/src/routes.js', { ea
 
 let allRoutes = [];
 for (const path in modules) {
-  const mod = modules[path];
-  if (mod.default) {
-    allRoutes = allRoutes.concat(mod.default);
-  }
+    const mod = modules[path];
+    if (mod.default) {
+        allRoutes = allRoutes.concat(mod.default);
+    }
 }
 
 export const routes = allRoutes;

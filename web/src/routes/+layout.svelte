@@ -9,19 +9,19 @@
 <Header />
 
 <nav class="menu">
-  {#each routes as r}
-    <a href={r.path}>{r.name}</a>
-  {/each}
+    {#each routes as r}
+        <a href={r.path}>{r.name}</a>
+    {/each}
 </nav>
 
 <main>
-  <render children={children}></render>	
+    {@render children()}
 </main>
 
 <style>
-  .menu {
-    display: flex;
-    gap: 1rem;
-    padding: 1rem;
-  }
+    .menu {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+    }
 </style>

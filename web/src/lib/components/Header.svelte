@@ -1,7 +1,11 @@
 <script>
 	import { routes } from '$lib/routes.js';
+	import { page } from '$app/stores';
+	import { signOut } from '@auth/sveltekit/client';
 	
-	let currentPath = '';
+	let { data } = $props();
+	
+	let currentPath = $state('');
 	
 	// 현재 페이지 경로를 감지 (클라이언트 사이드에서)
 	if (typeof window !== 'undefined') {
@@ -9,7 +13,7 @@
 	}
 </script>
 
-<header class="header">
+<header>
 	<div class="container">
 		<div class="nav-brand">
 			<h1><a href="/">Home Server</a></h1>
@@ -27,15 +31,29 @@
 						</a>
 					</li>
 				{/each}
+				
+				{#if data?.session?.user}
+					<li class="nav-item">
+						<div class="user-info">
+							<span class="user-email">{data.session.user.email}</span>
+							<button 
+								class="logout-btn"
+								onclick={() => signOut({ callbackUrl: '/auth/signin' })}
+							>
+								로그아웃
+							</button>
+						</div>
+					</li>
+				{/if}
 			</ul>
 		</nav>
 	</div>
 </header>
 
 <style>
-	.header {
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		color: white;
+	header {
+		background-color : rgba(255, 255, 255, 0.9);
+		color: black;
 		padding: 1rem 0;
 		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 		position: sticky;
@@ -92,6 +110,37 @@
 	.nav-link.active {
 		background: rgba(255, 255, 255, 0.2);
 		font-weight: 600;
+	}
+
+	.user-info {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-left: 1rem;
+		padding-left: 1rem;
+		border-left: 1px solid rgba(255, 255, 255, 0.2);
+	}
+
+	.user-email {
+		color: white;
+		font-size: 0.9rem;
+		opacity: 0.9;
+	}
+
+	.logout-btn {
+		padding: 0.4rem 0.8rem;
+		background: rgba(255, 255, 255, 0.1);
+		color: white;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 4px;
+		font-size: 0.85rem;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.logout-btn:hover {
+		background: rgba(255, 255, 255, 0.2);
+		border-color: rgba(255, 255, 255, 0.3);
 	}
 
 	@media (max-width: 768px) {

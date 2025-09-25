@@ -3,10 +3,10 @@
 	import { routes } from '$lib/routes.js';
 	import Header from '$lib/components/Header.svelte';
 
-	let { children } = $props();
+	let { children, data } = $props();
 </script>
 
-<Header />
+<Header {data} />
 
 <nav class="menu">
     {#each routes as r}

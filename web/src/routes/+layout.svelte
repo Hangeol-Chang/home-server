@@ -21,7 +21,5 @@
 <style>
     .menu {
         display: flex;
-        gap: 1rem;
-        padding: 1rem;
     }
 </style>

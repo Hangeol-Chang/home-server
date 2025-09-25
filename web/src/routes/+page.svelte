@@ -1,41 +1,18 @@
 <script>
 	import { onMount } from 'svelte';
+	import { useModules } from '$lib/stores/modules';
 	
 	let availableModules = $state([]);
 	let loading = $state(true);
 	
 	// 동적으로 모든 sub-module 발견
 	const moduleComponents = import.meta.glob('$modules/*/web/src/routes/+page.svelte');
-	const moduleRoutes = import.meta.glob('$modules/*/web/src/routes.js', { eager: true });
-	
+
 	onMount(() => {
-		// 모듈 정보 수집
-		const modules = [];
-		
-		for (const path in moduleComponents) {
-			const moduleName = path.split('/')[1];
-			const routePath = `$modules/${moduleName}/web/src/routes.js`;
-			
-			let moduleInfo = {
-				name: moduleName,
-				displayName: moduleName.charAt(0).toUpperCase() + moduleName.slice(1).replace(/-/g, ' '),
-				path: `/${moduleName}`,
-				routes: []
-			};
-			
-			// routes.js가 있으면 라우트 정보도 가져오기
-			if (moduleRoutes[routePath]) {
-				const routeData = moduleRoutes[routePath];
-				if (routeData.default && Array.isArray(routeData.default)) {
-					moduleInfo.routes = routeData.default;
-				}
-			}
-			
-			modules.push(moduleInfo);
-		}
-		
-		availableModules = modules;
-		loading = false;
+		useModules().subscribe(modules => {
+			availableModules = modules;
+			loading = false;
+		});
 	});
 </script>
 

@@ -23,6 +23,13 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 			clientSecret: env.GOOGLE_CLIENT_SECRET,
 		})
 	],
+	session: {
+		strategy: "jwt",
+		maxAge: 24 * 60 * 60, // 24시간 (초 단위)
+	},
+	jwt: {
+		maxAge: 24 * 60 * 60, // 24시간 (초 단위)
+	},
 	callbacks: {
 		async signIn({ user, account, profile }) {
 			console.log('SignIn attempt for:', user.email);
@@ -36,11 +43,20 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 			return false;
 		},
 		async session({ session, token }) {
+			// 토큰의 만료 시간을 확인
+			if (token.exp && Date.now() >= token.exp * 1000) {
+				console.log('Session expired, forcing re-login');
+				return null; // 세션 만료 시 null 반환하여 재로그인 유도
+			}
 			return session;
 		},
-		async jwt({ token, user }) {
+		async jwt({ token, user, account }) {
 			if (user) {
 				token.email = user.email;
+				// 토큰 발급 시간과 만료 시간 설정
+				const now = Math.floor(Date.now() / 1000);
+				token.iat = now; // issued at
+				token.exp = now + (24 * 60 * 60); // 24시간 후 만료
 			}
 			return token;
 		},
@@ -61,6 +77,16 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 	basePath: '/auth',
 	secret: env.AUTH_SECRET,
 	cookies: {
+		sessionToken: {
+			name: `authjs.session-token`,
+			options: {
+				httpOnly: true,
+				sameSite: 'lax',
+				path: '/',
+				secure: false, // 개발 환경에서는 false
+				maxAge: 24 * 60 * 60 // 24시간 (초 단위)
+			}
+		},
 		pkceCodeVerifier: {
 			name: "authjs.pkce.code_verifier",
 			options: {

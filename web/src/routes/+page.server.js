@@ -8,7 +8,14 @@ export const load = async (event) => {
 		throw redirect(302, '/auth/signin')
 	}
 	
+	// 세션 만료 체크 (추가 보안)
+	if (session.expires && new Date(session.expires) < new Date()) {
+		console.log('Session expired, redirecting to login');
+		throw redirect(302, '/auth/signin')
+	}
+	
 	return {
-		user: session.user
+		user: session.user,
+		sessionExpires: session.expires
 	}
 }

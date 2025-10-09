@@ -1,70 +1,134 @@
-#!/usr/bin/env python3
-"""
-Home Server 메인 엔트리 포인트
-통합 FastAPI 서버 실행 및 서브모듈 관리
-"""
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Optional
+import uvicorn
 
-import os
-import sys
+# FastAPI 앱 인스턴스 생성
+app = FastAPI(
+    title="Home Server API",
+    description="간단한 FastAPI 백엔드 서버 예제",
+    version="1.0.0"
+)
 
-# 프로젝트 경로 설정
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(current_dir))
-sys.path.append(project_root)
-sys.path.append(current_dir)
+# CORS 미들웨어 추가 (프론트엔드에서 접근할 수 있도록)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 개발 환경에서는 모든 도메인 허용
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# 로컬 모듈 import
-from core.app_config import create_app, setup_static_files, add_main_routes
-from modules.submodule_manager import SubmoduleManager
-from utils.server_runner import ServerRunner, get_server_config
+# 간단한 데이터 모델 정의
+class Item(BaseModel):
+    id: Optional[int] = None
+    name: str
+    description: Optional[str] = None
+    price: float
 
-def initialize_application():
-    """애플리케이션 초기화"""
-    print("🏠 Home Server 통합 시스템 초기화 중...")
-    
-    # FastAPI 앱 생성
-    app = create_app()
-    
-    # 정적 파일 설정
-    setup_static_files(app, current_dir)
-    
-    # 메인 라우트 추가
-    add_main_routes(app, current_dir, project_root)
-    
-    # 서브모듈 매니저 초기화
-    submodule_manager = SubmoduleManager(app, project_root)
-    
-    # 모든 서브모듈 등록
-    submodule_manager.register_all_modules()
-    
-    print("✅ 모든 모듈 로딩 완료!")
-    
-    return app, submodule_manager
+class User(BaseModel):
+    id: Optional[int] = None
+    username: str
+    email: str
 
-def main():
-    """메인 실행 함수"""
-    # 애플리케이션 초기화
-    app, submodule_manager = initialize_application()
-    
-    # 서버 설정 로드
-    config = get_server_config()
-    
-    # 서버 실행
-    server_runner = ServerRunner(app, submodule_manager)
-    
-    if config["debug"]:
-        server_runner.run_development_server(
-            host=config["host"], 
-            port=config["port"]
-        )
-    else:
-        server_runner.run_production_server(
-            host=config["host"], 
-            port=config["port"]
-        )
+# 메모리에 저장할 임시 데이터
+items_db = []
+users_db = []
+next_item_id = 1
+next_user_id = 1
 
-# 전역 변수로 app 노출 (uvicorn reload용)
-app, submodule_manager = initialize_application()
+# 기본 라우트
+@app.get("/")
+async def root():
+    """서버 상태 확인용 기본 엔드포인트"""
+    return {
+        "message": "FastAPI 홈 서버가 실행 중입니다!",
+        "status": "running",
+        "docs": "/docs"
+    }
+
+# 헬스 체크
+@app.get("/health")
+async def health_check():
+    """서버 헬스 체크"""
+    return {"status": "healthy"}
+
+# Items CRUD 엔드포인트들
+@app.get("/items", response_model=List[Item])
+async def get_items():
+    """모든 아이템 조회"""
+    return items_db
+
+@app.get("/items/{item_id}", response_model=Item)
+async def get_item(item_id: int):
+    """특정 아이템 조회"""
+    for item in items_db:
+        if item["id"] == item_id:
+            return item
+    raise HTTPException(status_code=404, detail="아이템을 찾을 수 없습니다")
+
+@app.post("/items", response_model=Item)
+async def create_item(item: Item):
+    """새 아이템 생성"""
+    global next_item_id
+    item_dict = item.dict()
+    item_dict["id"] = next_item_id
+    next_item_id += 1
+    items_db.append(item_dict)
+    return item_dict
+
+@app.put("/items/{item_id}", response_model=Item)
+async def update_item(item_id: int, item: Item):
+    """아이템 수정"""
+    for i, existing_item in enumerate(items_db):
+        if existing_item["id"] == item_id:
+            item_dict = item.dict()
+            item_dict["id"] = item_id
+            items_db[i] = item_dict
+            return item_dict
+    raise HTTPException(status_code=404, detail="아이템을 찾을 수 없습니다")
+
+@app.delete("/items/{item_id}")
+async def delete_item(item_id: int):
+    """아이템 삭제"""
+    for i, item in enumerate(items_db):
+        if item["id"] == item_id:
+            deleted_item = items_db.pop(i)
+            return {"message": "아이템이 삭제되었습니다", "deleted_item": deleted_item}
+    raise HTTPException(status_code=404, detail="아이템을 찾을 수 없습니다")
+
+# Users CRUD 엔드포인트들
+@app.get("/users", response_model=List[User])
+async def get_users():
+    """모든 사용자 조회"""
+    return users_db
+
+@app.post("/users", response_model=User)
+async def create_user(user: User):
+    """새 사용자 생성"""
+    global next_user_id
+    user_dict = user.dict()
+    user_dict["id"] = next_user_id
+    next_user_id += 1
+    users_db.append(user_dict)
+    return user_dict
+
+# 검색 엔드포인트
+@app.get("/items/search/{query}")
+async def search_items(query: str):
+    """아이템 이름으로 검색"""
+    results = []
+    for item in items_db:
+        if query.lower() in item["name"].lower():
+            results.append(item)
+    return {"query": query, "results": results}
 
 if __name__ == "__main__":
-    main()
+    # 서버 실행 (개발 환경)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True  # 코드 변경 시 자동 재시작
+    )

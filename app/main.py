@@ -4,6 +4,9 @@ from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
 
+# 라우터 임포트
+from routers import asset_manager, schedule_manager
+
 # FastAPI 앱 인스턴스 생성
 app = FastAPI(
     title="Home Server API",
@@ -19,6 +22,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 라우터 등록
+app.include_router(asset_manager.router)
+app.include_router(schedule_manager.router)
 
 # 간단한 데이터 모델 정의
 class Item(BaseModel):
@@ -45,7 +52,11 @@ async def root():
     return {
         "message": "FastAPI 홈 서버가 실행 중입니다!",
         "status": "running",
-        "docs": "/docs"
+        "docs": "/docs",
+        "modules": {
+            "asset_manager": "/asset-manager",
+            "schedule_manager": "/schedule-manager"
+        }
     }
 
 # 헬스 체크
@@ -53,56 +64,6 @@ async def root():
 async def health_check():
     """서버 헬스 체크"""
     return {"status": "healthy"}
-
-# Items CRUD 엔드포인트들
-@app.get("/items", response_model=List[Item])
-async def get_items():
-    """모든 아이템 조회"""
-    return items_db
-
-@app.get("/items/{item_id}", response_model=Item)
-async def get_item(item_id: int):
-    """특정 아이템 조회"""
-    for item in items_db:
-        if item["id"] == item_id:
-            return item
-    raise HTTPException(status_code=404, detail="아이템을 찾을 수 없습니다")
-
-@app.post("/items", response_model=Item)
-async def create_item(item: Item):
-    """새 아이템 생성"""
-    global next_item_id
-    item_dict = item.dict()
-    item_dict["id"] = next_item_id
-    next_item_id += 1
-    items_db.append(item_dict)
-    return item_dict
-
-@app.put("/items/{item_id}", response_model=Item)
-async def update_item(item_id: int, item: Item):
-    """아이템 수정"""
-    for i, existing_item in enumerate(items_db):
-        if existing_item["id"] == item_id:
-            item_dict = item.dict()
-            item_dict["id"] = item_id
-            items_db[i] = item_dict
-            return item_dict
-    raise HTTPException(status_code=404, detail="아이템을 찾을 수 없습니다")
-
-@app.delete("/items/{item_id}")
-async def delete_item(item_id: int):
-    """아이템 삭제"""
-    for i, item in enumerate(items_db):
-        if item["id"] == item_id:
-            deleted_item = items_db.pop(i)
-            return {"message": "아이템이 삭제되었습니다", "deleted_item": deleted_item}
-    raise HTTPException(status_code=404, detail="아이템을 찾을 수 없습니다")
-
-# Users CRUD 엔드포인트들
-@app.get("/users", response_model=List[User])
-async def get_users():
-    """모든 사용자 조회"""
-    return users_db
 
 @app.post("/users", response_model=User)
 async def create_user(user: User):
@@ -129,6 +90,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=5005,
         reload=True  # 코드 변경 시 자동 재시작
     )

@@ -1,11 +1,22 @@
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
+from dotenv import load_dotenv
+from pathlib import Path
 
 # 라우터 임포트
-from routers import asset_manager, schedule_manager
+from modules import asset_manager, schedule_manager
+
+
+# .env load 예시
+env_dir = Path(__file__).resolve().parent / "env"
+load_dotenv(env_dir / ".env")
+
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
 
 # FastAPI 앱 인스턴스 생성
 app = FastAPI(

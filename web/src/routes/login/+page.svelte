@@ -1,5 +1,6 @@
 <script>
 	import { signIn } from '@auth/sveltekit/client';
+	import fbLogo from '$lib/assets/fb_logo.png';
 
 	let error = '';
 	
@@ -21,13 +22,15 @@
 </svelte:head>
 
 <div class="login-container">
+	<div class="login-background"></div>
 	<div class="login-card">
-		<h1>🏠 Home Server</h1>
-		<p class="subtitle">허가된 사용자만 접근할 수 있습니다</p>
+		<img src={fbLogo} alt="Logo" class="logo" />
+		<h1 class="maintitle">Flour Biscuit</h1>
+		<h2 class="subtitle">Home-Server</h2>
 
 		{#if error}
 			<div class="error-message">
-				⚠️ {error}
+				{error}
 			</div>
 		{/if}
 
@@ -52,14 +55,6 @@
 			</svg>
 			<span>Google로 로그인</span>
 		</button>
-
-		<div class="info">
-			<p>
-				<strong>안내:</strong><br />
-				등록된 Google 계정으로만 로그인할 수 있습니다.<br />
-				접근 권한이 필요한 경우 관리자에게 문의하세요.
-			</p>
-		</div>
 	</div>
 </div>
 
@@ -69,8 +64,25 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		padding: 20px;
+		margin: -20px;
+		position: relative;
+	}
+
+	.login-background {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(30deg, var(--bg-tertiary), var(--bg-secondary));
+		filter: brightness(0.8);
+		z-index: -1;
+	}
+
+	.logo {
+		width: 80px;
+		height: 80px;
+		margin-bottom: 4px;
 	}
 
 	.login-card {
@@ -81,18 +93,19 @@
 		width: 100%;
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 		text-align: center;
+
+		background-color: var(--bg-primary);
 	}
 
 	h1 {
-		margin: 0 0 12px 0;
 		font-size: 2.5rem;
 		color: #333;
 	}
 
 	.subtitle {
-		margin: 0 0 32px 0;
+		margin: 0 0 20px 0;
 		color: #666;
-		font-size: 1rem;
+		font-size: 1.4rem;
 	}
 
 	.error-message {
@@ -131,22 +144,5 @@
 
 	.google-signin-btn:active {
 		transform: translateY(0);
-	}
-
-	.info {
-		margin-top: 32px;
-		padding-top: 24px;
-		border-top: 1px solid #eee;
-	}
-
-	.info p {
-		margin: 0;
-		color: #666;
-		font-size: 0.85rem;
-		line-height: 1.6;
-	}
-
-	.info strong {
-		color: #333;
 	}
 </style>

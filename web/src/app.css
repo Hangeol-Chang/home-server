@@ -1,0 +1,84 @@
+/* Color Theme Variables */
+/* https://digitalsynopsis.com/design/minimal-web-color-palettes-combination-hex-code/ */
+:root {
+	/* Primary Colors - 밝은 순서 */
+	--color-lightest: #E5FCC2; 
+	--color-light: #9DE0AD; 
+	--color-medium: #45ADA8;
+	--color-dark: #547980; 
+	--color-darkest: #594F4F;
+
+	/* Darker/Lighter variants (10% 단위) */
+	--color-lightest-darker: color-mix(in srgb, var(--color-lightest) 90%, black);
+	--color-light-darker: color-mix(in srgb, var(--color-light) 90%, black);
+	--color-medium-darker: color-mix(in srgb, var(--color-medium) 90%, black);
+	--color-dark-darker: color-mix(in srgb, var(--color-dark) 90%, black);
+	--color-darkest-darker: color-mix(in srgb, var(--color-darkest) 90%, black);
+
+	--color-lightest-lighter: color-mix(in srgb, var(--color-lightest) 90%, white);
+	--color-light-lighter: color-mix(in srgb, var(--color-light) 90%, white);
+	--color-medium-lighter: color-mix(in srgb, var(--color-medium) 90%, white);
+	--color-dark-lighter: color-mix(in srgb, var(--color-dark) 90%, white);
+
+	/* Semantic Colors - 용도별 */
+	--bg-primary: #ffffff; /* 기본 배경 */
+	--bg-secondary: var(--color-lightest); /* 보조 배경 */
+	--bg-tertiary: var(--color-light); /* 3차 배경 */
+
+	--text-primary: var(--color-darkest); /* 주요 텍스트 */
+	--text-secondary: var(--color-dark); /* 보조 텍스트 */
+	--text-tertiary: var(--color-medium); /* 3차 텍스트 */
+
+	--border-color: var(--color-light); /* 테두리 */
+	--border-color-dark: var(--color-medium); /* 진한 테두리 */
+
+	--button-bg: var(--color-medium); /* 버튼 배경 */
+	--button-hover: var(--color-medium-darker); /* 버튼 hover */
+	--button-text: #ffffff; /* 버튼 텍스트 */
+
+	--accent: var(--color-medium); /* 강조색 */
+	--accent-hover: var(--color-dark); /* 강조색 hover */
+
+	/* Shadow */
+	--shadow-sm: 0 1px 2px rgba(64, 35, 19, 0.05);
+	--shadow-md: 0 4px 6px rgba(64, 35, 19, 0.1);
+	--shadow-lg: 0 10px 15px rgba(64, 35, 19, 0.15);
+}
+
+/* 전역 스타일 */
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue',
+		'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji',
+		'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+	font-size: 16px;
+	line-height: 1.6;
+	color: var(--text-primary);
+	background-color: var(--bg-primary);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-weight: 700;
+	line-height: 1.3;
+	color: var(--text-primary);
+}
+
+button,
+input,
+textarea,
+select {
+	font-family: inherit;
+}

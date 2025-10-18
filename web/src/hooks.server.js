@@ -6,9 +6,7 @@ import { redirect } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import { sequence } from '@sveltejs/kit/hooks';
 
-// 개발 환경에서 AUTH_SECRET이 없으면 자동 생성
 const secret = AUTH_SECRET;
-
 if (!secret) {
 	throw new Error('AUTH_SECRET 환경 변수가 설정되지 않았습니다. 프로덕션 환경에서는 필수입니다.');
 }

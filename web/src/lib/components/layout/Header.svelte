@@ -26,7 +26,9 @@
 	<header class="app-header">
 		<div class="header-content">
 			<div class="logo">
-				<span class="app-title">Home Server</span>
+				<a href="/" style="text-decoration: none;">
+					<span class="app-title">Home Server</span>
+				</a>
 			</div>
 
 			<div class="profile-menu">

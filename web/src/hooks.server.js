@@ -20,6 +20,22 @@ const { handle: authHandle } = SvelteKitAuth({
 	],
 	secret,
 	trustHost: true,
+	session: {
+		strategy: 'jwt',
+		maxAge: 24 * 60 * 60 // 24시간 (초 단위)
+	},
+	cookies: {
+		sessionToken: {
+			name: 'authjs.session-token',
+			options: {
+				httpOnly: true,
+				sameSite: 'lax',
+				path: '/',
+				secure: !dev, // 프로덕션에서만 secure
+				maxAge: 24 * 60 * 60 // 24시간 (초 단위)
+			}
+		}
+	},
 	callbacks: {
 		async signIn({ user, account, profile }) {
 			// 이메일이 허용된 목록에 있는지 확인

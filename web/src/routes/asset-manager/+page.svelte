@@ -1,75 +1,73 @@
 <script>
-	import Dashboard from './dashboard.svelte';
+	import TransactionForm from '$lib/components/asset-manager/TransactionForm.svelte';
+	import MonthlyReport from '$lib/components/asset-manager/MonthlyReport.svelte';
+	import StatisticsChart from '$lib/components/asset-manager/StatisticsChart.svelte';
+	import { getTransactions, deleteTransaction } from '$lib/api/asset-manager.js';
+	import { onMount } from 'svelte';
 
-	// 더미 거래 데이터
-	const transactions = [
-		{
-			id: 1,
-			name: '스타벅스 아메리카노',
-			category: '식비',
-			amount: 4500,
-			type: 'expense',
-			date: '2025-10-21',
-			time: '14:30',
-			memo: '점심 후 커피'
-		},
-		{
-			id: 2,
-			name: 'GS25 편의점',
-			category: '식비',
-			amount: 12000,
-			type: 'expense',
-			date: '2025-10-21',
-			time: '09:15',
-			memo: '아침식사'
-		},
-		{
-			id: 3,
-			name: '월급',
-			category: '급여',
-			amount: 3000000,
-			type: 'income',
-			date: '2025-10-20',
-			time: '09:00',
-			memo: '10월 급여'
-		},
-		{
-			id: 4,
-			name: '쿠팡 쇼핑',
-			category: '쇼핑',
-			amount: 89000,
-			type: 'expense',
-			date: '2025-10-19',
-			time: '22:30',
-			memo: '생필품 구매'
-		},
-		{
-			id: 5,
-			name: '카카오 T 택시',
-			category: '교통',
-			amount: 8500,
-			type: 'expense',
-			date: '2025-10-19',
-			time: '18:20',
-			memo: '퇴근 택시'
-		},
-		{
-			id: 6,
-			name: '프리랜서 수입',
-			category: '부수입',
-			amount: 500000,
-			type: 'income',
-			date: '2025-10-18',
-			time: '15:00',
-			memo: '사이드 프로젝트'
-		}
+	// 상태 관리
+	let isFormOpen = $state(false);
+	let transactions = $state([]);
+	let loading = $state(true);
+	let error = $state('');
+
+	// 필터
+	let selectedClass = $state(null); // null=전체, 1=지출, 2=수익, 3=저축
+	let currentYear = $state(new Date().getFullYear());
+	let currentMonth = $state(new Date().getMonth() + 1);
+
+	// 날짜 범위 계산
+	const startDate = $derived(`${currentYear}-${String(currentMonth).padStart(2, '0')}-01`);
+	const endDate = $derived(() => {
+		const lastDay = new Date(currentYear, currentMonth, 0).getDate();
+		return `${currentYear}-${String(currentMonth).padStart(2, '0')}-${lastDay}`;
+	});
+
+	const classTypes = [
+		{ id: null, name: 'all', label: '전체', color: '#6366f1', icon: '📊' },
+		{ id: 1, name: 'spend', label: '지출', color: '#f44336', icon: '💸' },
+		{ id: 2, name: 'earn', label: '수익', color: '#4caf50', icon: '💰' },
+		{ id: 3, name: 'save', label: '저축', color: '#2196f3', icon: '🏦' }
 	];
 
-	let selectedType = $state('전체');
-	let selectedCategory = $state('전체');
-	
-	const types = ['전체', '지출', '수입'];
-	const categories = ['전체', '식비', '교통', '쇼핑', '급여', '부수입', '기타'];
+	onMount(async () => {
+		await loadTransactions();
+	});
+
+	async function loadTransactions() {
+		loading = true;
+		error = '';
+		try {
+			const filters = {
+				start_date: startDate,
+				end_date: endDate(),
+				limit: 100
+			};
+			if (selectedClass) {
+				filters.class_id = selectedClass;
+			}
+			transactions = await getTransactions(filters);
+		} catch (err) {
+			error = '거래 내역을 불러오는데 실패했습니다: ' + err.message;
+		} finally {
+			loading = false;
+		}
+	}
+
+	async function handleDeleteTransaction(transactionId) {
+		if (!confirm('이 거래를 삭제하시겠습니까?')) return;
+
+		try {
+			await deleteTransaction(transactionId);
+			await loadTransactions();
+		} catch (err) {
+			alert('삭제 실패: ' + err.message);
+		}
+	}
+
+	async function handleTransactionSuccess() {
+		await loadTransactions();
+	}
 
 	function formatCurrency(value) {
 		return new Intl.NumberFormat('ko-KR').format(value) + '원';
@@ -77,18 +75,28 @@
 
 	function formatDate(dateStr) {
 		const date = new Date(dateStr);
-		return date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+		return date.toLocaleDateString('ko-KR', {
+			month: 'long',
+			day: 'numeric',
+			weekday: 'short'
+		});
 	}
 
-	const filteredTransactions = $derived(
-		transactions.filter((t) => {
-			const typeMatch = selectedType === '전체' || 
-				(selectedType === '지출' && t.type === 'expense') ||
-				(selectedType === '수입' && t.type === 'income');
-			const categoryMatch = selectedCategory === '전체' || t.category === selectedCategory;
-			return typeMatch && categoryMatch;
-		})
-	);
+	function changeMonth(delta) {
+		currentMonth += delta;
+		if (currentMonth > 12) {
+			currentMonth = 1;
+			currentYear += 1;
+		} else if (currentMonth < 1) {
+			currentMonth = 12;
+			currentYear -= 1;
+		}
+	}
+
+	// 필터 변경 시 자동 로드
+	$effect(() => {
+		loadTransactions();
+	});
 </script>
 
 <svelte:head>
@@ -96,101 +104,152 @@
 </svelte:head>
 
 <div class="asset-manager-page">
+	<!-- 헤더 -->
 	<header class="page-header">
 		<h1>💰 가계부</h1>
-		<div class="header-actions">
-			<button class="add-btn income">
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<line x1="12" y1="5" x2="12" y2="19" />
-					<line x1="5" y1="12" x2="19" y2="12" />
-				</svg>
-				수입 추가
-			</button>
-			<button class="add-btn expense">
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<line x1="12" y1="5" x2="12" y2="19" />
-					<line x1="5" y1="12" x2="19" y2="12" />
-				</svg>
-				지출 추가
-			</button>
-		</div>
+		<button
+			class="add-btn"
+			onclick={() => (isFormOpen = !isFormOpen)}
+		>
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<line x1="12" y1="5" x2="12" y2="19" />
+				<line x1="5" y1="12" x2="19" y2="12" />
+			</svg>
+			{isFormOpen ? '닫기' : '거래 등록'}
+		</button>
 	</header>
 
-	<!-- Dashboard 컴포넌트 삽입 -->
-	<section class="dashboard-section">
-		<Dashboard />
-	</section>
+	<!-- 거래 등록 폼 -->
+	<TransactionForm bind:isOpen={isFormOpen} onSuccess={handleTransactionSuccess} />
 
-	<!-- 거래 내역 -->
+	<!-- 월 선택 -->
+	<div class="month-selector">
+		<button class="month-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<polyline points="15 18 9 12 15 6"></polyline>
+			</svg>
+		</button>
+		<h2 class="current-month">{currentYear}년 {currentMonth}월</h2>
+		<button class="month-btn" onclick={() => changeMonth(1)} aria-label="다음 달">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<polyline points="9 18 15 12 9 6"></polyline>
+			</svg>
+		</button>
+	</div>
+
+	<!-- 월간 리포트 -->
+	<MonthlyReport year={currentYear} month={currentMonth} />
+
+	<!-- 거래 분류 필터 -->
+	<div class="class-filter">
+		{#each classTypes as classType}
+			<button
+				class="filter-btn"
+				class:active={selectedClass === classType.id}
+				style="--class-color: {classType.color}"
+				onclick={() => (selectedClass = classType.id)}
+			>
+				<span class="filter-icon">{classType.icon}</span>
+				<span>{classType.label}</span>
+			</button>
+		{/each}
+	</div>
+
+	<!-- 통계 차트 (지출만) -->
+	{#if selectedClass === 1}
+		<StatisticsChart
+			classId={1}
+			startDate={startDate}
+			endDate={endDate()}
+		/>
+	{:else if selectedClass === 2}
+		<StatisticsChart
+			classId={2}
+			startDate={startDate}
+			endDate={endDate()}
+		/>
+	{:else if selectedClass === 3}
+		<StatisticsChart
+			classId={3}
+			startDate={startDate}
+			endDate={endDate()}
+		/>
+	{/if}
+
+	<!-- 거래 내역 리스트 -->
 	<section class="transactions-section">
 		<div class="section-header">
 			<h2>거래 내역</h2>
-			<div class="filters">
-				<div class="type-filter">
-					{#each types as type}
-						<button
-							class="filter-btn"
-							class:active={selectedType === type}
-							onclick={() => (selectedType = type)}
-						>
-							{type}
-						</button>
-					{/each}
-				</div>
-				<div class="category-filter">
-					{#each categories as category}
-						<button
-							class="filter-btn"
-							class:active={selectedCategory === category}
-							onclick={() => (selectedCategory = category)}
-						>
-							{category}
-						</button>
-					{/each}
-				</div>
+			<span class="transaction-count">{transactions.length}건</span>
+		</div>
+
+		{#if loading}
+			<div class="loading">
+				<div class="spinner"></div>
+				<p>거래 내역을 불러오는 중...</p>
 			</div>
-		</div>
-
-		<div class="transactions-list">
-			{#each filteredTransactions as transaction (transaction.id)}
-				<div class="transaction-card" class:income={transaction.type === 'income'}>
-					<div class="transaction-main">
-						<div class="transaction-icon">
-							{transaction.type === 'income' ? '💰' : '💸'}
-						</div>
-						<div class="transaction-info">
-							<h3 class="transaction-name">{transaction.name}</h3>
-							<div class="transaction-meta">
-								<span class="transaction-category">{transaction.category}</span>
-								<span class="transaction-date">{formatDate(transaction.date)} {transaction.time}</span>
+		{:else if error}
+			<div class="error">
+				<p>⚠️ {error}</p>
+				<button class="retry-btn" onclick={loadTransactions}>다시 시도</button>
+			</div>
+		{:else if transactions.length > 0}
+			<div class="transactions-list">
+				{#each transactions as transaction (transaction.id)}
+					<div
+						class="transaction-card"
+						class:income={transaction.class_name === 'earn'}
+						class:expense={transaction.class_name === 'spend'}
+						class:save={transaction.class_name === 'save'}
+					>
+						<div class="transaction-main">
+							<div class="transaction-icon">
+								{#if transaction.class_name === 'earn'}
+									💰
+								{:else if transaction.class_name === 'spend'}
+									💸
+								{:else}
+									🏦
+								{/if}
 							</div>
-							{#if transaction.memo}
-								<p class="transaction-memo">{transaction.memo}</p>
-							{/if}
+							<div class="transaction-info">
+								<h3 class="transaction-name">{transaction.name}</h3>
+								<div class="transaction-meta">
+									<span class="transaction-class">{transaction.class_display_name}</span>
+									<span class="transaction-category">{transaction.category_display_name}</span>
+									<span class="transaction-tier">{transaction.tier_display_name}</span>
+								</div>
+								<div class="transaction-date">{formatDate(transaction.date)}</div>
+								{#if transaction.description}
+									<p class="transaction-memo">{transaction.description}</p>
+								{/if}
+							</div>
+							<div
+								class="transaction-amount"
+								class:income={transaction.class_name === 'earn'}
+								class:expense={transaction.class_name === 'spend'}
+								class:save={transaction.class_name === 'save'}
+							>
+								{transaction.class_name === 'earn' ? '+' : '-'}{formatCurrency(transaction.cost)}
+							</div>
 						</div>
-						<div class="transaction-amount" class:income={transaction.type === 'income'}>
-							{transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+						<div class="transaction-actions">
+							<button
+								class="icon-btn danger"
+								onclick={() => handleDeleteTransaction(transaction.id)}
+								title="삭제"
+								aria-label="거래 삭제"
+							>
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="3 6 5 6 21 6" />
+									<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+								</svg>
+							</button>
 						</div>
 					</div>
-					<div class="transaction-actions">
-						<button class="icon-btn" title="수정">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-								<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-								<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-							</svg>
-						</button>
-						<button class="icon-btn danger" title="삭제">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-								<polyline points="3 6 5 6 21 6" />
-								<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-							</svg>
-						</button>
-					</div>
-				</div>
-			{/each}
-		</div>
-
-		{#if filteredTransactions.length === 0}
+				{/each}
+			</div>
+		{:else}
 			<div class="empty-state">
 				<svg
 					width="64"
@@ -201,10 +260,12 @@
 					stroke-width="1.5"
 				>
 					<rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-					<line x1="9" y1="9" x2="15" y2="15" />
-					<line x1="15" y1="9" x2="9" y2="15" />
+					<line x1="3" y1="9" x2="21" y2="9" />
 				</svg>
-				<p>해당 카테고리에 자산이 없습니다.</p>
+				<p>이 기간에 거래 내역이 없습니다</p>
+				<button class="cta-btn" onclick={() => (isFormOpen = true)}>
+					첫 거래 등록하기
+				</button>
 			</div>
 		{/if}
 	</section>
@@ -230,48 +291,102 @@
 		color: var(--text-primary);
 	}
 
-	.header-actions {
-		display: flex;
-		gap: 12px;
-	}
-
 	.add-btn {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		padding: 12px 20px;
+		padding: 12px 24px;
+		background: var(--accent);
+		color: white;
 		border: none;
 		border-radius: 8px;
-		font-size: 0.95rem;
+		font-size: 1rem;
 		font-weight: 600;
 		cursor: pointer;
 		transition: all 0.2s;
 	}
 
-	.add-btn.income {
-		background: #4caf50;
-		color: white;
-	}
-
-	.add-btn.income:hover {
-		background: #45a049;
+	.add-btn:hover {
+		background: #4f46e5;
 		transform: translateY(-2px);
-		box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+		box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 	}
 
-	.add-btn.expense {
-		background: #f44336;
-		color: white;
+	.month-selector {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 24px;
+		margin-bottom: 32px;
+		padding: 16px;
+		background: var(--bg-secondary);
+		border-radius: 12px;
 	}
 
-	.add-btn.expense:hover {
-		background: #e53935;
+	.month-btn {
+		background: var(--bg-primary);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		padding: 8px 12px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.2s;
+		color: var(--text-primary);
+	}
+
+	.month-btn:hover {
+		background: var(--bg-tertiary);
+		transform: scale(1.1);
+	}
+
+	.current-month {
+		margin: 0;
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		min-width: 180px;
+		text-align: center;
+	}
+
+	.class-filter {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 12px;
+		margin-bottom: 32px;
+	}
+
+	.filter-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		padding: 16px;
+		background: var(--bg-secondary);
+		border: 2px solid var(--border-color);
+		border-radius: 10px;
+		cursor: pointer;
+		font-size: 1rem;
+		font-weight: 600;
+		transition: all 0.2s;
+		color: var(--text-secondary);
+	}
+
+	.filter-btn:hover {
+		background: var(--bg-tertiary);
 		transform: translateY(-2px);
-		box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
 	}
 
-	.dashboard-section {
-		margin-bottom: 40px;
+	.filter-btn.active {
+		background: var(--class-color);
+		color: white;
+		border-color: var(--class-color);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+
+	.filter-icon {
+		font-size: 1.5rem;
 	}
 
 	.transactions-section {
@@ -282,9 +397,7 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 24px;
-		flex-wrap: wrap;
-		gap: 16px;
+		margin-bottom: 20px;
 	}
 
 	.section-header h2 {
@@ -293,31 +406,50 @@
 		color: var(--text-primary);
 	}
 
-	.category-filter {
-		display: flex;
-		gap: 8px;
-		flex-wrap: wrap;
-	}
-
-	.filter-btn {
-		padding: 8px 16px;
+	.transaction-count {
+		padding: 6px 16px;
 		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		color: var(--text-secondary);
+		border-radius: 20px;
 		font-size: 0.9rem;
-		cursor: pointer;
-		transition: all 0.2s;
+		font-weight: 600;
+		color: var(--text-secondary);
 	}
 
-	.filter-btn:hover {
-		background: var(--bg-tertiary);
+	.loading,
+	.error {
+		text-align: center;
+		padding: 60px 20px;
 	}
 
-	.filter-btn.active {
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 4px solid var(--border-color);
+		border-top-color: var(--accent);
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+		margin: 0 auto 16px;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.error p {
+		color: #f44336;
+		margin-bottom: 16px;
+	}
+
+	.retry-btn {
+		padding: 10px 20px;
 		background: var(--accent);
 		color: white;
-		border-color: var(--accent);
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		font-weight: 600;
 	}
 
 	.transactions-list {
@@ -329,14 +461,22 @@
 	.transaction-card {
 		background: var(--bg-primary);
 		border: 1px solid var(--border-color);
-		border-left: 4px solid #f44336;
+		border-left: 4px solid #6366f1;
 		border-radius: 8px;
 		padding: 16px 20px;
 		transition: all 0.2s;
 	}
 
+	.transaction-card.expense {
+		border-left-color: #f44336;
+	}
+
 	.transaction-card.income {
 		border-left-color: #4caf50;
+	}
+
+	.transaction-card.save {
+		border-left-color: #2196f3;
 	}
 
 	.transaction-card:hover {
@@ -364,21 +504,24 @@
 	.transaction-name {
 		margin: 0 0 8px 0;
 		font-size: 1.1rem;
+		font-weight: 600;
 		color: var(--text-primary);
 	}
 
 	.transaction-meta {
 		display: flex;
-		gap: 12px;
-		align-items: center;
-		margin-bottom: 4px;
+		gap: 8px;
+		flex-wrap: wrap;
+		margin-bottom: 6px;
 	}
 
-	.transaction-category {
-		padding: 2px 10px;
+	.transaction-class,
+	.transaction-category,
+	.transaction-tier {
+		padding: 3px 10px;
 		background: var(--bg-tertiary);
 		border-radius: 12px;
-		font-size: 0.8rem;
+		font-size: 0.75rem;
 		font-weight: 500;
 		color: var(--text-secondary);
 	}
@@ -386,6 +529,7 @@
 	.transaction-date {
 		font-size: 0.85rem;
 		color: var(--text-tertiary);
+		margin-top: 4px;
 	}
 
 	.transaction-memo {
@@ -398,12 +542,19 @@
 	.transaction-amount {
 		font-size: 1.5rem;
 		font-weight: 700;
-		color: #f44336;
 		white-space: nowrap;
+	}
+
+	.transaction-amount.expense {
+		color: #f44336;
 	}
 
 	.transaction-amount.income {
 		color: #4caf50;
+	}
+
+	.transaction-amount.save {
+		color: #2196f3;
 	}
 
 	.transaction-actions {
@@ -438,18 +589,36 @@
 
 	.empty-state {
 		text-align: center;
-		padding: 60px 20px;
+		padding: 80px 20px;
 		color: var(--text-tertiary);
 	}
 
 	.empty-state svg {
-		margin-bottom: 16px;
+		margin-bottom: 24px;
 		opacity: 0.3;
 	}
 
 	.empty-state p {
-		margin: 0;
+		margin: 0 0 24px 0;
+		font-size: 1.1rem;
+	}
+
+	.cta-btn {
+		padding: 12px 24px;
+		background: var(--accent);
+		color: white;
+		border: none;
+		border-radius: 8px;
 		font-size: 1rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.cta-btn:hover {
+		background: #4f46e5;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 	}
 
 	@media (max-width: 768px) {
@@ -459,9 +628,13 @@
 			gap: 16px;
 		}
 
-		.section-header {
-			flex-direction: column;
-			align-items: flex-start;
+		.add-btn {
+			width: 100%;
+			justify-content: center;
+		}
+
+		.class-filter {
+			grid-template-columns: 1fr 1fr;
 		}
 
 		.transactions-list {
@@ -477,7 +650,7 @@
 		}
 
 		.transaction-amount {
-			font-size: 1.3rem;
+			font-size: 1.2rem;
 		}
 	}
 </style>

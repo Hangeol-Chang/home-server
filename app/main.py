@@ -10,11 +10,15 @@ from pathlib import Path
 
 # 라우터 임포트
 from modules import asset_manager, schedule_manager
-
+# 데이터베이스 초기화
+from utils.database import init_database
 
 # .env load 예시
 env_dir = Path(__file__).resolve().parent / "env"
 load_dotenv(env_dir / ".env")
+
+# 데이터베이스 초기화
+init_database()
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
 

@@ -29,6 +29,14 @@ export async function createCategory(categoryData) {
 	return response.json();
 }
 
+export async function deleteCategory(categoryId) {
+	const response = await fetch(`${API_BASE_URL}/categories/${categoryId}`, {
+		method: 'DELETE'
+	});
+	if (!response.ok) throw new Error('Failed to delete category');
+	return response.json();
+}
+
 // ===== Tiers (티어) =====
 export async function getTiers(classId = null) {
 	const url = classId 
@@ -46,6 +54,14 @@ export async function createTier(tierData) {
 		body: JSON.stringify(tierData)
 	});
 	if (!response.ok) throw new Error('Failed to create tier');
+	return response.json();
+}
+
+export async function deleteTier(tierId) {
+	const response = await fetch(`${API_BASE_URL}/tiers/${tierId}`, {
+		method: 'DELETE'
+	});
+	if (!response.ok) throw new Error('Failed to delete tier');
 	return response.json();
 }
 

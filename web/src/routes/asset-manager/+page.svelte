@@ -107,16 +107,26 @@
 	<!-- 헤더 -->
 	<header class="page-header">
 		<h1>💰 가계부</h1>
-		<button
-			class="add-btn"
-			onclick={() => (isFormOpen = !isFormOpen)}
-		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<line x1="12" y1="5" x2="12" y2="19" />
-				<line x1="5" y1="12" x2="19" y2="12" />
-			</svg>
-			{isFormOpen ? '닫기' : '거래 등록'}
-		</button>
+		<div class="header-actions">
+			<a href="/asset-manager/admin" class="admin-link">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<circle cx="12" cy="12" r="3"></circle>
+					<path d="M12 1v6m0 6v6"></path>
+					<path d="M1 12h6m6 0h6"></path>
+				</svg>
+				관리
+			</a>
+			<button
+				class="add-btn"
+				onclick={() => (isFormOpen = !isFormOpen)}
+			>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<line x1="12" y1="5" x2="12" y2="19" />
+					<line x1="5" y1="12" x2="19" y2="12" />
+				</svg>
+				{isFormOpen ? '닫기' : '거래 등록'}
+			</button>
+		</div>
 	</header>
 
 	<!-- 거래 등록 폼 -->
@@ -278,38 +288,29 @@
 		padding: 20px;
 	}
 
-	.page-header {
+	/* 페이지 특화 스타일 */
+	.header-actions {
 		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 32px;
+		gap: 12px;
 	}
 
-	.page-header h1 {
-		margin: 0;
-		font-size: 2rem;
-		color: var(--text-primary);
-	}
-
-	.add-btn {
+	.admin-link {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		padding: 12px 24px;
-		background: var(--accent);
-		color: white;
-		border: none;
+		padding: 10px 20px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
 		border-radius: 8px;
-		font-size: 1rem;
+		color: var(--text-primary);
+		text-decoration: none;
 		font-weight: 600;
-		cursor: pointer;
 		transition: all 0.2s;
 	}
 
-	.add-btn:hover {
-		background: #4f46e5;
+	.admin-link:hover {
+		background: var(--bg-tertiary);
 		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 	}
 
 	.month-selector {
@@ -357,25 +358,10 @@
 		margin-bottom: 32px;
 	}
 
+	/* 필터 버튼 오버라이드 */
 	.filter-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
 		padding: 16px;
-		background: var(--bg-secondary);
-		border: 2px solid var(--border-color);
-		border-radius: 10px;
-		cursor: pointer;
 		font-size: 1rem;
-		font-weight: 600;
-		transition: all 0.2s;
-		color: var(--text-secondary);
-	}
-
-	.filter-btn:hover {
-		background: var(--bg-tertiary);
-		transform: translateY(-2px);
 	}
 
 	.filter-btn.active {
@@ -415,43 +401,7 @@
 		color: var(--text-secondary);
 	}
 
-	.loading,
-	.error {
-		text-align: center;
-		padding: 60px 20px;
-	}
-
-	.spinner {
-		width: 40px;
-		height: 40px;
-		border: 4px solid var(--border-color);
-		border-top-color: var(--accent);
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-		margin: 0 auto 16px;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.error p {
-		color: #f44336;
-		margin-bottom: 16px;
-	}
-
-	.retry-btn {
-		padding: 10px 20px;
-		background: var(--accent);
-		color: white;
-		border: none;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 600;
-	}
-
+	/* 거래 리스트 */
 	.transactions-list {
 		display: flex;
 		flex-direction: column;
@@ -603,31 +553,13 @@
 		font-size: 1.1rem;
 	}
 
-	.cta-btn {
-		padding: 12px 24px;
-		background: var(--accent);
-		color: white;
-		border: none;
-		border-radius: 8px;
-		font-size: 1rem;
-		font-weight: 600;
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.cta-btn:hover {
-		background: #4f46e5;
-		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-	}
-
 	@media (max-width: 768px) {
-		.page-header {
+		.header-actions {
+			width: 100%;
 			flex-direction: column;
-			align-items: flex-start;
-			gap: 16px;
 		}
 
+		.admin-link,
 		.add-btn {
 			width: 100%;
 			justify-content: center;

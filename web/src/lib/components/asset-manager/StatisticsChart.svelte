@@ -220,43 +220,7 @@
 		color: white;
 	}
 
-	.loading,
-	.error {
-		text-align: center;
-		padding: 40px 20px;
-	}
-
-	.spinner {
-		width: 40px;
-		height: 40px;
-		border: 4px solid var(--border-color);
-		border-top-color: var(--accent);
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-		margin: 0 auto 16px;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.error p {
-		color: #f44336;
-		margin-bottom: 16px;
-	}
-
-	.retry-btn {
-		padding: 10px 20px;
-		background: var(--accent);
-		color: white;
-		border: none;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 600;
-	}
-
+	/* 차트 레이아웃 */
 	.chart-content {
 		margin-top: 20px;
 	}

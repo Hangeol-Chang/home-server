@@ -330,6 +330,7 @@
 		font-size: 1.5rem;
 	}
 
+	/* 폼 스타일 커스터마이징 */
 	.error-message {
 		background: #fee;
 		border: 1px solid #fcc;
@@ -338,16 +339,6 @@
 		color: #c33;
 		margin-bottom: 20px;
 		font-size: 0.9rem;
-	}
-
-	.form-group {
-		margin-bottom: 20px;
-	}
-
-	.form-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 16px;
 	}
 
 	label {
@@ -390,10 +381,8 @@
 		font-family: inherit;
 	}
 
+	/* 폼 액션 오버라이드 */
 	.form-actions {
-		display: flex;
-		gap: 12px;
-		justify-content: flex-end;
 		margin-top: 24px;
 		padding-top: 20px;
 		border-top: 1px solid var(--border-color);
@@ -402,33 +391,7 @@
 	.btn-cancel,
 	.btn-submit {
 		padding: 12px 24px;
-		border: none;
-		border-radius: 8px;
 		font-size: 1rem;
-		font-weight: 600;
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.btn-cancel {
-		background: var(--bg-secondary);
-		color: var(--text-primary);
-		border: 1px solid var(--border-color);
-	}
-
-	.btn-cancel:hover:not(:disabled) {
-		background: var(--bg-tertiary);
-	}
-
-	.btn-submit {
-		background: var(--accent);
-		color: white;
-	}
-
-	.btn-submit:hover:not(:disabled) {
-		background: #4f46e5;
-		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 	}
 
 	.btn-cancel:disabled,

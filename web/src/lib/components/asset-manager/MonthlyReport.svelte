@@ -4,6 +4,8 @@
 
 	let { year = new Date().getFullYear(), month = new Date().getMonth() + 1 } = $props();
 
+	// 기본 수익 가정값 (수익이 0일 때 사용)
+	let defaultIncome = $state(3200000);
 	let stats = $state(null);
 	let loading = $state(true);
 	let error = $state('');
@@ -34,6 +36,45 @@
 		return { label: '수지균형', color: '#ff9800', icon: '⚖️' };
 	}
 
+	// 차트 데이터 계산
+	const chartData = $derived(() => {
+		if (!stats) return null;
+
+		const income = stats.earn_total > 0 ? stats.earn_total : defaultIncome;
+		const spend = stats.spend_total;
+		const save = stats.save_total;
+		const balance = stats.balance;
+
+		const spendPercent = (spend / income) * 100;
+		const savePercent = (save / income) * 100;
+		const balancePercent = (balance / income) * 100;
+
+		// SVG 원형 차트를 위한 각도 계산 (시작점은 -90도, 즉 12시 방향)
+		const circumference = 2 * Math.PI * 80; // 외부 원의 둘레 (반지름 80)
+		const spendDash = (spendPercent / 100) * circumference;
+		const saveDash = (savePercent / 100) * circumference;
+
+		// 각 세그먼트의 시작 각도 (rotate 값)
+		const spendRotation = -90;
+		const saveRotation = -90 + (spendPercent * 360) / 100;
+
+		return {
+			income,
+			spend,
+			save,
+			balance,
+			spendPercent: spendPercent.toFixed(1),
+			savePercent: savePercent.toFixed(1),
+			balancePercent: balancePercent.toFixed(1),
+			spendDash,
+			saveDash,
+			circumference,
+			spendRotation,
+			saveRotation,
+			usingDefault: stats.earn_total === 0
+		};
+	});
+
 	$effect(() => {
 		loadStatistics();
 	});
@@ -63,95 +104,118 @@
 			<p>⚠️ {error}</p>
 			<button class="retry-btn" onclick={loadStatistics}>다시 시도</button>
 		</div>
-	{:else if stats}
-		<div class="stats-grid">
-			<!-- 수익 카드 -->
-			<div class="stat-card income">
-				<div class="stat-icon">💰</div>
-				<div class="stat-content">
-					<h3 class="stat-label">총 수익</h3>
-					<p class="stat-value">{formatCurrency(stats.earn_total)}</p>
+	{:else if stats && chartData()}
+		<!-- 기본 수익 설정 (수익이 없을 때만 표시) -->
+		{#if chartData().usingDefault}
+			<div class="default-income-notice">
+				<p>
+					ℹ️ 이번 달 수익이 등록되지 않아 기본값({formatCurrency(defaultIncome)})을 사용하고 있습니다.
+				</p>
+				<div class="income-input">
+					<label>
+						기본 수익 설정:
+						<input
+							type="number"
+							bind:value={defaultIncome}
+							step="100000"
+							min="0"
+						/>
+					</label>
 				</div>
 			</div>
+		{/if}
 
-			<!-- 지출 카드 -->
-			<div class="stat-card expense">
-				<div class="stat-icon">💸</div>
-				<div class="stat-content">
-					<h3 class="stat-label">총 지출</h3>
-					<p class="stat-value">{formatCurrency(stats.spend_total)}</p>
-				</div>
-			</div>
+		<!-- 동심원 차트 -->
+		<div class="circular-chart-container">
+			<svg class="circular-chart" viewBox="0 0 200 200">
+				<!-- 내부 원 (수익) - 배경 -->
+				<circle
+					class="circle-bg"
+					cx="100"
+					cy="100"
+					r="50"
+				/>
+				<!-- 내부 원 (수익) - 채워진 부분 -->
+				<circle
+					class="circle-inner income"
+					cx="100"
+					cy="100"
+					r="50"
+				/>
 
-			<!-- 저축 카드 -->
-			<div class="stat-card save">
-				<div class="stat-icon">🏦</div>
-				<div class="stat-content">
-					<h3 class="stat-label">총 저축</h3>
-					<p class="stat-value">{formatCurrency(stats.save_total)}</p>
-				</div>
-			</div>
+				<!-- 외부 원 배경 -->
+				<circle
+					class="circle-bg-outer"
+					cx="100"
+					cy="100"
+					r="80"
+				/>
 
-			<!-- 잔액 카드 -->
-			<div class="stat-card balance" style="--balance-color: {getBalanceStatus(stats.balance).color}">
-				<div class="stat-icon">{getBalanceStatus(stats.balance).icon}</div>
-				<div class="stat-content">
-					<h3 class="stat-label">
-						잔액 ({getBalanceStatus(stats.balance).label})
-					</h3>
-					<p class="stat-value">{formatCurrency(Math.abs(stats.balance))}</p>
-				</div>
-			</div>
-		</div>
+				<!-- 외부 원 - 지출 세그먼트 -->
+				<circle
+					class="circle-outer spend"
+					cx="100"
+					cy="100"
+					r="80"
+					stroke-dasharray="{chartData().spendDash} {chartData().circumference}"
+					transform="rotate({chartData().spendRotation} 100 100)"
+				/>
 
-		<!-- 간단한 차트 (비율) -->
-		<div class="budget-chart">
-			<h3>지출 구성</h3>
-			<div class="chart-bar">
-				{#if stats.earn_total > 0}
-					<div 
-						class="bar-segment spend" 
-						style="width: {(stats.spend_total / stats.earn_total * 100).toFixed(1)}%"
-						title="지출: {(stats.spend_total / stats.earn_total * 100).toFixed(1)}%"
-					>
-						{#if (stats.spend_total / stats.earn_total * 100) > 10}
-							<span class="bar-label">{(stats.spend_total / stats.earn_total * 100).toFixed(1)}%</span>
-						{/if}
+				<!-- 외부 원 - 저축 세그먼트 -->
+				<circle
+					class="circle-outer save"
+					cx="100"
+					cy="100"
+					r="80"
+					stroke-dasharray="{chartData().saveDash} {chartData().circumference}"
+					transform="rotate({chartData().saveRotation} 100 100)"
+				/>
+
+				<!-- 중앙 텍스트 -->
+				<text x="100" y="95" class="chart-center-label">총 수익</text>
+				<text x="100" y="110" class="chart-center-value">
+					{formatCurrency(chartData().income)}
+				</text>
+			</svg>
+
+			<!-- 범례 및 통계 -->
+			<div class="chart-stats">
+				<div class="stat-item income">
+					<div class="stat-header">
+						<span class="stat-icon">💰</span>
+						<span class="stat-name">수익</span>
 					</div>
-					<div 
-						class="bar-segment save" 
-						style="width: {(stats.save_total / stats.earn_total * 100).toFixed(1)}%"
-						title="저축: {(stats.save_total / stats.earn_total * 100).toFixed(1)}%"
-					>
-						{#if (stats.save_total / stats.earn_total * 100) > 10}
-							<span class="bar-label">{(stats.save_total / stats.earn_total * 100).toFixed(1)}%</span>
-						{/if}
-					</div>
-					<div 
-						class="bar-segment balance" 
-						style="width: {(stats.balance / stats.earn_total * 100).toFixed(1)}%"
-						title="잔액: {(stats.balance / stats.earn_total * 100).toFixed(1)}%"
-					>
-						{#if (stats.balance / stats.earn_total * 100) > 10}
-							<span class="bar-label">{(stats.balance / stats.earn_total * 100).toFixed(1)}%</span>
-						{/if}
-					</div>
-				{:else}
-					<p class="no-data">수익 데이터가 없습니다</p>
-				{/if}
-			</div>
-			<div class="chart-legend">
-				<div class="legend-item">
-					<span class="legend-color spend"></span>
-					<span>지출</span>
+					<div class="stat-amount">{formatCurrency(chartData().income)}</div>
+					{#if chartData().usingDefault}
+						<div class="stat-note">(기본값)</div>
+					{/if}
 				</div>
-				<div class="legend-item">
-					<span class="legend-color save"></span>
-					<span>저축</span>
+
+				<div class="stat-item spend">
+					<div class="stat-header">
+						<span class="stat-icon">💸</span>
+						<span class="stat-name">지출</span>
+						<span class="stat-percent">{chartData().spendPercent}%</span>
+					</div>
+					<div class="stat-amount">{formatCurrency(chartData().spend)}</div>
 				</div>
-				<div class="legend-item">
-					<span class="legend-color balance"></span>
-					<span>잔액</span>
+
+				<div class="stat-item save">
+					<div class="stat-header">
+						<span class="stat-icon">🏦</span>
+						<span class="stat-name">저축</span>
+						<span class="stat-percent">{chartData().savePercent}%</span>
+					</div>
+					<div class="stat-amount">{formatCurrency(chartData().save)}</div>
+				</div>
+
+				<div class="stat-item balance" style="--balance-color: {getBalanceStatus(chartData().balance).color}">
+					<div class="stat-header">
+						<span class="stat-icon">{getBalanceStatus(chartData().balance).icon}</span>
+						<span class="stat-name">잔액 ({getBalanceStatus(chartData().balance).label})</span>
+						<span class="stat-percent">{chartData().balancePercent}%</span>
+					</div>
+					<div class="stat-amount">{formatCurrency(Math.abs(chartData().balance))}</div>
 				</div>
 			</div>
 		</div>
@@ -207,211 +271,246 @@
 		animation: spin 1s linear infinite;
 	}
 
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.loading,
-	.error {
-		text-align: center;
-		padding: 40px 20px;
-	}
-
-	.spinner {
-		width: 40px;
-		height: 40px;
-		border: 4px solid var(--border-color);
-		border-top-color: var(--accent);
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-		margin: 0 auto 16px;
-	}
-
-	.error p {
-		color: #f44336;
-		margin-bottom: 16px;
-	}
-
-	.retry-btn {
-		padding: 10px 20px;
-		background: var(--accent);
-		color: white;
-		border: none;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 600;
-	}
-
-	.stats-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-		gap: 16px;
-		margin-bottom: 32px;
-	}
-
-	.stat-card {
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: 10px;
-		padding: 20px;
-		display: flex;
-		align-items: center;
-		gap: 16px;
-		transition: all 0.2s;
-	}
-
-	.stat-card:hover {
-		transform: translateY(-4px);
-		box-shadow: var(--shadow-md);
-	}
-
-	.stat-card.income {
-		border-left: 4px solid #4caf50;
-	}
-
-	.stat-card.expense {
-		border-left: 4px solid #f44336;
-	}
-
-	.stat-card.save {
-		border-left: 4px solid #2196f3;
-	}
-
-	.stat-card.balance {
-		border-left: 4px solid var(--balance-color);
-	}
-
-	.stat-icon {
-		font-size: 2.5rem;
-		flex-shrink: 0;
-	}
-
-	.stat-content {
-		flex: 1;
-	}
-
-	.stat-label {
-		margin: 0 0 8px 0;
-		font-size: 0.9rem;
-		color: var(--text-secondary);
-		font-weight: 600;
-	}
-
-	.stat-value {
-		margin: 0;
-		font-size: 1.5rem;
-		font-weight: 700;
-		color: var(--text-primary);
-	}
-
-	.budget-chart {
-		background: var(--bg-secondary);
-		border-radius: 10px;
-		padding: 20px;
-	}
-
-	.budget-chart h3 {
-		margin: 0 0 16px 0;
-		font-size: 1.1rem;
-		color: var(--text-primary);
-	}
-
-	.chart-bar {
-		display: flex;
-		height: 40px;
+	/* 기본 수익 설정 알림 */
+	.default-income-notice {
+		background: #fff3cd;
+		border: 1px solid #ffeaa7;
 		border-radius: 8px;
-		overflow: hidden;
-		margin-bottom: 16px;
-		background: var(--bg-primary);
+		padding: 16px;
+		margin-bottom: 24px;
 	}
 
-	.bar-segment {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.3s;
-		position: relative;
+	.default-income-notice p {
+		margin: 0 0 12px 0;
+		color: #856404;
+		font-size: 0.95rem;
 	}
 
-	.bar-segment.spend {
-		background: #f44336;
-	}
-
-	.bar-segment.save {
-		background: #2196f3;
-	}
-
-	.bar-segment.balance {
-		background: #4caf50;
-	}
-
-	.bar-label {
-		color: white;
-		font-weight: 600;
-		font-size: 0.85rem;
-	}
-
-	.no-data {
-		margin: 0;
-		text-align: center;
-		color: var(--text-tertiary);
-		padding: 10px;
-	}
-
-	.chart-legend {
-		display: flex;
-		justify-content: center;
-		gap: 24px;
-	}
-
-	.legend-item {
+	.income-input {
 		display: flex;
 		align-items: center;
 		gap: 8px;
+	}
+
+	.income-input label {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-weight: 600;
+		color: #856404;
 		font-size: 0.9rem;
-		color: var(--text-secondary);
 	}
 
-	.legend-color {
-		width: 16px;
-		height: 16px;
-		border-radius: 4px;
+	.income-input input {
+		padding: 8px 12px;
+		border: 1px solid #ffeaa7;
+		border-radius: 6px;
+		background: white;
+		font-size: 1rem;
+		width: 150px;
 	}
 
-	.legend-color.spend {
-		background: #f44336;
+	/* 동심원 차트 컨테이너 */
+	.circular-chart-container {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 40px;
+		align-items: center;
 	}
 
-	.legend-color.save {
-		background: #2196f3;
+	/* SVG 차트 */
+	.circular-chart {
+		max-width: 400px;
+		width: 100%;
+		height: auto;
+		margin: 0 auto;
 	}
 
-	.legend-color.balance {
-		background: #4caf50;
+	/* 원 배경 */
+	.circle-bg {
+		fill: none;
+		stroke: #e0e0e0;
+		stroke-width: 15;
+	}
+
+	.circle-bg-outer {
+		fill: none;
+		stroke: #e0e0e0;
+		stroke-width: 25;
+	}
+
+	/* 내부 원 (수익) */
+	.circle-inner {
+		fill: #4caf50;
+		stroke: #2e7d32;
+		stroke-width: 2;
+		animation: fillInner 1s ease-out;
+	}
+
+	@keyframes fillInner {
+		from {
+			r: 0;
+		}
+		to {
+			r: 50;
+		}
+	}
+
+	/* 외부 원 세그먼트 */
+	.circle-outer {
+		fill: none;
+		stroke-width: 25;
+		stroke-linecap: round;
+		transition: all 0.3s ease;
+	}
+
+	.circle-outer.spend {
+		stroke: #f44336;
+		animation: drawSpend 1s ease-out 0.2s backwards;
+	}
+
+	.circle-outer.save {
+		stroke: #2196f3;
+		animation: drawSave 1s ease-out 0.4s backwards;
+	}
+
+	@keyframes drawSpend {
+		from {
+			stroke-dasharray: 0 502;
+		}
+	}
+
+	@keyframes drawSave {
+		from {
+			stroke-dasharray: 0 502;
+		}
+	}
+
+	/* 중앙 텍스트 */
+	.chart-center-label {
+		font-size: 10px;
+		fill: var(--text-secondary);
+		text-anchor: middle;
+		font-weight: 600;
+	}
+
+	.chart-center-value {
+		font-size: 11px;
+		fill: var(--text-primary);
+		text-anchor: middle;
+		font-weight: 700;
+	}
+
+	/* 통계 리스트 */
+	.chart-stats {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	.stat-item {
+		background: var(--bg-secondary);
+		border-radius: 10px;
+		padding: 16px;
+		border-left: 4px solid;
+		transition: all 0.2s;
+	}
+
+	.stat-item:hover {
+		transform: translateX(4px);
+		box-shadow: var(--shadow-md);
+	}
+
+	.stat-item.income {
+		border-color: #4caf50;
+	}
+
+	.stat-item.spend {
+		border-color: #f44336;
+	}
+
+	.stat-item.save {
+		border-color: #2196f3;
+	}
+
+	.stat-item.balance {
+		border-color: var(--balance-color);
+	}
+
+	.stat-header {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-bottom: 8px;
+	}
+
+	.stat-icon {
+		font-size: 1.3rem;
+	}
+
+	.stat-name {
+		font-weight: 600;
+		color: var(--text-primary);
+		font-size: 0.95rem;
+		flex: 1;
+	}
+
+	.stat-percent {
+		background: rgba(99, 102, 241, 0.1);
+		color: var(--accent);
+		padding: 4px 10px;
+		border-radius: 12px;
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+
+	.stat-amount {
+		font-size: 1.4rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin: 0;
+	}
+
+	.stat-note {
+		font-size: 0.8rem;
+		color: var(--text-tertiary);
+		margin-top: 4px;
+		font-style: italic;
+	}
+
+	@media (max-width: 1024px) {
+		.circular-chart-container {
+			grid-template-columns: 1fr;
+			gap: 32px;
+		}
+
+		.circular-chart {
+			max-width: 300px;
+		}
 	}
 
 	@media (max-width: 768px) {
-		.stats-grid {
-			grid-template-columns: 1fr;
+		.report-header {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 16px;
 		}
 
-		.stat-card {
-			padding: 16px;
+		.circular-chart {
+			max-width: 250px;
 		}
 
-		.stat-icon {
-			font-size: 2rem;
+		.stat-amount {
+			font-size: 1.2rem;
 		}
 
-		.stat-value {
-			font-size: 1.3rem;
+		.income-input {
+			flex-direction: column;
+			align-items: flex-start;
 		}
 
-		.chart-legend {
-			flex-wrap: wrap;
-			gap: 12px;
+		.income-input input {
+			width: 100%;
 		}
 	}
 </style>

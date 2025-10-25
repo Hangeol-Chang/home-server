@@ -146,6 +146,80 @@ async def create_tier(tier: AssetTierCreate):
         """, (tier_id,))
         return dict(cursor.fetchone())
 
+@router.delete("/categories/{category_id}")
+async def delete_category(category_id: int):
+    """카테고리 삭제 (비활성화)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # 카테고리 존재 확인
+        cursor.execute("SELECT * FROM asset_categories WHERE id = ?", (category_id,))
+        category = cursor.fetchone()
+        if not category:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Category with id {category_id} not found"
+            )
+        
+        # 해당 카테고리를 사용하는 거래가 있는지 확인
+        cursor.execute("SELECT COUNT(*) FROM assets WHERE category_id = ?", (category_id,))
+        count = cursor.fetchone()[0]
+        
+        if count > 0:
+            # 거래가 있으면 비활성화만
+            cursor.execute("""
+                UPDATE asset_categories 
+                SET is_active = FALSE 
+                WHERE id = ?
+            """, (category_id,))
+            message = f"Category {category_id} deactivated (has {count} transactions)"
+        else:
+            # 거래가 없으면 완전 삭제
+            cursor.execute("DELETE FROM asset_categories WHERE id = ?", (category_id,))
+            message = f"Category {category_id} deleted permanently"
+        
+        return {
+            "message": message,
+            "category": dict(category)
+        }
+
+@router.delete("/tiers/{tier_id}")
+async def delete_tier(tier_id: int):
+    """티어 삭제 (비활성화)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # 티어 존재 확인
+        cursor.execute("SELECT * FROM asset_tiers WHERE id = ?", (tier_id,))
+        tier = cursor.fetchone()
+        if not tier:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Tier with id {tier_id} not found"
+            )
+        
+        # 해당 티어를 사용하는 거래가 있는지 확인
+        cursor.execute("SELECT COUNT(*) FROM assets WHERE tier_id = ?", (tier_id,))
+        count = cursor.fetchone()[0]
+        
+        if count > 0:
+            # 거래가 있으면 비활성화만
+            cursor.execute("""
+                UPDATE asset_tiers 
+                SET is_active = FALSE 
+                WHERE id = ?
+            """, (tier_id,))
+            message = f"Tier {tier_id} deactivated (has {count} transactions)"
+        else:
+            # 거래가 없으면 완전 삭제
+            cursor.execute("DELETE FROM asset_tiers WHERE id = ?", (tier_id,))
+            message = f"Tier {tier_id} deleted permanently"
+        
+        return {
+            "message": message,
+            "tier": dict(tier)
+        }
+
 # ===== Transactions (거래) CRUD API =====
 
 @router.post("/transactions", response_model=AssetTransaction, status_code=status.HTTP_201_CREATED)

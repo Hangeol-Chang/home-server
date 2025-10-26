@@ -166,7 +166,7 @@
 					bind:value={formData.cost}
 					placeholder="0"
 					min="0"
-					step="100"
+					step="1"
 					required
 				/>
 			</div>

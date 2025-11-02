@@ -6,7 +6,8 @@
 		deleteCategory,
 		getTiers,
 		createTier,
-		deleteTier
+		deleteTier,
+		getTags
 	} from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
 
@@ -14,6 +15,7 @@
 	let classes = $state([]);
 	let categories = $state([]);
 	let tiers = $state([]);
+	let tags = $state([]);
 	let loading = $state(true);
 	let error = $state('');
 
@@ -60,10 +62,11 @@
 		loading = true;
 		error = '';
 		try {
-			[classes, categories, tiers] = await Promise.all([
+			[classes, categories, tiers, tags] = await Promise.all([
 				getClasses(),
 				getCategories(),
-				getTiers()
+				getTiers(),
+				getTags()
 			]);
 		} catch (err) {
 			error = '데이터를 불러오는데 실패했습니다: ' + err.message;
@@ -426,6 +429,30 @@
 					{/if}
 				</div>
 			</section>
+
+			<!-- 태그 관리 -->
+			<section class="manage-section">
+				<div class="section-header">
+					<h2>🏷️ 태그 관리</h2>
+					<p class="section-description">현재 사용 중인 모든 태그 목록입니다</p>
+				</div>
+
+				{#if tags.length > 0}
+					<div class="tags-grid">
+						{#each tags as tag}
+							<div class="tag-item">
+								<span class="tag-icon">🏷️</span>
+								<span class="tag-name">{tag}</span>
+							</div>
+						{/each}
+					</div>
+					<div class="tag-stats">
+						<p>총 <strong>{tags.length}개</strong>의 태그가 사용 중입니다</p>
+					</div>
+				{:else}
+					<p class="empty-message">아직 사용된 태그가 없습니다</p>
+				{/if}
+			</section>
 		</div>
 	{/if}
 </div>
@@ -601,6 +628,64 @@
 		background: #fee;
 		border-color: #fcc;
 		color: #c33;
+	}
+
+	/* 태그 관리 스타일 */
+	.section-description {
+		margin: 8px 0 0 0;
+		font-size: 0.9rem;
+		color: var(--text-secondary);
+	}
+
+	.tags-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+		gap: 12px;
+		margin-top: 20px;
+	}
+
+	.tag-item {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 12px 16px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		transition: all 0.2s;
+	}
+
+	.tag-item:hover {
+		background: var(--bg-secondary);
+		transform: translateY(-2px);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.tag-icon {
+		font-size: 1.2rem;
+	}
+
+	.tag-name {
+		font-weight: 500;
+		color: var(--text-primary);
+	}
+
+	.tag-stats {
+		margin-top: 20px;
+		padding: 16px;
+		background: var(--bg-tertiary);
+		border-radius: 8px;
+		text-align: center;
+	}
+
+	.tag-stats p {
+		margin: 0;
+		color: var(--text-secondary);
+	}
+
+	.tag-stats strong {
+		color: var(--primary-color);
+		font-size: 1.1rem;
 	}
 
 	@media (max-width: 768px) {

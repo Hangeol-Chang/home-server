@@ -1,5 +1,5 @@
 <script>
-	import { createTransaction, getCategories, getTiers } from '$lib/api/asset-manager.js';
+	import { createTransaction, getCategories, getTiers, getTags } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
 
 	let { isOpen = $bindable(false), onSuccess = () => {} } = $props();
@@ -8,6 +8,7 @@
 	let selectedClass = $state(1);
 	let categories = $state([]);
 	let tiers = $state([]);
+	let availableTags = $state([]);
 
 	// 폼 데이터
 	let formData = $state({
@@ -16,8 +17,13 @@
 		category_id: '',
 		tier_id: '',
 		date: new Date().toISOString().split('T')[0],
-		description: ''
+		description: '',
+		tags: []
 	});
+
+	let tagInput = $state('');
+	let showTagSuggestions = $state(false);
+	let filteredTagSuggestions = $state([]);
 
 	let isSubmitting = $state(false);
 	let error = $state('');
@@ -27,6 +33,15 @@
 		{ id: 2, name: 'earn', label: '수익', color: '#4caf50', icon: '💰' },
 		{ id: 3, name: 'save', label: '저축', color: '#2196f3', icon: '🏦' }
 	];
+
+	// 태그 목록 로드
+	async function loadTags() {
+		try {
+			availableTags = await getTags();
+		} catch (err) {
+			console.error('태그 로드 실패:', err);
+		}
+	}
 
 	// 카테고리와 티어 로드
 	async function loadCategoriesAndTiers() {
@@ -54,8 +69,49 @@
 	$effect(() => {
 		if (isOpen) {
 			loadCategoriesAndTiers();
+			loadTags();
 		}
 	});
+
+	// 태그 입력 변경 시 필터링
+	$effect(() => {
+		if (tagInput.trim()) {
+			const input = tagInput.toLowerCase();
+			filteredTagSuggestions = availableTags.filter(
+				tag => tag.toLowerCase().includes(input) && !formData.tags.includes(tag)
+			);
+			showTagSuggestions = filteredTagSuggestions.length > 0;
+		} else {
+			showTagSuggestions = false;
+			filteredTagSuggestions = [];
+		}
+	});
+
+	function addTag(tagToAdd = null) {
+		const tag = (tagToAdd || tagInput).trim();
+		if (tag && !formData.tags.includes(tag)) {
+			formData.tags = [...formData.tags, tag];
+			tagInput = '';
+			showTagSuggestions = false;
+		}
+	}
+
+	function removeTag(tagToRemove) {
+		formData.tags = formData.tags.filter(tag => tag !== tagToRemove);
+	}
+
+	function handleTagKeydown(e) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			addTag();
+		} else if (e.key === 'Escape') {
+			showTagSuggestions = false;
+		}
+	}
+
+	function selectSuggestion(tag) {
+		addTag(tag);
+	}
 
 	async function handleSubmit(e) {
 		e.preventDefault();
@@ -70,7 +126,8 @@
 				category_id: parseInt(formData.category_id),
 				tier_id: parseInt(formData.tier_id),
 				date: formData.date,
-				description: formData.description || undefined
+				description: formData.description || undefined,
+				tags: formData.tags.length > 0 ? formData.tags : undefined
 			};
 
 			await createTransaction(transactionData);
@@ -93,8 +150,10 @@
 			category_id: categories[0]?.id || '',
 			tier_id: tiers.find(t => t.tier_level === 99)?.id || tiers[0]?.id || '',
 			date: new Date().toISOString().split('T')[0],
-			description: ''
+			description: '',
+			tags: []
 		};
+		tagInput = '';
 	}
 
 	function handleCancel() {
@@ -219,6 +278,55 @@
 					placeholder="추가 설명을 입력하세요"
 					rows="3"
 				></textarea>
+			</div>
+
+			<!-- 태그 -->
+			<div class="form-group">
+				<label for="tags">태그 (선택)</label>
+				<div class="tag-input-container">
+					<div class="tag-input-wrapper">
+						<input
+							id="tags"
+							type="text"
+							bind:value={tagInput}
+							placeholder="태그 입력 후 Enter (예: 차량, 데이트, 카페)"
+							onkeydown={handleTagKeydown}
+							onfocus={() => {
+								if (tagInput.trim() && filteredTagSuggestions.length > 0) {
+									showTagSuggestions = true;
+								}
+							}}
+						/>
+						<button type="button" class="btn-add-tag" onclick={() => addTag()} disabled={!tagInput.trim()}>
+							추가
+						</button>
+					</div>
+					{#if showTagSuggestions}
+						<div class="tag-suggestions">
+							{#each filteredTagSuggestions as suggestion}
+								<button
+									type="button"
+									class="tag-suggestion-item"
+									onclick={() => selectSuggestion(suggestion)}
+								>
+									{suggestion}
+								</button>
+							{/each}
+						</div>
+					{/if}
+				</div>
+				{#if formData.tags.length > 0}
+					<div class="tag-list">
+						{#each formData.tags as tag}
+							<span class="tag">
+								{tag}
+								<button type="button" class="tag-remove" onclick={() => removeTag(tag)} aria-label="태그 제거">
+									×
+								</button>
+							</span>
+						{/each}
+					</div>
+				{/if}
 			</div>
 
 			<!-- 버튼 -->
@@ -366,6 +474,113 @@
 		background: var(--bg-secondary);
 		color: var(--text-primary);
 		transition: all 0.2s;
+	}
+
+	.tag-input-container {
+		position: relative;
+	}
+
+	.tag-input-wrapper {
+		display: flex;
+		gap: 8px;
+	}
+
+	.tag-input-wrapper input {
+		flex: 1;
+	}
+
+	.tag-suggestions {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		right: 0;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		box-shadow: var(--shadow-lg);
+		max-height: 200px;
+		overflow-y: auto;
+		z-index: 100;
+		margin-top: 4px;
+	}
+
+	.tag-suggestion-item {
+		width: 100%;
+		padding: 10px 16px;
+		text-align: left;
+		background: none;
+		border: none;
+		color: var(--text-primary);
+		cursor: pointer;
+		transition: background 0.2s;
+		font-size: 0.95rem;
+	}
+
+	.tag-suggestion-item:hover {
+		background: var(--bg-tertiary);
+	}
+
+	.btn-add-tag {
+		padding: 12px 20px;
+		background: var(--primary-color, #2196f3);
+		color: white;
+		border: none;
+		border-radius: 8px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s;
+		white-space: nowrap;
+	}
+
+	.btn-add-tag:hover:not(:disabled) {
+		background: var(--primary-dark, #1976d2);
+		transform: translateY(-1px);
+	}
+
+	.btn-add-tag:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.tag-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 12px;
+	}
+
+	.tag {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 12px;
+		background: var(--primary-color, #2196f3);
+		color: white;
+		border-radius: 16px;
+		font-size: 0.9rem;
+		font-weight: 500;
+	}
+
+	.tag-remove {
+		background: none;
+		border: none;
+		color: white;
+		font-size: 1.2rem;
+		line-height: 1;
+		cursor: pointer;
+		padding: 0;
+		margin: 0;
+		width: 18px;
+		height: 18px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 50%;
+		transition: background 0.2s;
+	}
+
+	.tag-remove:hover {
+		background: rgba(255, 255, 255, 0.2);
 	}
 
 	input:focus,

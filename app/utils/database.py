@@ -84,6 +84,7 @@ def init_database():
                 tier_id INTEGER NOT NULL,
                 date DATE NOT NULL,
                 description TEXT,
+                tags TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (class_id) REFERENCES asset_classes(id),

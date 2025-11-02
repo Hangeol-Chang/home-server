@@ -72,3 +72,8 @@ export async function searchTransactions(query, classId = null) {
 	if (classId) params.class_id = classId;
 	return apiGet(`${API_BASE}/search`, params);
 }
+
+// ===== Tags (태그) =====
+export async function getTags() {
+	return apiGet(`${API_BASE}/tags`);
+}

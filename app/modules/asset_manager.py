@@ -225,6 +225,8 @@ async def delete_tier(tier_id: int):
 @router.post("/transactions", response_model=AssetTransaction, status_code=status.HTTP_201_CREATED)
 async def create_transaction(transaction: AssetTransactionCreate):
     """새 거래 생성 (지출/수익/저축)"""
+    import json
+    
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
@@ -246,22 +248,31 @@ async def create_transaction(transaction: AssetTransactionCreate):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                               detail=f"Tier {transaction.tier_id} does not belong to class {transaction.class_id}")
         
+        # tags를 JSON 문자열로 변환
+        tags_json = json.dumps(transaction.tags) if transaction.tags else None
+        
         # 데이터 삽입
         cursor.execute("""
             INSERT INTO assets 
-            (name, cost, class_id, category_id, tier_id, date, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (name, cost, class_id, category_id, tier_id, date, description, tags)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (transaction.name, transaction.cost, transaction.class_id,
               transaction.category_id, transaction.tier_id, transaction.date,
-              transaction.description))
+              transaction.description, tags_json))
         
         transaction_id = cursor.lastrowid
         cursor.execute("""
-            SELECT id, name, cost, class_id, category_id, tier_id, date, description,
+            SELECT id, name, cost, class_id, category_id, tier_id, date, description, tags,
                    created_at, updated_at
             FROM assets WHERE id = ?
         """, (transaction_id,))
-        return dict(cursor.fetchone())
+        row = dict(cursor.fetchone())
+        
+        # tags를 JSON에서 리스트로 변환
+        if row['tags']:
+            row['tags'] = json.loads(row['tags'])
+        
+        return row
 
 @router.get("/transactions", response_model=List[AssetTransactionDetail])
 async def get_transactions(
@@ -274,12 +285,14 @@ async def get_transactions(
     offset: int = Query(0, ge=0, description="조회 시작 위치")
 ):
     """거래 목록 조회 (상세 정보 포함, 필터링 옵션)"""
+    import json
+    
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
         query = """
             SELECT 
-                a.id, a.name, a.cost, a.date, a.description,
+                a.id, a.name, a.cost, a.date, a.description, a.tags,
                 ac.name as class_name, ac.display_name as class_display_name,
                 cat.name as category_name, cat.display_name as category_display_name,
                 t.tier_level, t.name as tier_name, t.display_name as tier_display_name,
@@ -313,16 +326,27 @@ async def get_transactions(
         
         cursor.execute(query, params)
         rows = cursor.fetchall()
-        return [dict(row) for row in rows]
+        
+        # tags를 JSON에서 리스트로 변환
+        result = []
+        for row in rows:
+            row_dict = dict(row)
+            if row_dict['tags']:
+                row_dict['tags'] = json.loads(row_dict['tags'])
+            result.append(row_dict)
+        
+        return result
 
 @router.get("/transactions/{transaction_id}", response_model=AssetTransactionDetail)
 async def get_transaction(transaction_id: int):
     """특정 거래 상세 조회"""
+    import json
+    
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
             SELECT 
-                a.id, a.name, a.cost, a.date, a.description,
+                a.id, a.name, a.cost, a.date, a.description, a.tags,
                 ac.name as class_name, ac.display_name as class_display_name,
                 cat.name as category_name, cat.display_name as category_display_name,
                 t.tier_level, t.name as tier_name, t.display_name as tier_display_name,
@@ -337,11 +361,19 @@ async def get_transaction(transaction_id: int):
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                               detail=f"Transaction with id {transaction_id} not found")
-        return dict(row)
+        
+        row_dict = dict(row)
+        # tags를 JSON에서 리스트로 변환
+        if row_dict['tags']:
+            row_dict['tags'] = json.loads(row_dict['tags'])
+        
+        return row_dict
 
 @router.put("/transactions/{transaction_id}", response_model=AssetTransaction)
 async def update_transaction(transaction_id: int, transaction: AssetTransactionUpdate):
     """거래 정보 수정"""
+    import json
+    
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
@@ -374,6 +406,10 @@ async def update_transaction(transaction_id: int, transaction: AssetTransactionU
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                   detail=f"Tier does not belong to the same class")
         
+        # tags를 JSON 문자열로 변환
+        if 'tags' in update_data:
+            update_data['tags'] = json.dumps(update_data['tags']) if update_data['tags'] else None
+        
         # 업데이트 쿼리 생성
         set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
         set_clause += ", updated_at = CURRENT_TIMESTAMP"
@@ -386,11 +422,17 @@ async def update_transaction(transaction_id: int, transaction: AssetTransactionU
         """, params)
         
         cursor.execute("""
-            SELECT id, name, cost, class_id, category_id, tier_id, date, description,
+            SELECT id, name, cost, class_id, category_id, tier_id, date, description, tags,
                    created_at, updated_at
             FROM assets WHERE id = ?
         """, (transaction_id,))
-        return dict(cursor.fetchone())
+        
+        row_dict = dict(cursor.fetchone())
+        # tags를 JSON에서 리스트로 변환
+        if row_dict['tags']:
+            row_dict['tags'] = json.loads(row_dict['tags'])
+        
+        return row_dict
 
 @router.delete("/transactions/{transaction_id}")
 async def delete_transaction(transaction_id: int):
@@ -550,6 +592,28 @@ async def get_monthly_statistics(
             "save_total": save_total,
             "balance": earn_total - spend_total - save_total
         }
+
+# ===== Tags (태그) API =====
+
+@router.get("/tags", response_model=List[str])
+async def get_all_tags():
+    """모든 거래에서 사용된 태그 목록 조회 (중복 제거, 알파벳순 정렬)"""
+    import json
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT tags FROM assets WHERE tags IS NOT NULL")
+        rows = cursor.fetchall()
+        
+        # 모든 태그를 수집
+        all_tags = set()
+        for row in rows:
+            if row[0]:
+                tags = json.loads(row[0])
+                all_tags.update(tags)
+        
+        # 정렬하여 반환
+        return sorted(list(all_tags))
 
 @router.get("/search")
 async def search_transactions(

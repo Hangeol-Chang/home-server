@@ -69,6 +69,7 @@ class AssetTransactionBase(BaseModel):
     tier_id: int = Field(..., description="티어 ID")
     date: date_type = Field(default_factory=date_type.today, description="거래 날짜")
     description: Optional[str] = None
+    tags: Optional[List[str]] = Field(default=None, description="태그 목록")
 
 class AssetTransactionCreate(AssetTransactionBase):
     pass
@@ -80,6 +81,7 @@ class AssetTransactionUpdate(BaseModel):
     tier_id: Optional[int] = None
     date: Optional[date_type] = None
     description: Optional[str] = None
+    tags: Optional[List[str]] = None
 
 class AssetTransaction(AssetTransactionBase):
     id: int
@@ -96,6 +98,7 @@ class AssetTransactionDetail(BaseModel):
     cost: float
     date: date_type
     description: Optional[str]
+    tags: Optional[List[str]]
     class_name: str
     class_display_name: str
     category_name: str

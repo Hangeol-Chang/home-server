@@ -77,6 +77,13 @@
 								<span class="transaction-tier">{transaction.tier_display_name}</span>
 							</div>
 							<div class="transaction-date">{formatDate(transaction.date)}</div>
+							{#if transaction.tags && transaction.tags.length > 0}
+								<div class="transaction-tags">
+									{#each transaction.tags as tag}
+										<span class="tag">{tag}</span>
+									{/each}
+								</div>
+							{/if}
 							{#if transaction.description}
 								<p class="transaction-memo">{transaction.description}</p>
 							{/if}
@@ -239,6 +246,22 @@
 		font-size: 0.85rem;
 		color: var(--text-tertiary);
 		margin-top: 4px;
+	}
+
+	.transaction-tags {
+		display: flex;
+		gap: 6px;
+		flex-wrap: wrap;
+		margin-top: 8px;
+	}
+
+	.transaction-tags .tag {
+		padding: 4px 10px;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		color: white;
+		border-radius: 12px;
+		font-size: 0.75rem;
+		font-weight: 500;
 	}
 
 	.transaction-memo {

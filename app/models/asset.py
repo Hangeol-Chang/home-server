@@ -140,3 +140,27 @@ class MonthlyStatistics(BaseModel):
     earn_total: float
     save_total: float
     balance: float  # earn - spend - save
+
+# ===== Tags (태그) =====
+class AssetTagBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=50, description="태그명")
+    description: Optional[str] = None
+    color: str = Field(default="#6366f1", description="태그 색상")
+    is_active: bool = True
+
+class AssetTagCreate(AssetTagBase):
+    pass
+
+class AssetTagUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=50)
+    description: Optional[str] = None
+    color: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class AssetTag(AssetTagBase):
+    id: int
+    usage_count: int = 0
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

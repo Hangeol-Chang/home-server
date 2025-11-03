@@ -31,6 +31,12 @@
 				</a>
 			</div>
 
+			<nav class="main-nav">
+				<a href="/asset-manager" class="nav-link">💰 자산관리</a>
+				<a href="/schedule-manager" class="nav-link">📅 일정관리</a>
+				<a href="/notebook" class="nav-link">📓 노트북</a>
+			</nav>
+
 			<div class="profile-menu">
 				<button class="profile-button" onclick={toggleDropdown} aria-label="프로필 메뉴">
 					{#if session.user.image}
@@ -78,12 +84,13 @@
 	}
 
 	.header-content {
-		max-width: 1200px;
+		max-width: 1400px;
 		margin: 0 auto;
 		padding: 12px 24px;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 32px;
 	}
 
 	.logo {
@@ -94,6 +101,28 @@
 	.app-title {
 		font-size: 1.1rem;
 		font-weight: 700;
+		color: var(--text-primary);
+	}
+
+	/* Main Navigation */
+	.main-nav {
+		display: flex;
+		gap: 8px;
+		flex: 1;
+	}
+
+	.nav-link {
+		padding: 8px 16px;
+		border-radius: 8px;
+		text-decoration: none;
+		color: var(--text-secondary);
+		font-weight: 500;
+		transition: all 0.2s;
+		white-space: nowrap;
+	}
+
+	.nav-link:hover {
+		background: var(--bg-secondary);
 		color: var(--text-primary);
 	}
 

@@ -28,6 +28,7 @@ export const BASE_URL = currentConfig.baseUrl;
 export const ENDPOINTS = {
 	assetManager: '/asset-manager',
 	scheduleManager: '/schedule-manager',
+	notebook: '/notebook',
 	// 추가 모듈들...
 };
 

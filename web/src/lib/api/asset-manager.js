@@ -74,6 +74,18 @@ export async function searchTransactions(query, classId = null) {
 }
 
 // ===== Tags (태그) =====
-export async function getTags() {
-	return apiGet(`${API_BASE}/tags`);
+export async function getTags(activeOnly = true) {
+	return apiGet(`${API_BASE}/tags`, { active_only: activeOnly });
+}
+
+export async function createTag(tagData) {
+	return apiPost(`${API_BASE}/tags`, tagData);
+}
+
+export async function updateTag(tagId, tagData) {
+	return apiPut(`${API_BASE}/tags/${tagId}`, tagData);
+}
+
+export async function deleteTag(tagId, force = false) {
+	return apiDelete(`${API_BASE}/tags/${tagId}`, force ? { force } : {});
 }

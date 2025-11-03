@@ -84,15 +84,39 @@ def init_database():
                 tier_id INTEGER NOT NULL,
                 date DATE NOT NULL,
                 description TEXT,
-                tags TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (class_id) REFERENCES asset_classes(id),
                 FOREIGN KEY (category_id) REFERENCES asset_categories(id),
                 FOREIGN KEY (tier_id) REFERENCES asset_tiers(id)
             )
+        """)        
+        
+        # 5. asset_tags 테이블 (태그 마스터)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS asset_tags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                description TEXT,
+                color TEXT DEFAULT '#6366f1',
+                is_active BOOLEAN DEFAULT TRUE,
+                usage_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
         """)
         
+        # 6. asset_tag_relations 테이블 (거래-태그 다대다 관계)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS asset_tag_relations (
+                asset_id INTEGER NOT NULL,
+                tag_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (asset_id, tag_id),
+                FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+                FOREIGN KEY (tag_id) REFERENCES asset_tags(id) ON DELETE CASCADE
+            )
+        """)
+
         # 인덱스 생성
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_date ON assets(date)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_class ON assets(class_id)")
@@ -100,7 +124,11 @@ def init_database():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_date_class ON assets(date, class_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_categories_class ON asset_categories(class_id, is_active)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tiers_class ON asset_tiers(class_id, is_active)")
-        
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_name ON asset_tags(name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tag_relations_asset ON asset_tag_relations(asset_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tag_relations_tag ON asset_tag_relations(tag_id)")
+     
+
         # 초기 데이터 삽입 (데이터가 없을 때만)
         cursor.execute("SELECT COUNT(*) FROM asset_classes")
         if cursor.fetchone()[0] == 0:

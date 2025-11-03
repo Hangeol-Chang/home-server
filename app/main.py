@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 # 라우터 임포트
-from modules import asset_manager, schedule_manager
+from modules import asset_manager, schedule_manager, notebook_manager
 # 데이터베이스 초기화
 from utils.database import init_database
 
@@ -41,6 +41,7 @@ app.add_middleware(
 # 라우터 등록
 app.include_router(asset_manager.router)
 app.include_router(schedule_manager.router)
+app.include_router(notebook_manager.router)
 
 # 간단한 데이터 모델 정의
 class Item(BaseModel):

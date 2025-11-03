@@ -2,11 +2,11 @@
 /* https://digitalsynopsis.com/design/minimal-web-color-palettes-combination-hex-code/ */
 :root {
 	/* Primary Colors - 밝은 순서 */
-	--color-lightest: #E5FCC2; 
-	--color-light: #9DE0AD; 
-	--color-medium: #45ADA8;
-	--color-dark: #547980; 
-	--color-darkest: #594F4F;
+	--color-lightest: #eee2df; 
+	--color-light: #eed7c5; 
+	--color-medium: #c89f9c;
+	--color-dark: #c97c5d; 
+	--color-darkest: #b36a5e;
 
 	/* Darker/Lighter variants (10% 단위) */
 	--color-lightest-darker: color-mix(in srgb, var(--color-lightest) 90%, black);

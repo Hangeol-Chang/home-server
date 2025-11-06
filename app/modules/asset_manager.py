@@ -657,6 +657,223 @@ async def get_monthly_statistics(
             "balance": earn_total - spend_total - save_total
         }
 
+# ===== Period Comparison (기간별 비교) API =====
+
+@router.get("/statistics/period-comparison")
+async def get_period_comparison(
+    unit: str = Query("week", description="비교 단위: day, week, month, year"),
+    periods: int = Query(4, ge=1, le=8, description="비교할 기간 수 (1~8)"),
+    end_date: Optional[str] = Query(None, description="기준 종료일 (YYYY-MM-DD), 미지정시 오늘")
+):
+    """기간별 비교 통계 조회"""
+    from datetime import timedelta
+    from models.asset import PeriodUnit, PeriodComparison, PeriodData
+    
+    # 단위 검증
+    try:
+        period_unit = PeriodUnit(unit)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid unit: {unit}. Must be one of: day, week, month, year"
+        )
+    
+    # 종료일 파싱
+    if end_date:
+        try:
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid date format. Use YYYY-MM-DD"
+            )
+    else:
+        end = datetime.now().date()
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        period_data_list = []
+        
+        for i in range(periods):
+            # 각 기간의 시작/종료 계산
+            if period_unit == PeriodUnit.day:
+                period_end = end - timedelta(days=i)
+                period_start = period_end
+                label = period_end.strftime("%Y-%m-%d")
+                
+            elif period_unit == PeriodUnit.week:
+                # 주 단위: 월요일~일요일
+                period_end = end - timedelta(weeks=i)
+                weekday = period_end.weekday()  # 0=월요일, 6=일요일
+                period_end = period_end - timedelta(days=weekday) + timedelta(days=6)  # 일요일
+                period_start = period_end - timedelta(days=6)  # 월요일
+                label = f"{period_start.strftime('%m/%d')}~{period_end.strftime('%m/%d')}"
+                
+            elif period_unit == PeriodUnit.month:
+                # 월 단위
+                year = end.year
+                month = end.month - i
+                while month < 1:
+                    month += 12
+                    year -= 1
+                
+                # 해당 월의 첫날과 마지막날
+                period_start = date_type(year, month, 1)
+                if month == 12:
+                    period_end = date_type(year, 12, 31)
+                else:
+                    period_end = date_type(year, month + 1, 1) - timedelta(days=1)
+                label = f"{year}년 {month}월"
+                
+            else:  # year
+                year = end.year - i
+                period_start = date_type(year, 1, 1)
+                period_end = date_type(year, 12, 31)
+                label = f"{year}년"
+            
+            # 해당 기간의 거래 조회
+            cursor.execute("""
+                SELECT 
+                    ac.name as class_name,
+                    SUM(a.cost) as total,
+                    COUNT(*) as count
+                FROM assets a
+                JOIN asset_classes ac ON a.class_id = ac.id
+                WHERE a.date BETWEEN ? AND ?
+                GROUP BY ac.name
+            """, (period_start.strftime("%Y-%m-%d"), period_end.strftime("%Y-%m-%d")))
+            
+            class_totals = {}
+            total_count = 0
+            for row in cursor.fetchall():
+                class_totals[row[0]] = row[1]
+                total_count += row[2]
+            
+            spend_total = class_totals.get('spend', 0.0)
+            earn_total = class_totals.get('earn', 0.0)
+            save_total = class_totals.get('save', 0.0)
+            balance = earn_total - spend_total - save_total
+            
+            # 카테고리별 통계 (지출만)
+            cursor.execute("""
+                SELECT 
+                    cat.id,
+                    cat.name,
+                    cat.display_name,
+                    COUNT(*) as count,
+                    SUM(a.cost) as total
+                FROM assets a
+                JOIN asset_categories cat ON a.category_id = cat.id
+                JOIN asset_classes ac ON a.class_id = ac.id
+                WHERE a.date BETWEEN ? AND ?
+                  AND ac.name = 'spend'
+                GROUP BY cat.id
+                ORDER BY total DESC
+            """, (period_start.strftime("%Y-%m-%d"), period_end.strftime("%Y-%m-%d")))
+            
+            by_category = []
+            for row in cursor.fetchall():
+                by_category.append({
+                    "category_id": row[0],
+                    "category_name": row[1],
+                    "category_display_name": row[2],
+                    "count": row[3],
+                    "total_cost": row[4]
+                })
+            
+            # 상위 거래 5건 (지출액 기준)
+            cursor.execute("""
+                SELECT 
+                    a.id, a.name, a.cost, a.class_id, a.category_id, 
+                    a.tier_id, a.date, a.description,
+                    ac.name as class_name, ac.display_name as class_display_name,
+                    cat.name as category_name, cat.display_name as category_display_name,
+                    t.tier_level, t.name as tier_name, t.display_name as tier_display_name
+                FROM assets a
+                JOIN asset_classes ac ON a.class_id = ac.id
+                JOIN asset_categories cat ON a.category_id = cat.id
+                JOIN asset_tiers t ON a.tier_id = t.id
+                WHERE a.date BETWEEN ? AND ?
+                  AND ac.name = 'spend'
+                ORDER BY a.cost DESC
+                LIMIT 5
+            """, (period_start.strftime("%Y-%m-%d"), period_end.strftime("%Y-%m-%d")))
+            
+            top_transactions = []
+            for row in cursor.fetchall():
+                # 태그 조회
+                cursor.execute("""
+                    SELECT at.name
+                    FROM asset_tags at
+                    JOIN asset_tag_relations atr ON at.id = atr.tag_id
+                    WHERE atr.asset_id = ?
+                """, (row[0],))
+                tags = [t[0] for t in cursor.fetchall()]
+                
+                top_transactions.append({
+                    "id": row[0],
+                    "name": row[1],
+                    "cost": row[2],
+                    "class_id": row[3],
+                    "category_id": row[4],
+                    "tier_id": row[5],
+                    "date": row[6],
+                    "description": row[7],
+                    "class_name": row[8],
+                    "class_display_name": row[9],
+                    "category_name": row[10],
+                    "category_display_name": row[11],
+                    "tier_level": row[12],
+                    "tier_name": row[13],
+                    "tier_display_name": row[14],
+                    "tags": tags
+                })
+            
+            period_data_list.append({
+                "period_label": label,
+                "start_date": period_start,
+                "end_date": period_end,
+                "spend_total": spend_total,
+                "earn_total": earn_total,
+                "save_total": save_total,
+                "balance": balance,
+                "transaction_count": total_count,
+                "by_category": by_category,
+                "top_transactions": top_transactions
+            })
+        
+        # 평균 및 트렌드 계산
+        if period_data_list:
+            avg_spend = sum(p["spend_total"] for p in period_data_list) / len(period_data_list)
+            avg_earn = sum(p["earn_total"] for p in period_data_list) / len(period_data_list)
+            avg_save = sum(p["save_total"] for p in period_data_list) / len(period_data_list)
+            
+            # 트렌드: 최근 기간 vs 이전 기간들 평균
+            if len(period_data_list) > 1:
+                recent = period_data_list[0]
+                prev_avg_spend = sum(p["spend_total"] for p in period_data_list[1:]) / (len(period_data_list) - 1)
+                prev_avg_earn = sum(p["earn_total"] for p in period_data_list[1:]) / (len(period_data_list) - 1)
+                
+                spend_trend = ((recent["spend_total"] - prev_avg_spend) / prev_avg_spend * 100) if prev_avg_spend > 0 else 0
+                earn_trend = ((recent["earn_total"] - prev_avg_earn) / prev_avg_earn * 100) if prev_avg_earn > 0 else 0
+            else:
+                spend_trend = 0
+                earn_trend = 0
+        else:
+            avg_spend = avg_earn = avg_save = 0
+            spend_trend = earn_trend = 0
+        
+        return {
+            "unit": unit,
+            "periods": period_data_list,
+            "avg_spend": avg_spend,
+            "avg_earn": avg_earn,
+            "avg_save": avg_save,
+            "spend_trend": spend_trend,
+            "earn_trend": earn_trend
+        }
+
 # ===== Tags (태그) API =====
 
 @router.get("/tags", response_model=List[AssetTag])

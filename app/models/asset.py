@@ -141,6 +141,38 @@ class MonthlyStatistics(BaseModel):
     save_total: float
     balance: float  # earn - spend - save
 
+# ===== Period Comparison (기간별 비교) =====
+class PeriodUnit(str, Enum):
+    day = "day"
+    week = "week"
+    month = "month"
+    year = "year"
+
+class PeriodData(BaseModel):
+    """단일 기간 데이터"""
+    period_label: str = Field(..., description="기간 레이블 (예: 2025-11-04~11-10)")
+    start_date: date_type
+    end_date: date_type
+    spend_total: float
+    earn_total: float
+    save_total: float
+    balance: float
+    transaction_count: int
+    by_category: List[CategoryStatistics]
+    top_transactions: List['AssetTransactionDetail'] = Field(default_factory=list, description="상위 거래 5건")
+
+class PeriodComparison(BaseModel):
+    """기간별 비교 통계"""
+    unit: PeriodUnit = Field(..., description="비교 단위")
+    periods: List[PeriodData] = Field(..., description="최대 4개 기간 데이터 (최신순)")
+    
+    # 평균/트렌드 정보
+    avg_spend: float
+    avg_earn: float
+    avg_save: float
+    spend_trend: float = Field(..., description="지출 증감률 (최근 기간 대비 이전 기간 평균)")
+    earn_trend: float = Field(..., description="수익 증감률")
+
 # ===== Tags (태그) =====
 class AssetTagBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=50, description="태그명")

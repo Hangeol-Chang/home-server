@@ -3,6 +3,7 @@
 	import MonthlyReport from '$lib/components/asset-manager/MonthlyReport.svelte';
 	import StatisticsChart from '$lib/components/asset-manager/StatisticsChart.svelte';
 	import TransactionList from '$lib/components/asset-manager/TransactionList.svelte';
+	import PeriodComparison from '$lib/components/asset-manager/PeriodComparison.svelte';
 	import { getTransactions } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
 
@@ -127,6 +128,20 @@
 	<!-- 월간 리포트 -->
 	<MonthlyReport year={currentYear} month={currentMonth} />
 
+	<hr>
+	<button class="part-btn">
+		🗓️기간별 통계
+	</button>
+	<hr>
+
+	<!-- 기간별 비교 분석 -->
+	<PeriodComparison unit="week" periods={4} />
+
+	<hr>
+	<button class="part-btn">
+		📊 항목별 통계
+	</button>
+	<hr>
 	<!-- 거래 분류 필터 -->
 	<div class="class-filter">
 		{#each classTypes as classType}
@@ -245,7 +260,7 @@
 
 	.class-filter {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 		gap: 12px;
 		margin-bottom: 32px;
 	}
@@ -281,6 +296,34 @@
 
 		.class-filter {
 			grid-template-columns: 1fr 1fr;
+		}
+	}
+
+	.part-btn {
+		text-decoration: none;
+		width: 100%;
+		background-color: var(--bg-primary);
+		border: transparent;
+		border-radius: 4px;
+		padding: 8px;
+		margin: 8px 0;
+		text-align: left;
+		font-size: 1.3rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		cursor: pointer;
+		transition: all 0.3s;
+
+		background: linear-gradient(to right, 
+			var(--bg-secondary) 0%, var(--bg-secondary) 49%, 
+			var(--bg-primary) 50%, var(--bg-primary) 100%
+		);
+		background-size: 200% 100%;
+		background-position: right center;
+
+		&:hover {
+			background-position: left center;
+			transform: translateY(-2px);
 		}
 	}
 </style>

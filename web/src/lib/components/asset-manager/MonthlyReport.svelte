@@ -245,7 +245,7 @@
 	/* 동심원 차트 컨테이너 */
 	.circular-chart-container {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: 2fr 3fr;
 		gap: 10px;
 		align-items: center;
 	}
@@ -429,22 +429,26 @@
 	}
 
 	@media (max-width: 1024px) {
-		.circular-chart-container {
-			grid-template-columns: 1fr;
-			gap: 32px;
-		}
-
 		.circular-chart {
 			max-width: 300px;
+		}
+
+		.stats-table td {
+			padding: 8px 4px;
+		}
+		.stat-amount {
+			font-size: 1.2rem;
+		}
+		.stat-icon {
+			font-size: 1.1rem;
 		}
 	}
 
 	@media (max-width: 768px) {
-		.report-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 16px;
+		.circular-chart-container {
+			grid-template-columns: 1fr;
 		}
+
 
 		.circular-chart {
 			max-width: 250px;
@@ -454,7 +458,6 @@
 			font-size: 0.85rem;
 		}
 
-		.stats-table th,
 		.stats-table td {
 			padding: 12px 8px;
 		}

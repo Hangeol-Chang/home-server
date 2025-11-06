@@ -67,6 +67,12 @@ export async function getMonthlyStatistics(year, month) {
 	return apiGet(`${API_BASE}/statistics/monthly`, { year, month });
 }
 
+export async function getPeriodComparison(unit = 'week', periods = 4, endDate = null) {
+	const params = { unit, periods };
+	if (endDate) params.end_date = endDate;
+	return apiGet(`${API_BASE}/statistics/period-comparison`, params);
+}
+
 export async function searchTransactions(query, classId = null) {
 	const params = { query };
 	if (classId) params.class_id = classId;

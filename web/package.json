@@ -29,6 +29,7 @@
 	},
 	"dependencies": {
 		"@auth/core": "^0.41.0",
-		"@auth/sveltekit": "^1.11.0"
+		"@auth/sveltekit": "^1.11.0",
+		"chart.js": "^4.5.1"
 	}
 }

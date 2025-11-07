@@ -15,7 +15,7 @@
 	let spendChartCanvas = $state(null);
 	let saveChartCanvas = $state(null);
 	let spendChartInstance = null;
-	let saveChartInstance = null;
+	let saveChartInstance = null;0
 
 	const units = [
 		{ value: 'day', label: '일별', icon: '📅' },
@@ -112,8 +112,7 @@
 				label: categoryDisplayName,
 				data: categoryData,
 				backgroundColor: bgColor,
-				borderColor: getBorderColor(bgColor),
-				borderWidth: 2,
+				borderWidth: 0,
 				borderRadius: 6
 			});
 			colorIndex++;
@@ -135,9 +134,8 @@
 				{
 					label: '저축',
 					data: saveData,
-					backgroundColor: 'rgba(33, 150, 243, 0.7)',
-					borderColor: 'rgba(33, 150, 243, 1)',
-					borderWidth: 2,
+					backgroundColor: '#c89f9c',
+					borderWidth: 0,
 					borderRadius: 6
 				}
 			]
@@ -145,23 +143,20 @@
 	}
 
 	function getCategoryColor(index) {
+		// CSS 변수 기반 색상 팔레트
 		const colors = [
-			'rgba(244, 67, 54, 0.7)', // 빨강
-			'rgba(156, 39, 176, 0.7)', // 보라
-			'rgba(63, 81, 181, 0.7)', // 남색
-			'rgba(33, 150, 243, 0.7)', // 파랑
-			'rgba(0, 188, 212, 0.7)', // 청록
-			'rgba(76, 175, 80, 0.7)', // 초록
-			'rgba(255, 193, 7, 0.7)', // 노랑
-			'rgba(255, 152, 0, 0.7)', // 주황
-			'rgba(121, 85, 72, 0.7)', // 갈색
-			'rgba(158, 158, 158, 0.7)' // 회색
+			'#c89f9c', // --color-medium
+			'#c97c5d', // --color-dark
+			'#b36a5e', // --color-darkest
+			'#eed7c5', // --color-light
+			'#eee2df', // --color-lightest
+			'rgba(200, 159, 156, 0.7)', // --color-medium 70%
+			'rgba(201, 124, 93, 0.7)', // --color-dark 70%
+			'rgba(179, 106, 94, 0.7)', // --color-darkest 70%
+			'rgba(238, 215, 197, 0.7)', // --color-light 70%
+			'rgba(238, 226, 223, 0.7)' // --color-lightest 70%
 		];
 		return colors[index % colors.length];
-	}
-
-	function getBorderColor(bgColor) {
-		return bgColor.replace('0.7', '1');
 	}
 
 	function updateSpendChart() {
@@ -359,7 +354,6 @@
 
 <div class="period-comparison">
 	<div class="comparison-header">
-		<h2>📊 기간별 비교 분석</h2>
 		<div class="controls">
 			<div class="unit-selector">
 				{#each units as unitOption}
@@ -373,22 +367,23 @@
 					</button>
 				{/each}
 			</div>
-			<button class="refresh-btn" onclick={loadData} disabled={loading} aria-label="새로고침">
-				<svg
-					width="18"
-					height="18"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-				>
-					<path d="M23 4v6h-6M1 20v-6h6" />
-					<path
-						d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"
-					/>
-				</svg>
-			</button>
 		</div>
+
+        <button class="refresh-btn" onclick={loadData} disabled={loading} aria-label="새로고침">
+            <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+            >
+                <path d="M23 4v6h-6M1 20v-6h6" />
+                <path
+                    d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"
+                />
+            </svg>
+        </button>
 	</div>
 
 	{#if loading}
@@ -402,45 +397,30 @@
 			<button class="retry-btn" onclick={loadData}>다시 시도</button>
 		</div>
 	{:else if data}
-		<!-- 트렌드 요약 -->
-		<div class="trend-summary">
-			<div class="trend-card spend">
-				<div class="trend-label">
-					<span class="trend-icon">💸</span>
-					<span>평균 지출</span>
-				</div>
-				<div class="trend-value">{formatCurrency(data.avg_spend)}</div>
-				<div class="trend-change" style="color: {getTrendColor(data.spend_trend)}">
-					<span>{getTrendIcon(data.spend_trend)}</span>
-					<span>{formatTrend(data.spend_trend)}</span>
-				</div>
-			</div>
-
-			<div class="trend-card earn">
-				<div class="trend-label">
-					<span class="trend-icon">💰</span>
-					<span>평균 수익</span>
-				</div>
-				<div class="trend-value">{formatCurrency(data.avg_earn)}</div>
-				<div class="trend-change" style="color: {getTrendColor(data.earn_trend)}">
-					<span>{getTrendIcon(data.earn_trend)}</span>
-					<span>{formatTrend(data.earn_trend)}</span>
-				</div>
-			</div>
-
-			<div class="trend-card save">
-				<div class="trend-label">
-					<span class="trend-icon">🏦</span>
-					<span>평균 저축</span>
-				</div>
-				<div class="trend-value">{formatCurrency(data.avg_save)}</div>
-			</div>
-		</div>
-
 		<!-- 지출 카테고리별 차트 -->
 		{#if getSpendChartData()}
+            <h3>💸 SPEND</h3>
 			<div class="chart-section">
-				<h3>💸 지출 카테고리별 비교</h3>
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>period</th>
+                            <th>sum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {#each data.periods as period, index}
+                            <tr>
+                                <td class="period-label">
+                                    {period.period_label}
+                                </td>
+                                <td class="period-value">
+                                    {formatCurrency(period.spend_total)}
+                                </td>
+                            </tr>
+                        {/each}
+                    </tbody>
+                </table>
 				<div class="chart-container">
 					<canvas bind:this={spendChartCanvas}></canvas>
 				</div>
@@ -448,38 +428,37 @@
 		{/if}
 
 		<!-- 저축 추이 차트 -->
+        <h3>💰 SAVE</h3>
 		<div class="chart-section">
-			<h3>💰 저축 추이</h3>
+            <table class="stats-table">
+                <thead class="stats-thead">
+                    <tr>
+                        <th>period</th>
+                        <th>sum</th>
+                    </tr>
+                </thead>
+                <tbody class="stats-tbody">
+                    {#each data.periods as period, index}
+                        <tr>
+                            <td class="period-label">
+                                {period.period_label}
+                            </td>
+                            <td class="period-value">
+                                {formatCurrency(period.save_total)}
+                            </td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
 			<div class="chart-container">
 				<canvas bind:this={saveChartCanvas}></canvas>
 			</div>
 		</div>
 
 		<!-- 기간별 상세 정보 -->
-		<div class="periods-grid">
+		<!-- <div class="periods-grid">
 			{#each data.periods as period, index}
 				<div class="period-card">
-					<div class="period-header">
-						<h3>{period.period_label}</h3>
-						<span class="period-index">기간 {data.periods.length - index}</span>
-					</div>
-
-					<div class="period-stats">
-						<div class="stat-item spend">
-							<span class="stat-label">💸 지출</span>
-							<span class="stat-value">{formatCurrency(period.spend_total)}</span>
-						</div>
-						<div class="stat-item earn">
-							<span class="stat-label">💰 수익</span>
-							<span class="stat-value">{formatCurrency(period.earn_total)}</span>
-						</div>
-						<div class="stat-item save">
-							<span class="stat-label">🏦 저축</span>
-							<span class="stat-value">{formatCurrency(period.save_total)}</span>
-						</div>
-					</div>
-
-					<!-- 주요 카테고리 -->
 					<div class="top-categories">
 						<h4>주요 카테고리</h4>
 						{#if period.by_category && period.by_category.length > 0}
@@ -496,7 +475,6 @@
 						{/if}
 					</div>
 
-					<!-- 상위 거래 -->
 					<div class="top-transactions">
 						<h4>상위 거래</h4>
 						{#if period.top_transactions && period.top_transactions.length > 0}
@@ -519,7 +497,7 @@
 					</div>
 				</div>
 			{/each}
-		</div>
+		</div> -->
 	{/if}
 </div>
 
@@ -538,13 +516,6 @@
 		margin-bottom: 28px;
 		flex-wrap: wrap;
 		gap: 16px;
-	}
-
-	.comparison-header h2 {
-		font-size: 22px;
-		font-weight: 700;
-		color: #1a1a1a;
-		margin: 0;
 	}
 
 	.controls {
@@ -655,7 +626,7 @@
 		cursor: pointer;
 		font-size: 14px;
 		font-weight: 500;
-		transition: background 0.2s ease;
+		transition: all 0.2s ease;
 	}
 
 	.retry-btn:hover {
@@ -663,263 +634,73 @@
 	}
 
 	.chart-section {
-		margin-bottom: 32px;
-		background: #fafafa;
+        display: flex;
+        gap: 16px;
+		margin: 16px 0px;
+		background: var(--bg-primary);
+        box-shadow: var(--shadow-md);
 		padding: 24px;
 		border-radius: 12px;
 	}
 
-	.chart-section h3 {
-		font-size: 18px;
-		font-weight: 600;
-		color: #333;
-		margin: 0 0 20px 0;
-	}
-
 	.chart-container {
+        width: 100%;
 		height: 320px;
 		position: relative;
+        flex-grow: 1;
 	}
 
-	.trend-summary {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-		gap: 16px;
-		margin-bottom: 32px;
-	}
+    .stats-table {
+        width: 100%;
+        max-width: 300px;
+        flex-grow: 1;
+        border-collapse: collapse;
+        border-radius: 12px;
+        box-shadow: var(--shadow-md);
+    }
+    .stats-table th, .stats-table tr {
+        padding: 4px 8px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 14px;
+    }
+    .stats-table td {
+        padding: 4px 8px;
+        text-align: left;
+    }
 
-	.trend-card {
-		background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-		padding: 20px;
-		border-radius: 12px;
-		border: 2px solid transparent;
-		transition: all 0.3s ease;
+    .stats-table tbody tr:last-child {
+		border-bottom: none;
 	}
-
-	.trend-card:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-	}
-
-	.trend-card.spend {
-		border-color: rgba(244, 67, 54, 0.2);
-	}
-
-	.trend-card.earn {
-		border-color: rgba(76, 175, 80, 0.2);
-	}
-
-	.trend-card.save {
-		border-color: rgba(33, 150, 243, 0.2);
-	}
-
-	.trend-label {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 14px;
-		color: #666;
-		margin-bottom: 10px;
-	}
-
-	.trend-icon {
-		font-size: 20px;
-	}
-
-	.trend-value {
-		font-size: 24px;
-		font-weight: 700;
-		color: #1a1a1a;
-		margin-bottom: 8px;
-	}
-
-	.trend-change {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-		font-size: 13px;
-		font-weight: 600;
-	}
-
-	.periods-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-		gap: 20px;
-		margin-top: 24px;
-	}
-
-	.period-card {
-		background: white;
-		border: 1px solid #e0e0e0;
-		border-radius: 12px;
-		padding: 20px;
-		transition: all 0.3s ease;
-	}
-
-	.period-card:hover {
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-		border-color: #2196f3;
-	}
-
-	.period-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 16px;
-		padding-bottom: 12px;
-		border-bottom: 2px solid #f0f0f0;
-	}
-
-	.period-header h3 {
-		font-size: 16px;
-		font-weight: 600;
-		color: #1a1a1a;
-		margin: 0;
-	}
-
-	.period-index {
-		font-size: 12px;
-		color: #999;
-		background: #f5f5f5;
-		padding: 4px 10px;
-		border-radius: 12px;
-	}
-
-	.period-stats {
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-		margin-bottom: 16px;
-	}
-
-	.stat-item {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 10px;
-		background: #fafafa;
-		border-radius: 8px;
-	}
-
-	.stat-label {
-		font-size: 13px;
-		color: #666;
-		font-weight: 500;
-	}
-
-	.stat-value {
-		font-size: 15px;
-		font-weight: 600;
-		color: #1a1a1a;
-	}
-
-	.top-categories,
-	.top-transactions {
-		margin-top: 16px;
-	}
-
-	.top-categories h4,
-	.top-transactions h4 {
-		font-size: 13px;
-		font-weight: 600;
-		color: #666;
-		margin: 0 0 10px 0;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-	}
-
-	.category-list,
-	.transaction-list {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.category-item,
-	.transaction-item {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 8px;
-		background: #f8f9fa;
-		border-radius: 6px;
-		font-size: 13px;
-	}
-
-	.category-name,
-	.trans-info {
-		color: #333;
-		font-weight: 500;
-	}
-
-	.trans-info {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	.trans-name {
-		font-size: 13px;
-		font-weight: 500;
-		color: #333;
-	}
-
-	.trans-date {
-		font-size: 11px;
-		color: #999;
-	}
-
-	.category-value,
-	.trans-value {
-		color: #f44336;
-		font-weight: 600;
-	}
-
-	.no-data {
-		text-align: center;
-		color: #999;
-		font-size: 12px;
-		padding: 12px;
-		background: #f8f9fa;
-		border-radius: 6px;
-		margin: 0;
-	}
+    .stats-table th {
+        background: var(--bg-secondary);
+        font-weight: 600;
+    }
+    .period-label {
+        font-weight: 300;
+        color: var(--text-secondary);
+    }
+    .period-value {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
 
 	@media (max-width: 768px) {
 		.period-comparison {
 			padding: 20px;
 		}
 
-		.comparison-header {
-			flex-direction: column;
-			align-items: flex-start;
-		}
-
-		.controls {
-			width: 100%;
-			flex-direction: column;
-		}
-
-		.unit-selector {
-			width: 100%;
-			justify-content: space-between;
-		}
-
-		.unit-btn {
-			flex: 1;
-			padding: 8px 12px;
-		}
+        .chart-section {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .stats-table {
+            max-width: 100%;
+        }
 
 		.chart-container {
 			height: 280px;
-		}
-
-		.periods-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.trend-summary {
-			grid-template-columns: 1fr;
 		}
 	}
 </style>

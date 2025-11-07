@@ -195,7 +195,6 @@
 		padding: 20px;
 	}
 
-	/* 페이지 특화 스타일 */
 	.header-actions {
 		display: flex;
 		gap: 12px;
@@ -283,14 +282,8 @@
 	}
 
 	@media (max-width: 768px) {
-		.header-actions {
-			width: 100%;
-			flex-direction: column;
-		}
-
 		.admin-link,
 		.add-btn {
-			width: 100%;
 			justify-content: center;
 		}
 

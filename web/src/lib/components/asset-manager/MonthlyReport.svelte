@@ -32,13 +32,6 @@
 		return new Intl.NumberFormat('ko-KR').format(value) + '원';
 	}
 
-	function getBalanceStatus(balance) {
-		if (balance > 0) return { label: '흑자', color: '#4caf50', icon: '📈' };
-		if (balance < 0) return { label: '적자', color: '#f44336', icon: '📉' };
-		return { label: '수지균형', color: '#ff9800', icon: '⚖️' };
-	}
-
-
 	// 차트 데이터 계산
 	const chartData = $derived(() => {
 		if (!stats) return null;
@@ -177,11 +170,8 @@
 
 						<tr class="stat-row balance {chartData().balance >= 0 ? 'positive' : 'negative'}">
 							<td class="stat-label">
-								<span class="stat-icon">{getBalanceStatus(chartData().balance).icon}</span>
+								<span class="stat-icon">{chartData().balance >= 0 ? '📈' : '📉'}</span>
 								<span>잔액</span>
-								<span class="stat-badge {chartData().balance >= 0 ? 'positive' : 'negative'}">
-									{getBalanceStatus(chartData().balance).label}
-								</span>
 							</td>
 							<td class="stat-amount text-right">{formatCurrency(Math.abs(chartData().balance))}</td>
 							<td class="text-center">
@@ -367,16 +357,6 @@
 	.stat-badge.default {
 		background: rgba(255, 152, 0, 0.15);
 		color: #ff9800;
-	}
-
-	.stat-badge.positive {
-		background: rgba(76, 175, 80, 0.15);
-		color: #4caf50;
-	}
-
-	.stat-badge.negative {
-		background: rgba(244, 67, 54, 0.15);
-		color: #f44336;
 	}
 
 	.stat-amount {

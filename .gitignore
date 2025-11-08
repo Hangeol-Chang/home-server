@@ -23,5 +23,6 @@ __pycache__
 
 app/docs
 web/docs
+logs/
 
 obsidian-vault

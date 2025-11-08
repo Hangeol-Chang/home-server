@@ -29,10 +29,17 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS 미들웨어 추가 (프론트엔드에서 접근할 수 있도록)
+# 허용된 오리진 목록
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://hgchang1.iptime.org:5173",
+]
+
+# CORS 미들웨어 추가 (특정 도메인만 허용)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 개발 환경에서는 모든 도메인 허용
+    allow_origins=allowed_origins,  # 특정 도메인만 허용
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

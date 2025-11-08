@@ -3,17 +3,18 @@
  */
 
 import { dev } from '$app/environment';
+import { env } from '$env/dynamic/public';
 
 // 환경별 API 베이스 URL
 export const API_CONFIG = {
 	// 개발 환경
 	development: {
-		baseUrl: 'http://localhost:5005',
+		baseUrl: env.PUBLIC_API_URL || 'http://localhost:5005',
 		timeout: 30000
 	},
-	// 프로덕션 환경 (추후 설정)
+	// 프로덕션 환경
 	production: {
-		baseUrl: 'http://localhost:5005', // 나중에 실제 프로덕션 URL로 변경
+		baseUrl: env.PUBLIC_API_URL || 'http://hgchang1.iptime.org:5005',
 		timeout: 30000
 	}
 };

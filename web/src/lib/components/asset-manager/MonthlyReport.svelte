@@ -129,53 +129,53 @@
 			</svg>
 
 			<!-- 범례 및 통계 테이블 -->
-			<div class="stats-table-container">
-				<table class="stats-table">
+			<div class="table-container">
+				<table class="data-table">
 					<tbody>
-						<tr class="stat-row income">
-							<td class="stat-label">
-								<span class="stat-icon">💰</span>
+						<tr class="row-earn">
+							<td class="cell-label">
+								<span class="cell-icon">💰</span>
 								<span>수익</span>
 								{#if chartData().usingDefault}
-									<span class="stat-badge default">기본값</span>
+									<span class="cell-badge">기본값</span>
 								{/if}
 							</td>
-							<td class="stat-amount text-right">{formatCurrency(chartData().income)}</td>
+							<td class="cell-amount text-right">{formatCurrency(chartData().income)}</td>
 							<td class="text-center">
-								<span class="stat-percent base">100%</span>
+								<span class="cell-percent">100%</span>
 							</td>
 						</tr>
 						
-						<tr class="stat-row spend">
-							<td class="stat-label">
-								<span class="stat-icon">💸</span>
+						<tr class="row-spend">
+							<td class="cell-label">
+								<span class="cell-icon">💸</span>
 								<span>지출</span>
 							</td>
-							<td class="stat-amount text-right">{formatCurrency(chartData().spend)}</td>
+							<td class="cell-amount text-right">{formatCurrency(chartData().spend)}</td>
 							<td class="text-center">
-								<span class="stat-percent spend">{chartData().spendPercent}%</span>
+								<span class="cell-percent spend">{chartData().spendPercent}%</span>
 							</td>
 						</tr>
 
-						<tr class="stat-row save">
-							<td class="stat-label">
-								<span class="stat-icon">🏦</span>
+						<tr class="row-save">
+							<td class="cell-label">
+								<span class="cell-icon">🏦</span>
 								<span>저축</span>
 							</td>
-							<td class="stat-amount text-right">{formatCurrency(chartData().save)}</td>
+							<td class="cell-amount text-right">{formatCurrency(chartData().save)}</td>
 							<td class="text-center">
-								<span class="stat-percent save">{chartData().savePercent}%</span>
+								<span class="cell-percent save">{chartData().savePercent}%</span>
 							</td>
 						</tr>
 
-						<tr class="stat-row balance {chartData().balance >= 0 ? 'positive' : 'negative'}">
-							<td class="stat-label">
-								<span class="stat-icon">{chartData().balance >= 0 ? '📈' : '📉'}</span>
+						<tr class="{chartData().balance >= 0 ? 'row-positive' : 'row-negative'}">
+							<td class="cell-label">
+								<span class="cell-icon">{chartData().balance >= 0 ? '📈' : '📉'}</span>
 								<span>잔액</span>
 							</td>
-							<td class="stat-amount text-right">{formatCurrency(Math.abs(chartData().balance))}</td>
+							<td class="cell-amount text-right">{formatCurrency(Math.abs(chartData().balance))}</td>
 							<td class="text-center">
-								<span class="stat-percent balance">{chartData().balancePercent}%</span>
+								<span class="cell-percent balance">{chartData().balancePercent}%</span>
 							</td>
 						</tr>
 					</tbody>
@@ -302,125 +302,25 @@
 		font-weight: 700;
 	}
 
-	/* 통계 테이블 */
-	.stats-table-container {
-		background: var(--bg-primary);
-		border-radius: 8px;
-		overflow: hidden;
-		box-shadow: var(--shadow-md);
+	/* 행별 강조 색상 - 전역 스타일 오버라이드 */
+	.cell-percent.spend {
+		background: rgba(244, 67, 54, 0.1);
+		color: var(--text-danger);
 	}
 
-	.stats-table {
-		width: 100%;
-		border-collapse: collapse;
+	.cell-percent.save {
+		background: rgba(33, 150, 243, 0.1);
+		color: var(--text-info);
 	}
 
-	.stats-table tbody tr {
-		transition: all 0.2s;
-		border-bottom: 1px solid var(--border-color);
-	}
-
-	.stats-table tbody tr:last-child {
-		border-bottom: none;
-	}
-
-	.stats-table tbody tr:hover {
-		background: var(--bg-secondary);
-		transform: scale(1.01);
-	}
-
-	.stats-table td {
-		padding: 16px;
-	}
-
-	.stat-label {
-		align-items: center;
-		gap: 10px;
-		font-weight: 600;
-		color: var(--text-primary);
-	}
-
-	.stat-icon {
-		font-size: 1.4rem;
-		display: inline-flex;
-		align-items: center;
-	}
-
-	.stat-badge {
-		font-size: 0.75rem;
-		padding: 3px 8px;
-		border-radius: 10px;
-		font-weight: 600;
-		margin-left: 8px;
-	}
-
-	.stat-badge.default {
-		background: rgba(255, 152, 0, 0.15);
-		color: #ff9800;
-	}
-
-	.stat-amount {
-		font-size: 1.3rem;
-		font-weight: 700;
-		color: var(--text-primary);
-		font-variant-numeric: tabular-nums;
-	}
-
-	.stat-percent {
-		padding: 6px 12px;
-		border-radius: 16px;
-		font-weight: 700;
-		font-size: 0.9rem;
-		display: inline-block;
-		min-width: 60px;
-		text-align: center;
-
-		background-color: var(--bg-secondary);
-		width: 80px;
-	}
-
-	.text-right {
-		text-align: right;
-	}
-
-	.text-center {
-		text-align: center;
-	}
-
-	/* 행별 강조 색상 */
-	.stat-row.income {
-		background: linear-gradient(to right, rgba(46, 125, 50, 0.03), transparent);
-	}
-
-	.stat-row.spend {
-		background: linear-gradient(to right, rgba(244, 67, 54, 0.03), transparent);
-	}
-
-	.stat-row.save {
-		background: linear-gradient(to right, rgba(33, 150, 243, 0.03), transparent);
-	}
-
-	.stat-row.balance.positive {
-		background: linear-gradient(to right, rgba(76, 175, 80, 0.05), transparent);
-	}
-
-	.stat-row.balance.negative {
-		background: linear-gradient(to right, rgba(244, 67, 54, 0.05), transparent);
+	.cell-percent.balance {
+		background: var(--bg-tertiary);
+		color: var(--text-secondary);
 	}
 
 	@media (max-width: 1024px) {
 		.circular-chart {
 			max-width: 300px;
-		}
-
-		.stats-table td {
-			padding: 8px 4px;
-		}
-		.stat-amount {
-			font-size: 1.2rem;
-		}
-		.stat-icon {
-			font-size: 1.1rem;
 		}
 	}
 
@@ -429,36 +329,8 @@
 			grid-template-columns: 1fr;
 		}
 
-
 		.circular-chart {
 			max-width: 250px;
-		}
-
-		.stats-table {
-			font-size: 0.85rem;
-		}
-
-		.stats-table td {
-			padding: 12px 8px;
-		}
-
-		.stat-amount {
-			font-size: 1.1rem;
-		}
-
-		.stat-icon {
-			font-size: 1.2rem;
-		}
-
-		.stat-percent {
-			font-size: 0.8rem;
-			padding: 4px 8px;
-			min-width: 50px;
-		}
-
-		.stat-badge {
-			font-size: 0.7rem;
-			padding: 2px 6px;
 		}
 	}
 </style>

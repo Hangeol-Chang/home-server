@@ -3,6 +3,7 @@
 	import MonthlyReport from '$lib/components/asset-manager/MonthlyReport.svelte';
 	import StatisticsChart from '$lib/components/asset-manager/StatisticsChart.svelte';
 	import TransactionList from '$lib/components/asset-manager/TransactionList.svelte';
+	import CalendarView from '$lib/components/asset-manager/CalendarView.svelte';
 	import PeriodComparison from '$lib/components/asset-manager/PeriodComparison.svelte';
 	import { getTransactions } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
@@ -130,7 +131,16 @@
 
 	<hr>
 	<button class="part-btn">
-		🗓️기간별 통계
+		🗓️ 월간 캘린더
+	</button>
+	<hr>
+
+	<!-- 월간 캘린더 뷰 -->
+	<CalendarView year={currentYear} month={currentMonth} />
+
+	<hr>
+	<button class="part-btn">
+		🗓️ 기간별 통계
 	</button>
 	<hr>
 
@@ -233,7 +243,7 @@
 	.month-btn {
 		background: var(--bg-primary);
 		border: 1px solid var(--border-color);
-		border-radius: 8px;
+		border-radius: 4px;
 		padding: 8px 12px;
 		cursor: pointer;
 		display: flex;

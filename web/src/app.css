@@ -8,26 +8,42 @@
 	--color-dark: #c97c5d; 
 	--color-darkest: #b36a5e;
 
-	/* Darker/Lighter variants (10% 단위) */
-	--color-lightest-darker: color-mix(in srgb, var(--color-lightest) 90%, black);
-	--color-light-darker: color-mix(in srgb, var(--color-light) 90%, black);
-	--color-medium-darker: color-mix(in srgb, var(--color-medium) 90%, black);
-	--color-dark-darker: color-mix(in srgb, var(--color-dark) 90%, black);
-	--color-darkest-darker: color-mix(in srgb, var(--color-darkest) 90%, black);
+	--color-lightest-darker: color-mix(in srgb, var(--color-lightest) 50%, rgb(78, 23, 2));
+	--color-light-darker: color-mix(in srgb, var(--color-light) 50%, rgb(78, 23, 2));
+	--color-medium-darker: color-mix(in srgb, var(--color-medium) 50%, rgb(78, 23, 2));
+	--color-dark-darker: color-mix(in srgb, var(--color-dark) 50%, black);
+	--color-darkest-darker: color-mix(in srgb, var(--color-darkest) 50%, black);
 
-	--color-lightest-lighter: color-mix(in srgb, var(--color-lightest) 90%, white);
-	--color-light-lighter: color-mix(in srgb, var(--color-light) 90%, white);
-	--color-medium-lighter: color-mix(in srgb, var(--color-medium) 90%, white);
-	--color-dark-lighter: color-mix(in srgb, var(--color-dark) 90%, white);
+	--color-lightest-lighter: color-mix(in srgb, var(--color-lightest) 20%, white);
+	--color-light-lighter: color-mix(in srgb, var(--color-light) 20%, white);
+	--color-medium-lighter: color-mix(in srgb, var(--color-medium) 20%, white);
+	--color-dark-lighter: color-mix(in srgb, var(--color-dark) 20%, white);
 
 	/* Semantic Colors - 용도별 */
-	--bg-primary: #ffffff; /* 기본 배경 */
-	--bg-secondary: var(--color-lightest); /* 보조 배경 */
-	--bg-tertiary: var(--color-light); /* 3차 배경 */
+	--bg-white: #ffffff; /* 기본 흰색 배경 */
+	--bg-primary: var(--color-lightest-lighter); /* 기본 배경 */
+	--bg-secondary: var(--color-light-lighter); /* 보조 배경 */
+	--bg-tertiary: var(--color-lightest); /* 3차 배경 */
 
-	--text-primary: var(--color-darkest); /* 주요 텍스트 */
+	--bg-primary-dark: var(--color-lightest-darker); /* 진한 기본 배경 */
+	--bg-secondary-dark: var(--color-light-darker); /* 진한 보조 배경 */
+	--bg-tertiary-dark: var(--color-light); /* 진한 3차 배경 */
+
+	/* colored background */
+	--bg-danger: #ffebee; /* 위험 배경 */
+	--bg-success: #e8f5e9; /* 성공 배경 */
+	--bg-info: #e3f2fd; /* 정보 배경 */
+	--bg-warning: #fff3e0; /* 경고 배경 */
+
+	--text-primary: var(--color-darkest-darker); /* 주요 텍스트 */
 	--text-secondary: var(--color-dark); /* 보조 텍스트 */
 	--text-tertiary: var(--color-medium); /* 3차 텍스트 */
+
+	/* colored text */
+	--text-danger: #f44336; /* 위험 텍스트 */
+	--text-success: #4caf50; /* 성공 텍스트 */
+	--text-info: #2196f3; /* 정보 텍스트 */
+	--text-warning: #ff9800; /* 경고 텍스트 */
 
 	--border-color: var(--color-light); /* 테두리 */
 	--border-color-dark: var(--color-medium); /* 진한 테두리 */
@@ -486,6 +502,135 @@ select {
 
 .item-card:hover {
 	box-shadow: var(--shadow-md);
+}
+
+/* ========================================
+   테이블 전역 스타일
+   ======================================== */
+
+/* 기본 테이블 스타일 */
+.data-table {
+	width: 100%;
+	border-collapse: collapse;
+	background: var(--bg-white);
+}
+
+.data-table thead {
+	background: var(--bg-secondary);
+	border-bottom: 2px solid var(--border-color);
+}
+
+.data-table th {
+	padding: 12px 16px;
+	text-align: left;
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.data-table th.text-right {
+	text-align: right;
+}
+
+.data-table th.text-center {
+	text-align: center;
+}
+
+.data-table tbody tr {
+	border-bottom: 1px solid var(--border-color);
+	transition: all 0.2s;
+}
+
+.data-table tbody tr:last-child {
+	border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+	background: var(--bg-tertiary);
+}
+
+.data-table td {
+	padding: 14px 16px;
+	color: var(--text-primary);
+}
+
+.data-table td.text-right {
+	text-align: right;
+}
+
+.data-table td.text-center {
+	text-align: center;
+}
+
+/* 컴팩트 테이블 (더 작은 패딩) */
+.data-table.compact th {
+	padding: 8px 8px;
+}
+
+.data-table.compact td {
+	padding: 8px 8px;
+}
+
+/* 테이블 래퍼 (스크롤 지원) */
+.table-wrapper {
+	overflow-x: auto;
+	margin-bottom: 20px;
+}
+
+/* 테이블 컨테이너 (그림자와 배경) */
+.table-container {
+	background: var(--bg-primary);
+	border-radius: 8px;
+	overflow: hidden;
+	box-shadow: var(--shadow-md);
+}
+
+/* 테이블 셀 내용 스타일 */
+.cell-label {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.cell-icon {
+	font-size: 1.3rem;
+	display: inline-flex;
+	align-items: center;
+}
+
+.cell-amount {
+	font-size: 1.2rem;
+	font-weight: 700;
+	color: var(--text-primary);
+	font-variant-numeric: tabular-nums;
+}
+
+/* 배지 */
+.cell-badge {
+	font-size: 0.75rem;
+	padding: 3px 8px;
+	border-radius: 10px;
+	font-weight: 600;
+	margin-left: 8px;
+	background: var(--bg-tertiary);
+	color: var(--text-secondary);
+}
+
+/* 퍼센트 표시 */
+.cell-percent {
+	padding: 6px 12px;
+	border-radius: 16px;
+	font-weight: 700;
+	font-size: 0.9rem;
+	display: inline-block;
+	min-width: 60px;
+	text-align: center;
+	background-color: var(--bg-tertiary);
+	color: var(--text-secondary);
 }
 
 /* 반응형 유틸리티 */

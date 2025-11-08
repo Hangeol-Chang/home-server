@@ -55,8 +55,8 @@
 	}
 
 	function formatCurrency(value) {
-		if (value === null || value === undefined) return '0원';
-		return new Intl.NumberFormat('ko-KR').format(Math.abs(value)) + '원';
+		if (value === null || value === undefined) return '0';
+		return new Intl.NumberFormat('ko-KR').format(Math.abs(value)) + '';
 	}
 
 	function formatTrend(value) {
@@ -401,11 +401,11 @@
 		{#if getSpendChartData()}
             <h3>💸 SPEND</h3>
 			<div class="chart-section">
-                <table class="stats-table">
+                <table class="data-table compact">
                     <thead>
                         <tr>
                             <th>period</th>
-                            <th>sum</th>
+                            <th class="text-right">sum</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -414,7 +414,7 @@
                                 <td class="period-label">
                                     {period.period_label}
                                 </td>
-                                <td class="period-value">
+                                <td class="period-value text-right">
                                     {formatCurrency(period.spend_total)}
                                 </td>
                             </tr>
@@ -430,20 +430,20 @@
 		<!-- 저축 추이 차트 -->
         <h3>💰 SAVE</h3>
 		<div class="chart-section">
-            <table class="stats-table">
-                <thead class="stats-thead">
+            <table class="data-table compact">
+                <thead>
                     <tr>
                         <th>period</th>
-                        <th>sum</th>
+                        <th class="text-right">sum</th>
                     </tr>
                 </thead>
-                <tbody class="stats-tbody">
+                <tbody>
                     {#each data.periods as period, index}
                         <tr>
                             <td class="period-label">
                                 {period.period_label}
                             </td>
-                            <td class="period-value">
+                            <td class="period-value text-right">
                                 {formatCurrency(period.save_total)}
                             </td>
                         </tr>
@@ -650,36 +650,18 @@
         flex-grow: 1;
 	}
 
-    .stats-table {
-        width: 100%;
+    .data-table.compact {
         max-width: 300px;
         flex-grow: 1;
-        border-collapse: collapse;
-        border-radius: 12px;
         box-shadow: var(--shadow-md);
     }
-    .stats-table th, .stats-table tr {
-        padding: 4px 8px;
-        text-align: left;
-        border-bottom: 1px solid var(--border-color);
-        font-size: 14px;
-    }
-    .stats-table td {
-        padding: 4px 8px;
-        text-align: left;
-    }
 
-    .stats-table tbody tr:last-child {
-		border-bottom: none;
-	}
-    .stats-table th {
-        background: var(--bg-secondary);
-        font-weight: 600;
-    }
     .period-label {
         font-weight: 300;
+		font-size: 12px;
         color: var(--text-secondary);
     }
+
     .period-value {
         font-weight: 600;
         color: var(--text-primary);
@@ -694,13 +676,13 @@
             flex-direction: column;
             align-items: center;
         }
-        
-        .stats-table {
-            max-width: 100%;
-        }
 
 		.chart-container {
 			height: 280px;
+		}
+
+		.data-table.compact {
+			max-width: 100%;
 		}
 	}
 </style>

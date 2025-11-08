@@ -1,6 +1,6 @@
 <script>
 	import { signIn } from '@auth/sveltekit/client';
-	import fbLogo from '$lib/assets/fb_logo.png';
+	import fbLogo from '$lib/assets/favicon.png';
 
 	let error = '';
 	

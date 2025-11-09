@@ -1,0 +1,12 @@
+Description=Home Server service
+After=network.target
+
+[Service]
+ExecStart=/home/pi/workspace/home-server/start.sh
+WorkingDirectory=/home/pi/workspace/home-server
+Restart=always
+User=pi
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

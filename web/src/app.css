@@ -282,15 +282,17 @@ select {
 
 .form-group {
 	display: flex;
-	flex-direction: column;
 	gap: 8px;
 	margin-bottom: 16px;
+	align-items: center;
 }
 
 .form-group label {
 	font-weight: 600;
+	min-width: 120px;
 	color: var(--text-primary);
 	font-size: 0.9rem;
+	flex-grow: 1;
 }
 
 .form-group input[type='text'],
@@ -300,13 +302,15 @@ select {
 .form-group input[type='date'],
 .form-group textarea,
 .form-group select {
-	padding: 10px 12px;
+	padding: 4px 6px;
 	border: 1px solid var(--border-color);
 	border-radius: 6px;
 	background: var(--bg-primary);
 	color: var(--text-primary);
 	font-size: 1rem;
 	transition: all 0.2s;
+
+	flex-grow: 2;
 }
 
 .form-group input:focus,
@@ -646,11 +650,6 @@ select {
 	}
 
 	.form-actions {
-		flex-direction: column;
-		width: 100%;
-	}
-
-	.form-actions button {
 		width: 100%;
 	}
 

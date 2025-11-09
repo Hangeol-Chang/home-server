@@ -95,10 +95,8 @@
 		</div>
 	{:else if stats}
 		<div class="chart-content">
-			<!-- 총 합계 -->
 			<div class="total-summary">
 				<div class="total-info">
-					<span class="total-label">총 {stats.class_display_name}</span>
 					<span class="total-value">{formatCurrency(stats.total_cost)}</span>
 				</div>
 				<div class="total-count">
@@ -230,7 +228,7 @@
 		justify-content: space-between;
 		align-items: center;
 		background: var(--bg-secondary);
-		padding: 20px;
+		padding: 12px;
 		border-radius: 10px;
 		margin-bottom: 24px;
 		border: 2px solid var(--accent);
@@ -249,7 +247,7 @@
 	}
 
 	.total-value {
-		font-size: 2rem;
+		font-size: 1.4rem;
 		font-weight: 700;
 		color: var(--accent);
 	}
@@ -265,7 +263,7 @@
 	.bar-chart {
 		display: flex;
 		flex-direction: column;
-		gap: 16px;
+		gap: 8px;
 	}
 
 	.bar-item {
@@ -277,8 +275,8 @@
 
 	.bar-info {
 		display: flex;
-		flex-direction: column;
 		gap: 4px;
+		justify-content: space-between;
 	}
 
 	.bar-name {

@@ -400,9 +400,12 @@
 	}
 
 	.class-selector {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 12px;
+		display: flex;
+		max-width: 400px;
+		gap: 8px;
+		background: #f5f5f5;
+		padding: 4px;
+		border-radius: 10px;
 		margin-bottom: 24px;
 	}
 
@@ -410,32 +413,31 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 8px;
-		padding: 16px;
-		background: var(--bg-secondary);
-		border: 2px solid var(--border-color);
+		gap: 6px;
+		padding: 8px;
+		background: transparent;
+		border: none;
 		border-radius: 8px;
 		cursor: pointer;
-		font-size: 1rem;
-		font-weight: 600;
-		transition: all 0.2s;
-		color: var(--text-secondary);
+		font-size: 14px;
+		font-weight: 500;
+		color: #666;
+		transition: all 0.2s ease;
+		flex: 1;
 	}
 
 	.class-btn:hover {
-		background: var(--bg-tertiary);
-		transform: translateY(-2px);
+		background: rgba(33, 150, 243, 0.1);
 	}
 
 	.class-btn.active {
-		background: var(--class-color);
-		color: white;
-		border-color: var(--class-color);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		background: white;
+		color: var(--class-color);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 	}
 
 	.class-icon {
-		font-size: 1.5rem;
+		font-size: 16px;
 	}
 
 	/* 폼 스타일 커스터마이징 */
@@ -618,23 +620,6 @@
 	@media (max-width: 768px) {
 		.transaction-form-container {
 			padding: 16px;
-		}
-
-		.class-selector {
-			grid-template-columns: 1fr;
-		}
-
-		.form-row {
-			grid-template-columns: 1fr;
-		}
-
-		.form-actions {
-			flex-direction: column-reverse;
-		}
-
-		.btn-cancel,
-		.btn-submit {
-			width: 100%;
 		}
 	}
 </style>

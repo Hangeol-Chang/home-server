@@ -156,12 +156,12 @@
 	<div class="class-filter">
 		{#each classTypes as classType}
 			<button
-				class="filter-btn"
+				class="class-btn"
 				class:active={selectedClass === classType.id}
 				style="--class-color: {classType.color}"
 				onclick={() => (selectedClass = classType.id)}
 			>
-				<span class="filter-icon">{classType.icon}</span>
+				<span class="class-icon">{classType.icon}</span>
 				<span>{classType.label}</span>
 			</button>
 		{/each}
@@ -268,27 +268,46 @@
 	}
 
 	.class-filter {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-		gap: 12px;
+		display: flex;
+		gap: 8px;
+		background: #f5f5f5;
+		padding: 4px;
+		border-radius: 10px;
 		margin-bottom: 32px;
+		flex-wrap: wrap;
 	}
 
-	/* 필터 버튼 오버라이드 */
-	.filter-btn {
-		padding: 16px;
-		font-size: 1rem;
+	.class-btn {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 8px 16px;
+		background: transparent;
+		border: none;
+		border-radius: 8px;
+		cursor: pointer;
+		font-size: 14px;
+		font-weight: 500;
+		color: #666;
+		transition: all 0.2s ease;
+		flex: 1;
+		min-width: 100px;
+		justify-content: center;
 	}
 
-	.filter-btn.active {
-		background: var(--class-color);
-		color: white;
-		border-color: var(--class-color);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	.class-btn:hover {
+		background: rgba(var(--class-color-rgb, 33, 150, 243), 0.1);
+		color: var(--class-color, #2196f3);
 	}
 
-	.filter-icon {
-		font-size: 1.5rem;
+	.class-btn.active {
+		background: white;
+		color: var(--class-color, #2196f3);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	}
+
+	.class-icon {
+		font-size: 16px;
 	}
 
 	@media (max-width: 768px) {
@@ -298,7 +317,12 @@
 		}
 
 		.class-filter {
-			grid-template-columns: 1fr 1fr;
+			flex-wrap: wrap;
+		}
+
+		.class-btn {
+			flex: 1 1 calc(50% - 4px);
+			min-width: 0;
 		}
 	}
 

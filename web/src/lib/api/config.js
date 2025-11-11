@@ -7,7 +7,7 @@ import { env } from '$env/dynamic/public';
 
 // 환경별 API 베이스 URL
 export const API_CONFIG = {
-	baseUrl: env.PUBLIC_API_URL || 'http://localhost:5005',
+	baseUrl: dev ? '/api' : (env.PUBLIC_API_URL || 'http://localhost:5005'),
 	timeout: 30000
 };
 

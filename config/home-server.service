@@ -1,12 +1,19 @@
+[Unit]
 Description=Home Server service
 After=network.target
 
 [Service]
+Type=forking
 ExecStart=/home/pi/workspace/home-server/start.sh
+ExecStop=/home/pi/workspace/home-server/stop.sh
 WorkingDirectory=/home/pi/workspace/home-server
 Restart=always
+RestartSec=10
 User=pi
 Environment=PYTHONUNBUFFERED=1
+PIDFile=/home/pi/workspace/home-server/logs/web.pid
+KillMode=control-group
+RemainAfterExit=no
 
 [Install]
 WantedBy=multi-user.target

@@ -617,9 +617,125 @@
 		cursor: not-allowed;
 	}
 
+	/* 태블릿 */
+	@media (max-width: 1024px) {
+		.transaction-form {
+			padding: 20px;
+		}
+
+		.class-selector {
+			max-width: 100%;
+		}
+	}
+
+	/* 모바일 */
 	@media (max-width: 768px) {
 		.transaction-form-container {
+			padding: 12px;
+		}
+
+		.transaction-form {
 			padding: 16px;
+			max-width: 100%;
+		}
+
+		.form-header h3 {
+			font-size: 1.3rem;
+		}
+
+		.close-btn {
+			padding: 6px;
+		}
+
+		.class-selector {
+			max-width: 100%;
+			flex-direction: row;
+			gap: 6px;
+		}
+
+		.class-btn {
+			padding: 10px 8px;
+			font-size: 0.85rem;
+			flex-direction: column;
+			gap: 4px;
+		}
+
+		label {
+			font-size: 0.9rem;
+			margin-bottom: 6px;
+		}
+
+		input[type='text'],
+		input[type='number'],
+		input[type='date'],
+		select,
+		textarea {
+			padding: 10px 12px;
+			font-size: 0.95rem;
+		}
+
+		.tag-input-wrapper {
+			flex-direction: column;
+		}
+
+		.btn-add-tag {
+			width: 100%;
+			padding: 10px 16px;
+		}
+
+		.form-actions {
+			flex-direction: column-reverse;
+			gap: 10px;
+		}
+
+		.btn-cancel,
+		.btn-submit {
+			width: 100%;
+			justify-content: center;
+		}
+	}
+
+	/* 모바일 소형 */
+	@media (max-width: 480px) {
+		.transaction-form-container {
+			padding: 8px;
+		}
+
+		.transaction-form {
+			padding: 12px;
+		}
+
+		.form-header h3 {
+			font-size: 1.2rem;
+		}
+
+		.class-selector {
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.class-btn {
+			flex-direction: row;
+			padding: 10px 12px;
+			font-size: 0.9rem;
+		}
+
+		label {
+			font-size: 0.85rem;
+		}
+
+		input[type='text'],
+		input[type='number'],
+		input[type='date'],
+		select,
+		textarea {
+			padding: 8px 10px;
+			font-size: 0.9rem;
+		}
+
+		.tag {
+			font-size: 0.85rem;
+			padding: 5px 10px;
 		}
 	}
 </style>

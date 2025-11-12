@@ -585,54 +585,15 @@
 		cursor: not-allowed;
 	}
 
-	.loading,
-	.error {
-		text-align: center;
-		padding: 60px 20px;
-		color: #666;
+		color: #2196f3;
 	}
 
-	.spinner {
-		width: 40px;
-		height: 40px;
-		margin: 0 auto 16px;
-		border: 4px solid #f3f3f3;
-		border-top: 4px solid #2196f3;
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
+	.refresh-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
-	@keyframes spin {
-		0% {
-			transform: rotate(0deg);
-		}
-		100% {
-			transform: rotate(360deg);
-		}
-	}
-
-	.error p {
-		color: #f44336;
-		font-size: 16px;
-		margin-bottom: 16px;
-	}
-
-	.retry-btn {
-		padding: 10px 24px;
-		background: #2196f3;
-		color: white;
-		border: none;
-		border-radius: 8px;
-		cursor: pointer;
-		font-size: 14px;
-		font-weight: 500;
-		transition: all 0.2s ease;
-	}
-
-	.retry-btn:hover {
-		background: #1976d2;
-	}
-
+    .chart-section {
 	.chart-section {
         display: flex;
         gap: 16px;
@@ -667,22 +628,74 @@
         color: var(--text-primary);
     }
 
-	@media (max-width: 768px) {
+	/* 태블릿 */
+	@media (max-width: 1024px) {
 		.period-comparison {
-			padding: 20px;
+			padding: 24px;
 		}
 
-        .chart-section {
-            flex-direction: column;
-            align-items: center;
-        }
+		.chart-container {
+			height: 300px;
+		}
+	}
+
+	/* 모바일 */
+	@media (max-width: 768px) {
+		.period-comparison {
+			padding: 16px;
+		}
+
+		.chart-section {
+			flex-direction: column;
+			align-items: center;
+			gap: 20px;
+		}
 
 		.chart-container {
-			height: 280px;
+			height: 260px;
 		}
 
 		.data-table.compact {
 			max-width: 100%;
+			font-size: 0.85rem;
+		}
+
+		.data-table.compact th,
+		.data-table.compact td {
+			padding: 6px 4px;
+		}
+
+		.period-value {
+			font-size: 0.9rem;
+		}
+	}
+
+	/* 모바일 소형 */
+	@media (max-width: 480px) {
+		.period-comparison {
+			padding: 12px;
+		}
+
+		.chart-container {
+			height: 220px;
+		}
+
+		.data-table.compact {
+			font-size: 0.8rem;
+		}
+
+		.data-table.compact th,
+		.data-table.compact td {
+			padding: 5px 3px;
+			font-size: 0.75rem;
+		}
+
+		.period-label {
+			font-size: 0.7rem;
+		}
+
+		.period-value {
+			font-size: 0.85rem;
 		}
 	}
 </style>

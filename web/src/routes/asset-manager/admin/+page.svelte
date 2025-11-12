@@ -1059,14 +1059,138 @@
 		font-weight: 600;
 	}
 
+	/* 태블릿 */
+	@media (max-width: 1024px) {
+		.admin-page {
+			padding: 20px;
+		}
+
+		.admin-tabs {
+			gap: 8px;
+		}
+
+		.tab-btn {
+			padding: 10px 16px;
+			font-size: 0.9rem;
+		}
+	}
+
+	/* 모바일 */
 	@media (max-width: 768px) {
+		.admin-page {
+			padding: 12px;
+		}
+
+		.page-header {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 12px;
+		}
+
+		.page-header h1 {
+			font-size: 1.5rem;
+		}
+
+		.back-link {
+			padding: 8px 12px;
+			font-size: 0.9rem;
+		}
+
+		.admin-tabs {
+			flex-direction: column;
+			width: 100%;
+			gap: 6px;
+		}
+
+		.tab-btn {
+			width: 100%;
+			justify-content: center;
+			padding: 10px 14px;
+			font-size: 0.95rem;
+		}
+
+		.section {
+			padding: 16px;
+		}
+
+		.section-header {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 12px;
+		}
+
+		.section-header h2 {
+			font-size: 1.3rem;
+		}
+
 		.class-grid {
 			grid-template-columns: 1fr 1fr;
+			gap: 8px;
 		}
 
 		.class-btn {
-			flex: 1 1 calc(50% - 4px);
-			min-width: 0;
+			padding: 10px 12px;
+			font-size: 0.85rem;
+		}
+
+		.form-group {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.form-group label {
+			min-width: auto;
+		}
+
+		.form-actions {
+			flex-direction: column-reverse;
+		}
+
+		.form-actions button {
+			width: 100%;
+		}
+	}
+
+	/* 모바일 소형 */
+	@media (max-width: 480px) {
+		.admin-page {
+			padding: 8px;
+		}
+
+		.page-header h1 {
+			font-size: 1.3rem;
+		}
+
+		.back-link {
+			padding: 8px 10px;
+			font-size: 0.85rem;
+		}
+
+		.tab-btn {
+			padding: 10px 12px;
+			font-size: 0.9rem;
+		}
+
+		.section {
+			padding: 12px;
+		}
+
+		.section-header h2 {
+			font-size: 1.2rem;
+		}
+
+		.class-grid {
+			grid-template-columns: 1fr;
+			gap: 6px;
+		}
+
+		.class-btn {
+			width: 100%;
+		}
+
+		.badge {
+			font-size: 0.7rem;
+			padding: 2px 6px;
 		}
 	}
 </style>

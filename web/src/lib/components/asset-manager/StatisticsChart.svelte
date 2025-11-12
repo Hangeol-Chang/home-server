@@ -169,48 +169,16 @@
 	}
 
 	.chart-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 24px;
 		flex-wrap: wrap;
 		gap: 16px;
 	}
 
-	.chart-header h3 {
-		margin: 0;
-		font-size: 1.3rem;
-		color: var(--text-primary);
-	}
-
 	.date-range {
-		font-size: 0.85rem;
-		color: var(--text-tertiary);
 		font-weight: normal;
 	}
 
 	.view-toggle {
-		display: flex;
-		gap: 8px;
 		background: var(--bg-secondary);
-		padding: 4px;
-		border-radius: 8px;
-	}
-
-	.toggle-btn {
-		padding: 8px 16px;
-		background: transparent;
-		border: none;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.9rem;
-		font-weight: 600;
-		color: var(--text-secondary);
-		transition: all 0.2s;
-	}
-
-	.toggle-btn:hover {
-		background: var(--bg-tertiary);
 	}
 
 	.toggle-btn.active {
@@ -224,20 +192,7 @@
 	}
 
 	.total-summary {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		background: var(--bg-secondary);
-		padding: 12px;
-		border-radius: 10px;
-		margin-bottom: 24px;
 		border: 2px solid var(--accent);
-	}
-
-	.total-info {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
 	}
 
 	.total-label {
@@ -260,102 +215,32 @@
 		border-radius: 8px;
 	}
 
-	.bar-chart {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.bar-item {
-		display: grid;
-		grid-template-columns: 1fr 3fr auto;
-		gap: 16px;
-		align-items: center;
-	}
-
-	.bar-info {
-		display: flex;
-		gap: 4px;
-		justify-content: space-between;
-	}
-
-	.bar-name {
-		font-size: 0.95rem;
-		font-weight: 600;
-		color: var(--text-primary);
-	}
-
-	.bar-value {
-		font-size: 0.85rem;
+	.total-count {
+		font-size: 1.1rem;
 		color: var(--text-secondary);
-	}
-
-	.bar-wrapper {
-		background: var(--bg-secondary);
+		padding: 8px 16px;
+		background: var(--bg-primary);
 		border-radius: 8px;
-		height: 36px;
-		overflow: hidden;
-		position: relative;
 	}
 
-	.bar-fill {
-		height: 100%;
-		display: flex;
-		align-items: center;
-		justify-content: flex-end;
-		padding-right: 12px;
-		transition: width 0.5s ease-out;
-		min-width: 60px;
+	/* 태블릿 */
+	@media (max-width: 1024px) {
+		.statistics-chart {
+			padding: 20px;
+		}
 	}
 
-	.bar-percentage {
-		color: white;
-		font-weight: 600;
-		font-size: 0.85rem;
-		text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-	}
-
-	.bar-count {
-		font-size: 0.9rem;
-		color: var(--text-tertiary);
-		white-space: nowrap;
-	}
-
-	.no-data {
-		text-align: center;
-		padding: 40px;
-		color: var(--text-tertiary);
-	}
-
+	/* 모바일 */
 	@media (max-width: 768px) {
-		.chart-header {
-			flex-direction: column;
-			align-items: flex-start;
+		.statistics-chart {
+			padding: 16px;
 		}
+	}
 
-		.bar-item {
-			grid-template-columns: 1fr;
-			gap: 8px;
-		}
-
-		.bar-info {
-			flex-direction: row;
-			justify-content: space-between;
-		}
-
-		.bar-count {
-			text-align: right;
-			margin-top: 4px;
-		}
-
-		.total-summary {
-			flex-direction: column;
-			gap: 16px;
-			align-items: flex-start;
-		}
-
-		.total-value {
-			font-size: 1.5rem;
+	/* 모바일 소형 */
+	@media (max-width: 480px) {
+		.statistics-chart {
+			padding: 12px;
 		}
 	}
 </style>

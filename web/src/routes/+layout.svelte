@@ -43,4 +43,26 @@
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 		padding: 20px;
 	}
+
+	/* 태블릿 */
+	@media (max-width: 1024px) {
+		.app-main {
+			padding: 16px;
+		}
+	}
+
+	/* 모바일 */
+	@media (max-width: 768px) {
+		.app-main {
+			padding: 12px;
+			box-shadow: none;
+		}
+	}
+
+	/* 모바일 소형 */
+	@media (max-width: 480px) {
+		.app-main {
+			padding: 8px;
+		}
+	}
 </style>

@@ -353,25 +353,240 @@
 		color: #c33;
 	}
 
-	@media (max-width: 768px) {
+	/* 태블릿 */
+	@media (max-width: 1024px) {
+		.section-header h2 {
+			font-size: 1.3rem;
+		}
+
 		.table-scroll-wrapper {
-			max-height: 500px;
+			max-height: 550px;
 		}
 
 		.col-name {
-			min-width: 150px;
+			min-width: 180px;
 		}
 
 		.col-category {
-			min-width: 200px;
+			min-width: 240px;
+		}
+	}
+
+	/* 모바일 */
+	@media (max-width: 768px) {
+		.transactions-section {
+			margin-top: 20px;
+		}
+
+		.section-header {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 10px;
+		}
+
+		.section-header h2 {
+			font-size: 1.2rem;
+		}
+
+		.transaction-count {
+			padding: 4px 12px;
+			font-size: 0.85rem;
+		}
+
+		.table-scroll-wrapper {
+			max-height: 450px;
+			font-size: 0.85rem;
+		}
+
+		/* 테이블 컬럼 조정 */
+		.col-icon {
+			width: 40px;
+		}
+
+		.col-name {
+			min-width: 140px;
+		}
+
+		.col-category {
+			min-width: 180px;
+		}
+
+		.col-date {
+			width: 120px;
+			font-size: 0.8rem;
+		}
+
+		.col-tags {
+			min-width: 100px;
+		}
+
+		.col-amount {
+			width: 120px;
+		}
+
+		.col-actions {
+			width: 60px;
+		}
+
+		.cell-icon {
+			font-size: 1.2rem;
+		}
+
+		.cell-name .name {
+			font-size: 0.9rem;
+		}
+
+		.cell-name .description {
+			font-size: 0.75rem;
+		}
+
+		.badge {
+			padding: 2px 8px;
+			font-size: 0.7rem;
+		}
+
+		.cell-tags .tag {
+			padding: 3px 6px;
+			font-size: 0.65rem;
 		}
 
 		.cell-amount {
 			font-size: 1rem;
 		}
 
+		.icon-btn {
+			padding: 5px;
+		}
+
+		.icon-btn svg {
+			width: 14px;
+			height: 14px;
+		}
+
+		.empty-state {
+			padding: 40px 16px;
+		}
+
+		.empty-state svg {
+			width: 48px;
+			height: 48px;
+		}
+
+		.empty-state p {
+			font-size: 0.95rem;
+		}
+	}
+
+	/* 모바일 소형 - 카드 레이아웃으로 전환 */
+	@media (max-width: 480px) {
+		.table-scroll-wrapper {
+			border: none;
+			border-radius: 0;
+			max-height: none;
+		}
+
+		.data-table {
+			display: none; /* 테이블 숨김 */
+		}
+
+		/* 카드 레이아웃 추가 */
+		.table-scroll-wrapper::after {
+			content: '';
+			display: block;
+		}
+	}
+
+	/* 모바일 소형 화면용 카드 스타일 (JavaScript로 동적 생성 필요 시) */
+	@media (max-width: 480px) {
+		.transactions-section {
+			margin-top: 16px;
+		}
+
+		.section-header h2 {
+			font-size: 1.1rem;
+		}
+
+		.transaction-count {
+			padding: 3px 10px;
+			font-size: 0.8rem;
+		}
+
+		/* 작은 화면에서는 스크롤 가능하도록 */
+		.table-scroll-wrapper {
+			overflow-x: auto;
+			-webkit-overflow-scrolling: touch;
+		}
+
+		.data-table {
+			display: table; /* 테이블 유지 */
+			min-width: 600px; /* 최소 너비 설정 */
+		}
+
+		.data-table th {
+			padding: 8px 4px;
+			font-size: 0.7rem;
+		}
+
+		.data-table td {
+			padding: 10px 4px;
+		}
+
+		.col-icon {
+			width: 35px;
+		}
+
+		.col-name {
+			min-width: 120px;
+		}
+
+		.col-category {
+			min-width: 150px;
+		}
+
+		.col-date {
+			width: 100px;
+		}
+
+		.col-tags {
+			min-width: 80px;
+		}
+
+		.col-amount {
+			width: 100px;
+		}
+
+		.col-actions {
+			width: 50px;
+		}
+
 		.cell-icon {
-			font-size: 1.2rem;
+			font-size: 1.1rem;
+		}
+
+		.cell-name .name {
+			font-size: 0.85rem;
+		}
+
+		.cell-name .description {
+			font-size: 0.7rem;
+		}
+
+		.badge {
+			padding: 2px 6px;
+			font-size: 0.65rem;
+		}
+
+		.cell-amount {
+			font-size: 0.9rem;
+		}
+
+		.empty-state {
+			padding: 30px 12px;
+		}
+
+		.empty-state svg {
+			width: 40px;
+			height: 40px;
 		}
 	}
 </style>

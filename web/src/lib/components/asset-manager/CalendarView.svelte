@@ -339,36 +339,6 @@
 		transform: scale(1.1);
 	}
 
-	.loading, .error {
-		text-align: center;
-		padding: 40px 20px;
-		color: #666;
-	}
-
-	.spinner {
-		width: 40px;
-		height: 40px;
-		margin: 0 auto 16px;
-		border: 4px solid #f3f3f3;
-		border-top: 4px solid var(--color-medium);
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-	}
-
-	@keyframes spin {
-		0% {
-			transform: rotate(0deg);
-		}
-		100% {
-			transform: rotate(360deg);
-		}
-	}
-
-	.error p {
-		color: #f44336;
-		font-size: 16px;
-	}
-
 	.calendar-container {
 		display: flex;
 		gap: 16px;
@@ -526,6 +496,79 @@
 	.amount.spend {
 		color: #f44336;
 		background: rgba(244, 67, 54, 0.1);
+	}
+
+	/* 태블릿 */
+	@media (max-width: 1024px) {
+		.calendar-view {
+			padding: 20px;
+		}
+	}
+
+	/* 모바일 */
+	@media (max-width: 768px) {
+		.calendar-view {
+			padding: 16px;
+		}
+
+		.calendar-grid {
+			gap: 4px;
+		}
+
+		.calendar-day {
+			min-height: 80px;
+			padding: 4px;
+			font-size: 0.85rem;
+		}
+
+		.week-stats-column {
+			width: 60px;
+			gap: 4px;
+		}
+
+		.week-stats-cell {
+			padding: 4px 2px;
+			font-size: 0.7rem;
+		}
+
+		.amount-full {
+			display: none;
+		}
+
+		.amount-compact {
+			display: inline;
+		}
+	}
+
+	/* 모바일 소형 */
+	@media (max-width: 480px) {
+		.calendar-view {
+			padding: 12px;
+		}
+
+		.calendar-grid {
+			gap: 2px;
+		}
+
+		.calendar-day {
+			min-height: 70px;
+			padding: 3px;
+			font-size: 0.8rem;
+		}
+
+		.week-stats-column {
+			width: 50px;
+			gap: 2px;
+		}
+
+		.week-stats-cell {
+			padding: 3px 1px;
+			font-size: 0.65rem;
+		}
+
+		.amount-compact {
+			font-size: 0.75rem;
+		}
 	}
 
 	@media (max-width: 768px) {

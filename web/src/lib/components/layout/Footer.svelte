@@ -23,4 +23,26 @@
 		font-size: 0.85rem;
 		color: #666;
 	}
+
+	/* 모바일 */
+	@media (max-width: 768px) {
+		.footer-content {
+			padding: 12px 16px;
+		}
+
+		.footer-content p {
+			font-size: 0.8rem;
+		}
+	}
+
+	/* 모바일 소형 */
+	@media (max-width: 480px) {
+		.footer-content {
+			padding: 10px 12px;
+		}
+
+		.footer-content p {
+			font-size: 0.75rem;
+		}
+	}
 </style>

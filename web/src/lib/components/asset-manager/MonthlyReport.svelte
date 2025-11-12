@@ -193,45 +193,6 @@
 		margin-bottom: 32px;
 	}
 
-	.report-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 24px;
-	}
-
-	.report-header h2 {
-		margin: 0;
-		font-size: 1.5rem;
-		color: var(--text-primary);
-	}
-
-	.refresh-btn {
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		padding: 8px;
-		cursor: pointer;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.2s;
-		color: var(--text-secondary);
-	}
-
-	.refresh-btn:hover:not(:disabled) {
-		background: var(--bg-tertiary);
-		transform: scale(1.1);
-	}
-
-	.refresh-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.spinning {
-		animation: spin 1s linear infinite;
-	}
-
 	/* 동심원 차트 컨테이너 */
 	.circular-chart-container {
 		display: grid;
@@ -318,19 +279,78 @@
 		color: var(--text-secondary);
 	}
 
+	/* 태블릿 */
 	@media (max-width: 1024px) {
 		.circular-chart {
-			max-width: 300px;
+			max-width: 280px;
+		}
+
+		.report-header h2 {
+			font-size: 1.3rem;
 		}
 	}
 
+	/* 모바일 */
 	@media (max-width: 768px) {
+		.monthly-report {
+			padding: 16px;
+		}
+
+		.report-header {
+			margin-bottom: 20px;
+		}
+
+		.report-header h2 {
+			font-size: 1.2rem;
+		}
+
 		.circular-chart-container {
 			grid-template-columns: 1fr;
+			gap: 20px;
 		}
 
 		.circular-chart {
-			max-width: 250px;
+			max-width: 240px;
+		}
+
+		.chart-center-label {
+			font-size: 9px;
+		}
+
+		.chart-center-value {
+			font-size: 10px;
+		}
+	}
+
+	/* 모바일 소형 */
+	@media (max-width: 480px) {
+		.monthly-report {
+			padding: 12px;
+		}
+
+		.report-header h2 {
+			font-size: 1.1rem;
+		}
+
+		.circular-chart {
+			max-width: 200px;
+		}
+
+		.chart-center-label {
+			font-size: 8px;
+		}
+
+		.chart-center-value {
+			font-size: 9px;
+		}
+
+		.refresh-btn {
+			padding: 6px;
+		}
+
+		.refresh-btn svg {
+			width: 16px;
+			height: 16px;
 		}
 	}
 </style>

@@ -237,4 +237,85 @@
 	.dropdown-item svg {
 		flex-shrink: 0;
 	}
+
+	/* 태블릿 */
+	@media (max-width: 1024px) {
+		.header-content {
+			padding: 10px 16px;
+			gap: 16px;
+		}
+
+		.nav-link {
+			padding: 6px 12px;
+			font-size: 0.9rem;
+		}
+	}
+
+	/* 모바일 */
+	@media (max-width: 768px) {
+		.header-content {
+			padding: 8px 12px;
+			gap: 8px;
+		}
+
+		.app-title {
+			font-size: 0.95rem;
+		}
+
+		.main-nav {
+			gap: 4px;
+			overflow-x: auto;
+			scrollbar-width: none; /* Firefox */
+			-ms-overflow-style: none; /* IE/Edge */
+		}
+
+		.main-nav::-webkit-scrollbar {
+			display: none; /* Chrome/Safari */
+		}
+
+		.nav-link {
+			padding: 6px 10px;
+			font-size: 0.85rem;
+		}
+
+		.user-avatar,
+		.user-avatar-placeholder {
+			width: 36px;
+			height: 36px;
+			font-size: 1rem;
+		}
+
+		.dropdown {
+			min-width: 200px;
+		}
+
+		.dropdown-item {
+			padding: 10px 12px;
+			font-size: 0.9rem;
+		}
+	}
+
+	/* 모바일 소형 */
+	@media (max-width: 480px) {
+		.header-content {
+			padding: 8px;
+			gap: 6px;
+		}
+
+		.app-title {
+			font-size: 0.9rem;
+		}
+
+		.nav-link {
+			padding: 5px 8px;
+			font-size: 0.8rem;
+		}
+
+		.user-avatar,
+		.user-avatar-placeholder {
+			width: 32px;
+			height: 32px;
+			font-size: 0.9rem;
+		}
+	}
 </style>

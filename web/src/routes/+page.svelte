@@ -111,13 +111,114 @@
 		font-size: 0.95rem;
 	}
 
-	@media (max-width: 768px) {
+	/* 태블릿 */
+	@media (max-width: 1024px) {
+		.home-page {
+			padding: 16px;
+		}
+
+		.welcome-section {
+			padding: 32px 16px;
+			margin-bottom: 36px;
+		}
+
 		.welcome-section h1 {
-			font-size: 2rem;
+			font-size: 2.2rem;
+		}
+
+		.dashboard-container {
+			margin-bottom: 36px;
+		}
+	}
+
+	/* 모바일 */
+	@media (max-width: 768px) {
+		.home-page {
+			padding: 12px;
+		}
+
+		.welcome-section {
+			padding: 24px 12px;
+			margin-bottom: 24px;
+		}
+
+		.welcome-section h1 {
+			font-size: 1.8rem;
+		}
+
+		.welcome-section p {
+			font-size: 1rem;
+		}
+
+		.dashboard-container {
+			margin-bottom: 24px;
+		}
+
+		.quick-links h2 {
+			font-size: 1.3rem;
+			margin-bottom: 16px;
 		}
 
 		.links-grid {
 			grid-template-columns: 1fr;
+			gap: 16px;
+		}
+
+		.link-card {
+			padding: 24px 20px;
+		}
+
+		.link-icon {
+			font-size: 2.5rem;
+			margin-bottom: 12px;
+		}
+
+		.link-card h3 {
+			font-size: 1.2rem;
+		}
+
+		.link-card p {
+			font-size: 0.9rem;
+		}
+	}
+
+	/* 모바일 소형 */
+	@media (max-width: 480px) {
+		.home-page {
+			padding: 8px;
+		}
+
+		.welcome-section {
+			padding: 20px 12px;
+			margin-bottom: 20px;
+		}
+
+		.welcome-section h1 {
+			font-size: 1.6rem;
+		}
+
+		.welcome-section p {
+			font-size: 0.95rem;
+		}
+
+		.quick-links h2 {
+			font-size: 1.2rem;
+		}
+
+		.link-card {
+			padding: 20px 16px;
+		}
+
+		.link-icon {
+			font-size: 2.2rem;
+		}
+
+		.link-card h3 {
+			font-size: 1.1rem;
+		}
+
+		.link-card p {
+			font-size: 0.85rem;
 		}
 	}
 </style>

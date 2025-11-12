@@ -353,4 +353,143 @@
 			transform: translateY(-2px);
 		}
 	}
+
+	/* 태블릿 */
+	@media (max-width: 1024px) {
+		.asset-manager-page {
+			padding: 16px;
+		}
+
+		.page-header h1 {
+			font-size: 1.7rem;
+		}
+
+		.current-month {
+			font-size: 1.3rem;
+			min-width: 160px;
+		}
+	}
+
+	/* 모바일 */
+	@media (max-width: 768px) {
+		.asset-manager-page {
+			padding: 12px;
+		}
+
+		.page-header {
+			flex-direction: column;
+			align-items: stretch;
+			gap: 12px;
+		}
+
+		.page-header h1 {
+			font-size: 1.5rem;
+		}
+
+		.header-actions {
+			flex-direction: row;
+			width: 100%;
+		}
+
+		.admin-link,
+		.add-btn {
+			flex: 1;
+			justify-content: center;
+			padding: 8px 12px;
+			font-size: 0.9rem;
+		}
+
+		.month-selector {
+			padding: 12px;
+			gap: 16px;
+			margin-bottom: 20px;
+		}
+
+		.current-month {
+			font-size: 1.2rem;
+			min-width: 140px;
+		}
+
+		.class-filter {
+			padding: 6px;
+			gap: 6px;
+			margin-bottom: 20px;
+		}
+
+		.class-btn {
+			padding: 8px 12px;
+			font-size: 0.85rem;
+			min-width: 80px;
+		}
+
+		.part-btn {
+			font-size: 1.1rem;
+			padding: 6px;
+		}
+	}
+
+	/* 모바일 소형 */
+	@media (max-width: 480px) {
+		.asset-manager-page {
+			padding: 8px;
+		}
+
+		.page-header h1 {
+			font-size: 1.3rem;
+		}
+
+		.header-actions {
+			gap: 8px;
+		}
+
+		.admin-link,
+		.add-btn {
+			padding: 8px 10px;
+			font-size: 0.85rem;
+			gap: 4px;
+		}
+
+		.admin-link svg,
+		.add-btn svg {
+			width: 16px;
+			height: 16px;
+		}
+
+		.month-selector {
+			padding: 10px;
+			gap: 12px;
+			margin-bottom: 16px;
+		}
+
+		.month-btn {
+			padding: 6px 8px;
+		}
+
+		.month-btn svg {
+			width: 18px;
+			height: 18px;
+		}
+
+		.current-month {
+			font-size: 1.1rem;
+			min-width: 120px;
+		}
+
+		.class-filter {
+			flex-direction: column;
+			padding: 4px;
+			gap: 4px;
+		}
+
+		.class-btn {
+			width: 100%;
+			padding: 10px;
+			font-size: 0.9rem;
+		}
+
+		.part-btn {
+			font-size: 1rem;
+			padding: 6px;
+		}
+	}
 </style>

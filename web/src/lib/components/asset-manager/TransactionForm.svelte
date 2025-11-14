@@ -78,7 +78,7 @@
 		if (tagInput.trim()) {
 			const input = tagInput.toLowerCase();
 			filteredTagSuggestions = availableTags.filter(
-				tag => tag.toLowerCase().includes(input) && !formData.tags.includes(tag)
+				tag => tag.name.toLowerCase().includes(input) && !formData.tags.includes(tag.name)
 			);
 			showTagSuggestions = filteredTagSuggestions.length > 0;
 		} else {
@@ -110,7 +110,7 @@
 	}
 
 	function selectSuggestion(tag) {
-		addTag(tag);
+		addTag(tag.name);
 	}
 
 	async function handleSubmit(e) {
@@ -309,7 +309,7 @@
 									class="tag-suggestion-item"
 									onclick={() => selectSuggestion(suggestion)}
 								>
-									{suggestion}
+									{suggestion.name}
 								</button>
 							{/each}
 						</div>

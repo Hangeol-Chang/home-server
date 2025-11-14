@@ -585,42 +585,33 @@
 		cursor: not-allowed;
 	}
 
-		color: #2196f3;
-	}
-
-	.refresh-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-    .chart-section {
 	.chart-section {
-        display: flex;
-        gap: 16px;
+		display: flex;
+		gap: 16px;
 		margin: 16px 0px;
 		background: var(--bg-primary);
-        box-shadow: var(--shadow-md);
+		box-shadow: var(--shadow-md);
 		padding: 24px;
 		border-radius: 12px;
 	}
 
 	.chart-container {
-        width: 100%;
+		width: 100%;
 		height: 320px;
 		position: relative;
-        flex-grow: 1;
+		flex-grow: 1;
 	}
 
-    .data-table.compact {
-        max-width: 300px;
-        flex-grow: 1;
-        box-shadow: var(--shadow-md);
-    }
+	.data-table.compact {
+		max-width: 300px;
+		flex-grow: 1;
+		box-shadow: var(--shadow-md);
+	}
 
-    .period-label {
-        font-weight: 300;
+	.period-label {
+		font-weight: 300;
 		font-size: 12px;
-        color: var(--text-secondary);
+		color: var(--text-secondary);
     }
 
     .period-value {

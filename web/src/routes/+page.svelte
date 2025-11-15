@@ -7,11 +7,6 @@
 </svelte:head>
 
 <div class="home-page">
-	<header class="welcome-section">
-		<h1>환영합니다! 🏠</h1>
-		<p>Home Server에서 자산과 일정을 관리하세요</p>
-	</header>
-
 	<div class="dashboard-container">
 		<!-- compact 모드로 Dashboard 표시 -->
 		<Dashboard compact={true} />
@@ -39,26 +34,6 @@
 		max-width: 1200px;
 		margin: 0 auto;
 		padding: 20px;
-	}
-
-	.welcome-section {
-		text-align: center;
-		margin-bottom: 48px;
-		padding: 40px 20px;
-		background: linear-gradient(135deg, var(--color-lightest), var(--color-light));
-		border-radius: 16px;
-	}
-
-	.welcome-section h1 {
-		margin: 0 0 12px 0;
-		font-size: 2.5rem;
-		color: var(--text-primary);
-	}
-
-	.welcome-section p {
-		margin: 0;
-		font-size: 1.1rem;
-		color: var(--text-secondary);
 	}
 
 	.dashboard-container {
@@ -117,15 +92,6 @@
 			padding: 16px;
 		}
 
-		.welcome-section {
-			padding: 32px 16px;
-			margin-bottom: 36px;
-		}
-
-		.welcome-section h1 {
-			font-size: 2.2rem;
-		}
-
 		.dashboard-container {
 			margin-bottom: 36px;
 		}
@@ -135,19 +101,6 @@
 	@media (max-width: 768px) {
 		.home-page {
 			padding: 12px;
-		}
-
-		.welcome-section {
-			padding: 24px 12px;
-			margin-bottom: 24px;
-		}
-
-		.welcome-section h1 {
-			font-size: 1.8rem;
-		}
-
-		.welcome-section p {
-			font-size: 1rem;
 		}
 
 		.dashboard-container {
@@ -186,19 +139,6 @@
 	@media (max-width: 480px) {
 		.home-page {
 			padding: 8px;
-		}
-
-		.welcome-section {
-			padding: 20px 12px;
-			margin-bottom: 20px;
-		}
-
-		.welcome-section h1 {
-			font-size: 1.6rem;
-		}
-
-		.welcome-section p {
-			font-size: 0.95rem;
 		}
 
 		.quick-links h2 {

@@ -37,9 +37,23 @@
 	// 태그 목록 로드
 	async function loadTags() {
 		try {
-			availableTags = await getTags();
+			const tags = await getTags();
+			// 태그 데이터가 객체 배열인지 문자열 배열인지 확인
+			if (tags && tags.length > 0) {
+				if (typeof tags[0] === 'string') {
+					// 문자열 배열인 경우 객체로 변환
+					availableTags = tags.map(tag => ({ name: tag }));
+				} else {
+					// 이미 객체 배열인 경우 그대로 사용
+					availableTags = tags;
+				}
+			} else {
+				availableTags = [];
+			}
+			console.log('태그 로드 완료:', availableTags);
 		} catch (err) {
 			console.error('태그 로드 실패:', err);
+			availableTags = [];
 		}
 	}
 
@@ -130,14 +144,25 @@
 				tags: formData.tags.length > 0 ? formData.tags : undefined
 			};
 
-			await createTransaction(transactionData);
+			console.log('거래 등록 요청:', transactionData);
+			const result = await createTransaction(transactionData);
+			console.log('거래 등록 성공:', result);
 			
 			// 성공 시 폼 리셋
-			resetForm();
-			onSuccess();
-			isOpen = false;
+			try {
+				resetForm();
+				if (typeof onSuccess === 'function') {
+					await onSuccess();
+				}
+				isOpen = false;
+			} catch (callbackErr) {
+				console.error('성공 콜백 실행 중 에러:', callbackErr);
+				// 콜백 에러는 사용자에게 보여주지 않음 (거래는 성공)
+				isOpen = false;
+			}
 		} catch (err) {
-			error = err.message;
+			console.error('거래 등록 실패:', err);
+			error = err?.message || err?.toString() || '거래 등록에 실패했습니다';
 		} finally {
 			isSubmitting = false;
 		}

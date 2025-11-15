@@ -2,20 +2,28 @@
 	import { signOut } from '@auth/sveltekit/client';
 
 	let { session } = $props();
-	let isDropdownOpen = $state(false);
+	let isProfileDropdownOpen = $state(false);
+	let isMenuDropdownOpen = $state(false);
 
 	async function handleSignOut() {
 		await signOut({ callbackUrl: '/login' });
 	}
 
-	function toggleDropdown() {
-		isDropdownOpen = !isDropdownOpen;
+	function toggleProfileDropdown() {
+		isProfileDropdownOpen = !isProfileDropdownOpen;
+		isMenuDropdownOpen = false;
+	}
+
+	function toggleMenuDropdown() {
+		isMenuDropdownOpen = !isMenuDropdownOpen;
+		isProfileDropdownOpen = false;
 	}
 
 	// 외부 클릭 시 드롭다운 닫기
 	function handleClickOutside(event) {
-		if (!event.target.closest('.profile-menu')) {
-			isDropdownOpen = false;
+		if (!event.target.closest('.profile-menu') && !event.target.closest('.menu-dropdown-container')) {
+			isProfileDropdownOpen = false;
+			isMenuDropdownOpen = false;
 		}
 	}
 </script>
@@ -31,46 +39,70 @@
 				</a>
 			</div>
 
-			<nav class="main-nav">
-				<a href="/asset-manager" class="nav-link">💰 자산관리</a>
-				<a href="/schedule-manager" class="nav-link">📅 일정관리</a>
-				<a href="/notebook" class="nav-link">📓 노트북</a>
-			</nav>
+			<div class="header-right">
+				<div class="menu-dropdown-container">
+					<button class="menu-button" onclick={toggleMenuDropdown} aria-label="메뉴">
+						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<line x1="3" y1="12" x2="21" y2="12"></line>
+							<line x1="3" y1="6" x2="21" y2="6"></line>
+							<line x1="3" y1="18" x2="21" y2="18"></line>
+						</svg>
+						<span>메뉴</span>
+					</button>
 
-			<div class="profile-menu">
-				<button class="profile-button" onclick={toggleDropdown} aria-label="프로필 메뉴">
-					{#if session.user.image}
-						<img src={session.user.image} alt="Profile" class="user-avatar" />
-					{:else}
-						<div class="user-avatar-placeholder">
-							{session.user.email?.charAt(0).toUpperCase()}
+					{#if isMenuDropdownOpen}
+						<div class="menu-dropdown">
+							<a href="/asset-manager" class="menu-dropdown-item">
+								<span>💰</span>
+								<span>자산관리</span>
+							</a>
+							<a href="/schedule-manager" class="menu-dropdown-item">
+								<span>📅</span>
+								<span>일정관리</span>
+							</a>
+							<a href="/notebook" class="menu-dropdown-item">
+								<span>📓</span>
+								<span>노트북</span>
+							</a>
 						</div>
 					{/if}
-				</button>
+				</div>
 
-				{#if isDropdownOpen}
-					<div class="dropdown">
-						<div class="dropdown-header">
-							<div class="user-email">{session.user.email}</div>
+				<div class="profile-menu">
+					<button class="profile-button" onclick={toggleProfileDropdown} aria-label="프로필 메뉴">
+						{#if session.user.image}
+							<img src={session.user.image} alt="Profile" class="user-avatar" />
+						{:else}
+							<div class="user-avatar-placeholder">
+								{session.user.email?.charAt(0).toUpperCase()}
+							</div>
+						{/if}
+					</button>
+
+					{#if isProfileDropdownOpen}
+						<div class="dropdown">
+							<div class="dropdown-header">
+								<div class="user-email">{session.user.email}</div>
+							</div>
+							<div class="dropdown-divider"></div>
+							<button class="dropdown-item" onclick={handleSignOut}>
+								<svg
+									width="16"
+									height="16"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+								>
+									<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+									<polyline points="16 17 21 12 16 7" />
+									<line x1="21" y1="12" x2="9" y2="12" />
+								</svg>
+								<span style="height: 26px;">로그아웃</span>
+							</button>
 						</div>
-						<div class="dropdown-divider"></div>
-						<button class="dropdown-item" onclick={handleSignOut}>
-							<svg
-								width="16"
-								height="16"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-							>
-								<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-								<polyline points="16 17 21 12 16 7" />
-								<line x1="21" y1="12" x2="9" y2="12" />
-							</svg>
-							<span style="height: 26px;">로그아웃</span>
-						</button>
-					</div>
-				{/if}
+					{/if}
+				</div>
 			</div>
 		</div>
 	</header>
@@ -104,26 +136,69 @@
 		color: var(--text-primary);
 	}
 
-	/* Main Navigation */
-	.main-nav {
+	/* Header Right Container */
+	.header-right {
 		display: flex;
+		align-items: center;
+		gap: 16px;
+	}
+
+	/* Menu Dropdown */
+	.menu-dropdown-container {
+		position: relative;
+	}
+
+	.menu-button {
+		display: flex;
+		align-items: center;
 		gap: 8px;
-		flex: 1;
-	}
-
-	.nav-link {
 		padding: 8px 16px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
 		border-radius: 8px;
-		text-decoration: none;
-		color: var(--text-secondary);
-		font-weight: 500;
+		color: var(--text-primary);
+		font-weight: 600;
+		cursor: pointer;
 		transition: all 0.2s;
-		white-space: nowrap;
 	}
 
-	.nav-link:hover {
-		background: var(--bg-secondary);
+	.menu-button:hover {
+		background: var(--bg-tertiary);
+		transform: translateY(-1px);
+	}
+
+	.menu-dropdown {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		min-width: 200px;
+		background: var(--bg-primary);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		box-shadow: var(--shadow-lg);
+		overflow: hidden;
+		z-index: 1000;
+		animation: slideDown 0.2s ease-out;
+	}
+
+	.menu-dropdown-item {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+		padding: 12px 16px;
+		text-decoration: none;
 		color: var(--text-primary);
+		font-size: 1rem;
+		font-weight: 500;
+		transition: background 0.2s;
+		border: none;
+		background: none;
+		cursor: pointer;
+	}
+
+	.menu-dropdown-item:hover {
+		background: var(--bg-secondary);
 	}
 
 	/* Profile Menu */
@@ -245,7 +320,7 @@
 			gap: 16px;
 		}
 
-		.nav-link {
+		.menu-button {
 			padding: 6px 12px;
 			font-size: 0.9rem;
 		}
@@ -255,27 +330,33 @@
 	@media (max-width: 768px) {
 		.header-content {
 			padding: 8px 12px;
-			gap: 8px;
+			gap: 12px;
 		}
 
 		.app-title {
 			font-size: 0.95rem;
 		}
 
-		.main-nav {
-			gap: 4px;
-			overflow-x: auto;
-			scrollbar-width: none; /* Firefox */
-			-ms-overflow-style: none; /* IE/Edge */
+		.header-right {
+			gap: 12px;
 		}
 
-		.main-nav::-webkit-scrollbar {
-			display: none; /* Chrome/Safari */
-		}
-
-		.nav-link {
+		.menu-button {
 			padding: 6px 10px;
 			font-size: 0.85rem;
+		}
+
+		.menu-button span {
+			display: none;
+		}
+
+		.menu-dropdown {
+			min-width: 180px;
+		}
+
+		.menu-dropdown-item {
+			padding: 10px 12px;
+			font-size: 0.9rem;
 		}
 
 		.user-avatar,
@@ -299,16 +380,28 @@
 	@media (max-width: 480px) {
 		.header-content {
 			padding: 8px;
-			gap: 6px;
+			gap: 8px;
 		}
 
 		.app-title {
 			font-size: 0.9rem;
 		}
 
-		.nav-link {
-			padding: 5px 8px;
-			font-size: 0.8rem;
+		.header-right {
+			gap: 8px;
+		}
+
+		.menu-button {
+			padding: 6px 8px;
+		}
+
+		.menu-dropdown {
+			min-width: 160px;
+		}
+
+		.menu-dropdown-item {
+			padding: 8px 10px;
+			font-size: 0.85rem;
 		}
 
 		.user-avatar,

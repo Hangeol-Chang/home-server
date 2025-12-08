@@ -355,40 +355,6 @@ select {
 	box-shadow: var(--shadow-md);
 }
 
-.stat-card {
-	background: var(--bg-secondary);
-	border: 1px solid var(--border-color);
-	border-radius: 10px;
-	padding: 20px;
-	transition: all 0.2s;
-}
-
-.stat-card:hover {
-	transform: translateY(-4px);
-	box-shadow: var(--shadow-md);
-}
-
-.stat-card.income {
-	border-left: 4px solid #4caf50;
-}
-
-.stat-card.expense,
-.stat-card.spend {
-	border-left: 4px solid #f44336;
-}
-
-.stat-card.save {
-	border-left: 4px solid #2196f3;
-}
-
-.stat-card.balance {
-	border-left: 4px solid var(--balance-color, #ff9800);
-}
-
-.stat-card.highlight {
-	border-left: 4px solid var(--accent);
-}
-
 /* 뱃지 */
 .badge {
 	display: inline-flex;

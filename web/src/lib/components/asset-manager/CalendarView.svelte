@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { getTransactions } from '$lib/api/asset-manager.js';
 	import TransactionDropdown from './TransactionDropdown.svelte';
+	import TransactionForm from './TransactionForm.svelte';
 
 	let { year = new Date().getFullYear(), month = new Date().getMonth() + 1 } = $props();
 
@@ -9,8 +10,75 @@
 	let loading = $state(false);
 	let error = $state(null);
 
+	// 거래 등록 폼 상태
+	let isFormOpen = $state(false);
+	let formDate = $state(null);
+
+	// 티어 필터 상태 (name -> boolean, true=visible)
+	let tierFilters = $state({});
+
+	// 현재 데이터에 존재하는 티어 목록
+	let availableTiers = $derived.by(() => {
+		const tiers = new Map();
+		transactions.forEach((t) => {
+			if (t.tier_display_name && !tiers.has(t.tier_display_name)) {
+				tiers.set(t.tier_display_name, {
+					name: t.tier_display_name,
+					level: t.tier_level
+				});
+			}
+		});
+		return Array.from(tiers.values()).sort((a, b) => a.level - b.level);
+	});
+
 	// 날짜별 거래 집계 데이터
-	let dailyData = $state({});
+	let dailyData = $derived.by(() => {
+		const daily = {};
+
+		transactions.forEach((trans) => {
+			// 티어 필터링 (undefined면 true로 취급)
+			if (tierFilters[trans.tier_display_name] === false) return;
+
+			const date = trans.date;
+			if (!daily[date]) {
+				daily[date] = {
+					earn: 0, // 수익
+					spend: 0, // 지출
+					save: 0 // 저축
+				};
+			}
+
+			if (trans.class_name === 'earn') {
+				daily[date].earn += Math.abs(trans.cost);
+			} else if (trans.class_name === 'spend') {
+				daily[date].spend += Math.abs(trans.cost);
+			} else if (trans.class_name === 'save') {
+				daily[date].save += Math.abs(trans.cost);
+			}
+		});
+
+		return daily;
+	});
+
+	function toggleTierFilter(name) {
+		// 현재 상태가 false이면 true로, undefined나 true이면 false로
+		const current = tierFilters[name] !== false;
+		tierFilters = { ...tierFilters, [name]: !current };
+	}
+
+	let monthlyStats = $derived.by(() => {
+		let earn = 0;
+		let spend = 0;
+		let save = 0;
+
+		Object.values(dailyData).forEach((day) => {
+			earn += day.earn;
+			spend += day.spend;
+			save += day.save;
+		});
+
+		return { earn, spend, save };
+	});
 
 	// 선택된 날짜 및 드롭다운 상태
 	let selectedDate = $state(null);
@@ -43,38 +111,12 @@
 			});
 
 			transactions = data;
-			calculateDailyData();
 		} catch (err) {
 			console.error('Failed to load calendar data:', err);
 			error = '데이터를 불러오는데 실패했습니다.';
 		} finally {
 			loading = false;
 		}
-	}
-
-	function calculateDailyData() {
-		const daily = {};
-
-		transactions.forEach((trans) => {
-			const date = trans.date;
-			if (!daily[date]) {
-				daily[date] = {
-					earn: 0, // 수익
-					spend: 0, // 지출
-					save: 0 // 저축
-				};
-			}
-
-			if (trans.class_name === 'earn') {
-				daily[date].earn += Math.abs(trans.cost);
-			} else if (trans.class_name === 'spend') {
-				daily[date].spend += Math.abs(trans.cost);
-			} else if (trans.class_name === 'save') {
-				daily[date].save += Math.abs(trans.cost);
-			}
-		});
-
-		dailyData = daily;
 	}
 
 	function getCalendarDays() {
@@ -186,21 +228,46 @@
 			dropdownVisible = true;
 		}
 	}
+
+	function handleAddTransaction(date) {
+		formDate = date;
+		isFormOpen = true;
+		// 드롭다운은 닫기
+		dropdownVisible = false;
+	}
+
+	async function handleFormSuccess() {
+		await loadData();
+	}
 </script>
 
 <div class="calendar-view">
 	<div class="calendar-header">
-		<button class="month-nav-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<polyline points="15 18 9 12 15 6"></polyline>
-			</svg>
-		</button>
-		<h3>📅 {year}년 {month}월</h3>
-		<button class="month-nav-btn" onclick={() => changeMonth(1)} aria-label="다음 달">
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<polyline points="9 18 15 12 9 6"></polyline>
-			</svg>
-		</button>
+		<div class="month-nav">
+			<button class="month-nav-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<polyline points="15 18 9 12 15 6"></polyline>
+				</svg>
+			</button>
+			<h3>📅 {year}년 {month}월</h3>
+			<button class="month-nav-btn" onclick={() => changeMonth(1)} aria-label="다음 달">
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<polyline points="9 18 15 12 9 6"></polyline>
+				</svg>
+			</button>
+		</div>
+		<div class="filters">
+			{#each availableTiers as tier}
+				<label class="filter-item">
+					<input 
+						type="checkbox" 
+						checked={tierFilters[tier.name] !== false} 
+						onclick={() => toggleTierFilter(tier.name)}
+					> 
+					{tier.name}
+				</label>
+			{/each}
+		</div>
 	</div>
 
 	{#if loading}
@@ -261,7 +328,23 @@
 
 			<!-- 주간 통계 -->
 			<div class="week-stats-column">
-				<div class="week-stats-header">-</div>
+				<div class="week-stats-header">
+					{#if monthlyStats.spend > 0 || monthlyStats.save > 0}
+						<div class="amount spend">
+							<span class="amount-full">-{formatCurrency(monthlyStats.spend + monthlyStats.save)}</span>
+							<span class="amount-compact">-{formatCurrencyCompact(monthlyStats.spend + monthlyStats.save)}</span>
+						</div>
+					{/if}
+					{#if monthlyStats.earn > 0}
+						<div class="amount earn">
+							<span class="amount-full">+{formatCurrency(monthlyStats.earn)}</span>
+							<span class="amount-compact">+{formatCurrencyCompact(monthlyStats.earn)}</span>
+						</div>
+					{/if}
+					{#if monthlyStats.earn === 0 && monthlyStats.spend === 0 && monthlyStats.save === 0}
+						-
+					{/if}
+				</div>
 				{#each getCalendarDays() as week, weekIndex}
 					{@const weekStats = getWeekStats(week)}
 					<div class="week-stats-cell">
@@ -290,8 +373,18 @@
 		bind:visible={dropdownVisible}
 		{transactions}
 		{dailyData}
+		onAddTransaction={handleAddTransaction}
 	/>
 </div>
+
+{#if isFormOpen}
+	<TransactionForm 
+		bind:isOpen={isFormOpen} 
+		initialDate={formDate}
+		mode="modal"
+		onSuccess={handleFormSuccess} 
+	/>
+{/if}
 
 <style>
 	.calendar-view {
@@ -309,6 +402,30 @@
 		align-items: center;
 		margin-bottom: 20px;
 		gap: 16px;
+		flex-wrap: wrap;
+	}
+
+	.month-nav {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		flex: 1;
+		justify-content: center;
+	}
+
+	.filters {
+		display: flex;
+		gap: 12px;
+	}
+
+	.filter-item {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 0.9rem;
+		cursor: pointer;
+		user-select: none;
+		color: var(--text-primary);
 	}
 
 	.calendar-header h3 {
@@ -316,7 +433,6 @@
 		font-weight: 700;
 		color: var(--text-primary);
 		margin: 0;
-		flex: 1;
 		text-align: center;
 	}
 
@@ -385,6 +501,16 @@
 		background: var(--bg-primary-dark);
 		color: white;
 		border-radius: 4px;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 2px;
+		min-height: 30px;
+	}
+
+	.week-stats-header .amount {
+		background: rgba(255, 255, 255, 0.2);
+		color: white;
 	}
 
 	.week-stats-cell {

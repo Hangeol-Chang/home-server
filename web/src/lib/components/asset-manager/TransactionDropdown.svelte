@@ -3,7 +3,8 @@
 		selectedDate = $bindable(null),
 		visible = $bindable(false),
 		transactions = [],
-		dailyData = {}
+		dailyData = {},
+		onAddTransaction = () => {}
 	} = $props();
 
 	function formatCurrency(value) {
@@ -38,7 +39,15 @@
 	<div class="transaction-dropdown">
 		<div class="dropdown-header">
 			<h4>{selectedDate}</h4>
-			<button class="close-btn" onclick={close} aria-label="닫기">✕</button>
+			<div class="header-actions">
+				<button class="add-btn" onclick={() => onAddTransaction(selectedDate)} aria-label="거래 추가" title="거래 추가">
+					<svg style="position: relative;" width="28" height="28" viewBox="0 0 24 24" fill="none">
+						<line x1="12" y1="5" x2="12" y2="19" stroke="white" stroke-width="2" stroke-linecap="round"/>
+						<line x1="5" y1="12" x2="19" y2="12" stroke="white" stroke-width="2" stroke-linecap="round"/>
+					</svg>
+				</button>
+				<button class="close-btn" onclick={close} aria-label="닫기">✕</button>
+			</div>
 		</div>
 		<div class="dropdown-content">
 			{#if dayTransactions.length === 0}
@@ -175,6 +184,34 @@
 		color: var(--text-primary);
 	}
 
+	.header-actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.add-btn {
+		background: var(--bg-primary-dark);
+		border: none;
+		border-radius: 4px;
+		width: 28px;
+		height: 28px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		color: white;
+		font-size: 2rem;
+		text-align: center;
+		transition: all 0.2s;
+		padding: 0;
+	}
+
+	.add-btn:hover {
+		background: var(--accent-hover);
+		transform: scale(1.1);
+	}
+
 	.close-btn {
 		background: transparent;
 		border: none;
@@ -184,6 +221,7 @@
 		padding: 4px 8px;
 		transition: all 0.2s;
 		border-radius: 4px;
+		line-height: 1;
 	}
 
 	.close-btn:hover {

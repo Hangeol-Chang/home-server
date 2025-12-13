@@ -2,7 +2,12 @@
 	import { createTransaction, getCategories, getTiers, getTags } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
 
-	let { isOpen = $bindable(false), onSuccess = () => {} } = $props();
+	let { 
+		isOpen = $bindable(false), 
+		onSuccess = () => {},
+		initialDate = null,
+		mode = 'modal' // 'inline' | 'modal'
+	} = $props();
 
 	// 거래 분류: 1=지출, 2=수익, 3=저축
 	let selectedClass = $state(1);
@@ -16,7 +21,7 @@
 		cost: '',
 		category_id: '',
 		tier_id: '',
-		date: new Date().toISOString().split('T')[0],
+		date: initialDate || new Date().toISOString().split('T')[0],
 		description: '',
 		tags: []
 	});
@@ -82,6 +87,9 @@
 	// 거래 분류 변경 시
 	$effect(() => {
 		if (isOpen) {
+			if (initialDate) {
+				formData.date = initialDate;
+			}
 			loadCategoriesAndTiers();
 			loadTags();
 		}
@@ -174,7 +182,7 @@
 			cost: '',
 			category_id: categories[0]?.id || '',
 			tier_id: tiers.find(t => t.tier_level === 99)?.id || tiers[0]?.id || '',
-			date: new Date().toISOString().split('T')[0],
+			date: initialDate || new Date().toISOString().split('T')[0],
 			description: '',
 			tags: []
 		};
@@ -188,183 +196,196 @@
 	}
 </script>
 
-{#if isOpen}
-	<div class="transaction-form-container">
-		<form class="transaction-form" onsubmit={handleSubmit}>
-			<div class="form-header">
-				<h3>📝 거래 등록</h3>
-				<button type="button" class="close-btn" onclick={handleCancel} aria-label="닫기">
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<line x1="18" y1="6" x2="6" y2="18"></line>
-						<line x1="6" y1="6" x2="18" y2="18"></line>
-					</svg>
+{#snippet formContent()}
+	<form class="transaction-form" onsubmit={handleSubmit}>
+		<div class="form-header">
+			<h3>📝 거래 등록</h3>
+			<button type="button" class="close-btn" onclick={handleCancel} aria-label="닫기">
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<line x1="18" y1="6" x2="6" y2="18"></line>
+					<line x1="6" y1="6" x2="18" y2="18"></line>
+				</svg>
+			</button>
+		</div>
+
+		<!-- 거래 분류 선택 -->
+		<div class="class-selector">
+			{#each classTypes as classType}
+				<button
+					type="button"
+					class="class-btn"
+					class:active={selectedClass === classType.id}
+					style="--class-color: {classType.color}"
+					onclick={() => {
+						selectedClass = classType.id;
+						formData.category_id = '';
+						formData.tier_id = '';
+					}}
+				>
+					<span class="class-icon">{classType.icon}</span>
+					<span>{classType.label}</span>
 				</button>
+			{/each}
+		</div>
+
+		{#if error}
+			<div class="error-message">⚠️ {error}</div>
+		{/if}
+
+		<!-- 날짜 -->
+		<div class="form-group">
+			<label for="date">
+				날짜 <span class="required">*</span>
+			</label>
+			<input
+				id="date"
+				type="date"
+				bind:value={formData.date}
+				required
+			/>
+		</div>
+
+
+		<!-- 거래명 -->
+		<div class="form-group">
+			<label for="name">
+				거래명 <span class="required">*</span>
+			</label>
+			<input
+				id="name"
+				type="text"
+				bind:value={formData.name}
+				placeholder="예: 점심 식사, 월급 등"
+				required
+			/>
+		</div>
+
+		<!-- 금액 -->
+		<div class="form-group">
+			<label for="cost">
+				금액 <span class="required">*</span>
+			</label>
+			<input
+				id="cost"
+				type="number"
+				bind:value={formData.cost}
+				placeholder="0"
+				min="0"
+				step="1"
+				required
+			/>
+		</div>
+
+		<div class="form-row">
+			<!-- 카테고리 -->
+			<div class="form-group">
+				<label for="category">
+					카테고리 <span class="required">*</span>
+				</label>
+				<select id="category" bind:value={formData.category_id} required>
+					{#each categories as category}
+						<option value={category.id}>{category.display_name}</option>
+					{/each}
+				</select>
 			</div>
 
-			<!-- 거래 분류 선택 -->
-			<div class="class-selector">
-				{#each classTypes as classType}
-					<button
-						type="button"
-						class="class-btn"
-						class:active={selectedClass === classType.id}
-						style="--class-color: {classType.color}"
-						onclick={() => {
-							selectedClass = classType.id;
-							formData.category_id = '';
-							formData.tier_id = '';
+			<!-- 티어 -->
+			<div class="form-group">
+				<label for="tier">
+					분류 <span class="required">*</span>
+				</label>
+				<select id="tier" bind:value={formData.tier_id} required>
+					{#each tiers as tier}
+						<option value={tier.id}>{tier.display_name}</option>
+					{/each}
+				</select>
+			</div>
+		</div>
+
+		<!-- 설명 -->
+		<div class="form-group">
+			<label for="description">설명 (선택)</label>
+			<textarea
+				id="description"
+				bind:value={formData.description}
+				placeholder="추가 설명을 입력하세요"
+				rows="3"
+			></textarea>
+		</div>
+
+		<!-- 태그 -->
+		<div class="form-group">
+			<label for="tags">태그 (선택)</label>
+			<div class="tag-input-container">
+				<div class="tag-input-wrapper">
+					<input
+						id="tags"
+						type="text"
+						bind:value={tagInput}
+						placeholder="태그 입력 후 Enter (예: 차량, 데이트, 카페)"
+						onkeydown={handleTagKeydown}
+						onfocus={() => {
+							if (tagInput.trim() && filteredTagSuggestions.length > 0) {
+								showTagSuggestions = true;
+							}
 						}}
-					>
-						<span class="class-icon">{classType.icon}</span>
-						<span>{classType.label}</span>
+					/>
+					<button type="button" class="btn-add-tag" onclick={() => addTag()} disabled={!tagInput.trim()}>
+						추가
 					</button>
-				{/each}
-			</div>
-
-			{#if error}
-				<div class="error-message">⚠️ {error}</div>
-			{/if}
-
-			<!-- 거래명 -->
-			<div class="form-group">
-				<label for="name">
-					거래명 <span class="required">*</span>
-				</label>
-				<input
-					id="name"
-					type="text"
-					bind:value={formData.name}
-					placeholder="예: 점심 식사, 월급 등"
-					required
-				/>
-			</div>
-
-			<!-- 금액 -->
-			<div class="form-group">
-				<label for="cost">
-					금액 <span class="required">*</span>
-				</label>
-				<input
-					id="cost"
-					type="number"
-					bind:value={formData.cost}
-					placeholder="0"
-					min="0"
-					step="1"
-					required
-				/>
-			</div>
-
-			<div class="form-row">
-				<!-- 카테고리 -->
-				<div class="form-group">
-					<label for="category">
-						카테고리 <span class="required">*</span>
-					</label>
-					<select id="category" bind:value={formData.category_id} required>
-						{#each categories as category}
-							<option value={category.id}>{category.display_name}</option>
-						{/each}
-					</select>
 				</div>
-
-				<!-- 티어 -->
-				<div class="form-group">
-					<label for="tier">
-						분류 <span class="required">*</span>
-					</label>
-					<select id="tier" bind:value={formData.tier_id} required>
-						{#each tiers as tier}
-							<option value={tier.id}>{tier.display_name}</option>
-						{/each}
-					</select>
-				</div>
-			</div>
-
-			<!-- 날짜 -->
-			<div class="form-group">
-				<label for="date">
-					날짜 <span class="required">*</span>
-				</label>
-				<input
-					id="date"
-					type="date"
-					bind:value={formData.date}
-					required
-				/>
-			</div>
-
-			<!-- 설명 -->
-			<div class="form-group">
-				<label for="description">설명 (선택)</label>
-				<textarea
-					id="description"
-					bind:value={formData.description}
-					placeholder="추가 설명을 입력하세요"
-					rows="3"
-				></textarea>
-			</div>
-
-			<!-- 태그 -->
-			<div class="form-group">
-				<label for="tags">태그 (선택)</label>
-				<div class="tag-input-container">
-					<div class="tag-input-wrapper">
-						<input
-							id="tags"
-							type="text"
-							bind:value={tagInput}
-							placeholder="태그 입력 후 Enter (예: 차량, 데이트, 카페)"
-							onkeydown={handleTagKeydown}
-							onfocus={() => {
-								if (tagInput.trim() && filteredTagSuggestions.length > 0) {
-									showTagSuggestions = true;
-								}
-							}}
-						/>
-						<button type="button" class="btn-add-tag" onclick={() => addTag()} disabled={!tagInput.trim()}>
-							추가
-						</button>
-					</div>
-					{#if showTagSuggestions}
-						<div class="tag-suggestions">
-							{#each filteredTagSuggestions as suggestion}
-								<button
-									type="button"
-									class="tag-suggestion-item"
-									onclick={() => selectSuggestion(suggestion)}
-								>
-									{suggestion.name}
-								</button>
-							{/each}
-						</div>
-					{/if}
-				</div>
-				{#if formData.tags.length > 0}
-					<div class="tag-list">
-						{#each formData.tags as tag}
-							<span class="tag">
-								{tag}
-								<button type="button" class="tag-remove" onclick={() => removeTag(tag)} aria-label="태그 제거">
-									×
-								</button>
-							</span>
+				{#if showTagSuggestions}
+					<div class="tag-suggestions">
+						{#each filteredTagSuggestions as suggestion}
+							<button
+								type="button"
+								class="tag-suggestion-item"
+								onclick={() => selectSuggestion(suggestion)}
+							>
+								{suggestion.name}
+							</button>
 						{/each}
 					</div>
 				{/if}
 			</div>
+			{#if formData.tags.length > 0}
+				<div class="tag-list">
+					{#each formData.tags as tag}
+						<span class="tag">
+							{tag}
+							<button type="button" class="tag-remove" onclick={() => removeTag(tag)} aria-label="태그 제거">
+								×
+							</button>
+						</span>
+					{/each}
+				</div>
+			{/if}
+		</div>
 
-			<!-- 버튼 -->
-			<div class="form-actions">
-				<button type="button" class="btn-cancel" onclick={handleCancel} disabled={isSubmitting}>
-					취소
-				</button>
-				<button type="submit" class="btn-submit" disabled={isSubmitting}>
-					{isSubmitting ? '등록 중...' : '등록하기'}
-				</button>
+		<!-- 버튼 -->
+		<div class="form-actions">
+			<button type="button" class="btn-cancel" onclick={handleCancel} disabled={isSubmitting}>
+				취소
+			</button>
+			<button type="submit" class="btn-submit" disabled={isSubmitting}>
+				{isSubmitting ? '등록 중...' : '등록하기'}
+			</button>
+		</div>
+	</form>
+{/snippet}
+
+{#if isOpen}
+	{#if mode === 'modal'}
+		<div class="modal-overlay" onclick={handleCancel} role="presentation">
+			<div class="transaction-form-container modal" onclick={(e) => e.stopPropagation()} role="presentation">
+				{@render formContent()}
 			</div>
-		</form>
-	</div>
+		</div>
+	{:else}
+		<div class="transaction-form-container">
+			{@render formContent()}
+		</div>
+	{/if}
 {/if}
 
 <style>
@@ -761,6 +782,47 @@
 		.tag {
 			font-size: 0.85rem;
 			padding: 5px 10px;
+		}
+	}
+	/* Modal Styles */
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		z-index: 1000;
+		backdrop-filter: blur(4px);
+		animation: fadeIn 0.2s ease-out;
+	}
+
+	.transaction-form-container.modal {
+		width: 90%;
+		max-width: 500px;
+		max-height: 90vh;
+		overflow-y: auto;
+		margin: 0;
+		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+		animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+	}
+
+	@keyframes fadeIn {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
+
+	@keyframes scaleUp {
+		from { 
+			opacity: 0;
+			transform: scale(0.95) translateY(10px);
+		}
+		to { 
+			opacity: 1;
+			transform: scale(1) translateY(0);
 		}
 	}
 </style>

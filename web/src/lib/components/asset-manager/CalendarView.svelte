@@ -258,14 +258,21 @@
 		</div>
 		<div class="filters">
 			{#each availableTiers as tier}
-				<label class="filter-item">
-					<input 
-						type="checkbox" 
-						checked={tierFilters[tier.name] !== false} 
-						onclick={() => toggleTierFilter(tier.name)}
-					> 
+				<button 
+					class="filter-chip" 
+					class:active={tierFilters[tier.name] !== false}
+					onclick={() => toggleTierFilter(tier.name)}
+					aria-pressed={tierFilters[tier.name] !== false}
+				>
+					<span class="check-icon">
+						{#if tierFilters[tier.name] !== false}
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="20 6 9 17 4 12"></polyline>
+							</svg>
+						{/if}
+					</span>
 					{tier.name}
-				</label>
+				</button>
 			{/each}
 		</div>
 	</div>
@@ -415,17 +422,50 @@
 
 	.filters {
 		display: flex;
-		gap: 12px;
+		gap: 8px;
+		flex-wrap: wrap;
 	}
 
-	.filter-item {
+	.filter-chip {
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		gap: 6px;
+		padding: 8px 16px;
+		border-radius: 24px;
+		border: 1px solid var(--border-color);
+		background: var(--bg-primary);
+		color: var(--text-secondary);
 		font-size: 0.9rem;
+		font-weight: 600;
 		cursor: pointer;
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 		user-select: none;
-		color: var(--text-primary);
+	}
+
+	.filter-chip:hover {
+		background: var(--bg-secondary);
+		transform: translateY(-1px);
+	}
+
+	.filter-chip.active {
+		background: var(--color-medium);
+		color: white;
+		border-color: var(--color-medium);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		padding-left: 12px; /* Icon space adjustment */
+	}
+
+	.filter-chip.active:hover {
+		filter: brightness(1.1);
+		transform: translateY(-1px);
+	}
+
+	.check-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 14px;
+		height: 14px;
 	}
 
 	.calendar-header h3 {
@@ -498,8 +538,7 @@
 		text-align: center;
 		font-size: 14px;
 		padding: 4px 6px;
-		background: var(--bg-primary-dark);
-		color: white;
+		background: var(--bg-tertiary);
 		border-radius: 4px;
 		display: flex;
 		flex-direction: column;

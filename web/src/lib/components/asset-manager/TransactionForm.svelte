@@ -663,18 +663,9 @@
 		cursor: not-allowed;
 	}
 
-	/* 태블릿 */
-	@media (max-width: 1024px) {
-		.transaction-form {
-			padding: 20px;
-		}
 
-		.class-selector {
-			max-width: 100%;
-		}
-	}
 
-	/* 모바일 */
+	/* Tablet/Mobile (< 768px) */
 	@media (max-width: 768px) {
 		.transaction-form-container {
 			padding: 12px;
@@ -741,8 +732,8 @@
 		}
 	}
 
-	/* 모바일 소형 */
-	@media (max-width: 480px) {
+	/* Mobile (< 320px) */
+	@media (max-width: 320px) {
 		.transaction-form-container {
 			padding: 8px;
 		}

@@ -86,25 +86,14 @@
 		font-size: 0.95rem;
 	}
 
-	/* 태블릿 */
-	@media (max-width: 1024px) {
+	/* Tablet/Mobile (< 768px) */
+	@media (max-width: 768px) {
 		.home-page {
 			padding: 16px;
 		}
 
 		.dashboard-container {
 			margin-bottom: 36px;
-		}
-	}
-
-	/* 모바일 */
-	@media (max-width: 768px) {
-		.home-page {
-			padding: 12px;
-		}
-
-		.dashboard-container {
-			margin-bottom: 24px;
 		}
 
 		.quick-links h2 {
@@ -135,8 +124,8 @@
 		}
 	}
 
-	/* 모바일 소형 */
-	@media (max-width: 480px) {
+	/* Mobile (< 320px) */
+	@media (max-width: 320px) {
 		.home-page {
 			padding: 8px;
 		}

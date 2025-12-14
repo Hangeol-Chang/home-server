@@ -146,37 +146,11 @@
 		transform: translateY(0);
 	}
 
-	/* 태블릿 */
-	@media (max-width: 1024px) {
-		.login-card {
-			padding: 40px;
-			max-width: 400px;
-		}
-
-		h1 {
-			font-size: 2.2rem;
-		}
-
-		.subtitle {
-			font-size: 1.3rem;
-		}
-	}
-
-	/* 모바일 */
+	/* Tablet/Mobile (< 768px) */
 	@media (max-width: 768px) {
-		.login-container {
-			margin: -12px;
-			padding: 20px;
-		}
-
 		.login-card {
 			padding: 32px;
 			max-width: 100%;
-		}
-
-		.logo {
-			width: 70px;
-			height: 70px;
 		}
 
 		h1 {
@@ -187,14 +161,24 @@
 			font-size: 1.2rem;
 		}
 
+		.login-container {
+			margin: -12px;
+			padding: 20px;
+		}
+
+		.logo {
+			width: 70px;
+			height: 70px;
+		}
+
 		.google-signin-btn {
 			padding: 12px 20px;
 			font-size: 0.95rem;
 		}
 	}
 
-	/* 모바일 소형 */
-	@media (max-width: 480px) {
+	/* Mobile (< 320px) */
+	@media (max-width: 320px) {
 		.login-container {
 			margin: -8px;
 			padding: 16px;

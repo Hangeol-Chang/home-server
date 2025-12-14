@@ -44,14 +44,7 @@
 		padding: 20px;
 	}
 
-	/* 태블릿 */
-	@media (max-width: 1024px) {
-		.app-main {
-			padding: 16px;
-		}
-	}
-
-	/* 모바일 */
+	/* Tablet/Mobile (< 768px) */
 	@media (max-width: 768px) {
 		.app-main {
 			padding: 12px;
@@ -59,8 +52,8 @@
 		}
 	}
 
-	/* 모바일 소형 */
-	@media (max-width: 480px) {
+	/* Mobile (< 320px) */
+	@media (max-width: 320px) {
 		.app-main {
 			padding: 8px;
 		}

@@ -24,7 +24,7 @@
 		color: #666;
 	}
 
-	/* 모바일 */
+	/* Tablet/Mobile (< 768px) */
 	@media (max-width: 768px) {
 		.footer-content {
 			padding: 12px 16px;
@@ -35,8 +35,8 @@
 		}
 	}
 
-	/* 모바일 소형 */
-	@media (max-width: 480px) {
+	/* Mobile (< 320px) */
+	@media (max-width: 320px) {
 		.footer-content {
 			padding: 10px 12px;
 		}

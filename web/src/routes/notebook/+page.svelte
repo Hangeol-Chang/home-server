@@ -685,7 +685,8 @@
 		font-size: 0.95rem;
 	}
 
-	@media (max-width: 1024px) {
+	/* Tablet/Mobile (< 768px) */
+	@media (max-width: 768px) {
 		.notebook-container {
 			grid-template-columns: 1fr;
 		}

@@ -1059,26 +1059,23 @@
 		font-weight: 600;
 	}
 
-	/* 태블릿 */
-	@media (max-width: 1024px) {
+	/* Tablet/Mobile (< 768px) */
+	@media (max-width: 768px) {
 		.admin-page {
-			padding: 20px;
+			padding: 12px;
 		}
 
 		.admin-tabs {
 			gap: 8px;
+			flex-direction: column;
+			width: 100%;
 		}
 
 		.tab-btn {
 			padding: 10px 16px;
 			font-size: 0.9rem;
-		}
-	}
-
-	/* 모바일 */
-	@media (max-width: 768px) {
-		.admin-page {
-			padding: 12px;
+			width: 100%;
+			justify-content: center;
 		}
 
 		.page-header {
@@ -1094,19 +1091,6 @@
 		.back-link {
 			padding: 8px 12px;
 			font-size: 0.9rem;
-		}
-
-		.admin-tabs {
-			flex-direction: column;
-			width: 100%;
-			gap: 6px;
-		}
-
-		.tab-btn {
-			width: 100%;
-			justify-content: center;
-			padding: 10px 14px;
-			font-size: 0.95rem;
 		}
 
 		.section {
@@ -1151,8 +1135,8 @@
 		}
 	}
 
-	/* 모바일 소형 */
-	@media (max-width: 480px) {
+	/* Mobile (< 320px) */
+	@media (max-width: 320px) {
 		.admin-page {
 			padding: 8px;
 		}

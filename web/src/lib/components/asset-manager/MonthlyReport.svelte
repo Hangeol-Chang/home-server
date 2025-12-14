@@ -279,18 +279,9 @@
 		color: var(--text-secondary);
 	}
 
-	/* 태블릿 */
-	@media (max-width: 1024px) {
-		.circular-chart {
-			max-width: 280px;
-		}
 
-		.report-header h2 {
-			font-size: 1.3rem;
-		}
-	}
 
-	/* 모바일 */
+	/* Tablet/Mobile (< 768px) */
 	@media (max-width: 768px) {
 		.monthly-report {
 			padding: 16px;
@@ -322,8 +313,8 @@
 		}
 	}
 
-	/* 모바일 소형 */
-	@media (max-width: 480px) {
+	/* Mobile (< 320px) */
+	@media (max-width: 320px) {
 		.monthly-report {
 			padding: 12px;
 		}

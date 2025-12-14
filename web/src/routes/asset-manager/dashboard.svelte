@@ -421,6 +421,7 @@
 		font-size: 0.9rem;
 	}
 
+	/* Tablet/Mobile (< 768px) */
 	@media (max-width: 768px) {
 		.stats-grid {
 			grid-template-columns: 1fr;

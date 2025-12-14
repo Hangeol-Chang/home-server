@@ -313,20 +313,9 @@
 		flex-shrink: 0;
 	}
 
-	/* 태블릿 */
-	@media (max-width: 1024px) {
-		.header-content {
-			padding: 10px 16px;
-			gap: 16px;
-		}
 
-		.menu-button {
-			padding: 6px 12px;
-			font-size: 0.9rem;
-		}
-	}
 
-	/* 모바일 */
+	/* Tablet/Mobile (< 768px) */
 	@media (max-width: 768px) {
 		.header-content {
 			padding: 8px 12px;
@@ -376,8 +365,8 @@
 		}
 	}
 
-	/* 모바일 소형 */
-	@media (max-width: 480px) {
+	/* Mobile (< 320px) */
+	@media (max-width: 320px) {
 		.header-content {
 			padding: 8px;
 			gap: 8px;

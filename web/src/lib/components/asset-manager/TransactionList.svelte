@@ -353,26 +353,9 @@
 		color: #c33;
 	}
 
-	/* 태블릿 */
-	@media (max-width: 1024px) {
-		.section-header h2 {
-			font-size: 1.3rem;
-		}
 
-		.table-scroll-wrapper {
-			max-height: 550px;
-		}
 
-		.col-name {
-			min-width: 180px;
-		}
-
-		.col-category {
-			min-width: 240px;
-		}
-	}
-
-	/* 모바일 */
+	/* Tablet/Mobile (< 768px) */
 	@media (max-width: 768px) {
 		.transactions-section {
 			margin-top: 20px;
@@ -477,27 +460,8 @@
 		}
 	}
 
-	/* 모바일 소형 - 카드 레이아웃으로 전환 */
-	@media (max-width: 480px) {
-		.table-scroll-wrapper {
-			border: none;
-			border-radius: 0;
-			max-height: none;
-		}
-
-		.data-table {
-			display: none; /* 테이블 숨김 */
-		}
-
-		/* 카드 레이아웃 추가 */
-		.table-scroll-wrapper::after {
-			content: '';
-			display: block;
-		}
-	}
-
-	/* 모바일 소형 화면용 카드 스타일 (JavaScript로 동적 생성 필요 시) */
-	@media (max-width: 480px) {
+	/* Mobile (< 320px) */
+	@media (max-width: 320px) {
 		.transactions-section {
 			margin-top: 16px;
 		}
@@ -515,6 +479,9 @@
 		.table-scroll-wrapper {
 			overflow-x: auto;
 			-webkit-overflow-scrolling: touch;
+			border: none;
+			border-radius: 0;
+			max-height: none;
 		}
 
 		.data-table {

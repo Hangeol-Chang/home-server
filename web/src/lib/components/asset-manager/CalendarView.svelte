@@ -663,14 +663,7 @@
 		background: rgba(244, 67, 54, 0.1);
 	}
 
-	/* 태블릿 */
-	@media (max-width: 1024px) {
-		.calendar-view {
-			padding: 20px;
-		}
-	}
-
-	/* 모바일 */
+	/* Tablet/Mobile (< 768px) */
 	@media (max-width: 768px) {
 		.calendar-view {
 			padding: 16px;
@@ -694,6 +687,7 @@
 		.week-stats-cell {
 			padding: 4px 2px;
 			font-size: 0.7rem;
+            min-height: 80px;
 		}
 
 		.amount-full {
@@ -703,10 +697,18 @@
 		.amount-compact {
 			display: inline;
 		}
+
+        .day-number {
+			font-size: 14px;
+		}
+
+		.amount {
+			font-size: 10px;
+		}
 	}
 
-	/* 모바일 소형 */
-	@media (max-width: 480px) {
+	/* Mobile (< 320px) */
+	@media (max-width: 320px) {
 		.calendar-view {
 			padding: 12px;
 		}
@@ -733,58 +735,6 @@
 
 		.amount-compact {
 			font-size: 0.75rem;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.amount-full {
-			display: none;
-		}
-
-		.amount-compact {
-			display: inline;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.calendar-view {
-			padding: 16px;
-		}
-
-		.calendar-grid {
-			gap: 4px;
-		}
-
-		.calendar-day {
-			min-height: 80px;
-			padding: 4px;
-		}
-
-        .week-stats-column {
-            width: 60px;
-            gap: 4px;
-        }
-
-        .week-stats-cell {
-            min-height: 80px;
-            padding: 4px;
-        }
-
-		.day-number {
-			font-size: 14px;
-		}
-
-		.amount {
-			font-size: 10px;
-		}
-
-		/* 모바일에서는 항상 compact 버전 */
-		.amount-full {
-			display: none;
-		}
-
-		.amount-compact {
-			display: inline;
 		}
 	}
 </style>

@@ -223,22 +223,17 @@
 		border-radius: 8px;
 	}
 
-	/* 태블릿 */
-	@media (max-width: 1024px) {
-		.statistics-chart {
-			padding: 20px;
-		}
-	}
 
-	/* 모바일 */
+
+	/* Tablet/Mobile (< 768px) */
 	@media (max-width: 768px) {
 		.statistics-chart {
 			padding: 16px;
 		}
 	}
 
-	/* 모바일 소형 */
-	@media (max-width: 480px) {
+	/* Mobile (< 320px) */
+	@media (max-width: 320px) {
 		.statistics-chart {
 			padding: 12px;
 		}

@@ -310,21 +310,7 @@
 		font-size: 16px;
 	}
 
-	@media (max-width: 768px) {
-		.admin-link,
-		.add-btn {
-			justify-content: center;
-		}
 
-		.class-filter {
-			flex-wrap: wrap;
-		}
-
-		.class-btn {
-			flex: 1 1 calc(50% - 4px);
-			min-width: 0;
-		}
-	}
 
 	.part-btn {
 		text-decoration: none;
@@ -354,8 +340,8 @@
 		}
 	}
 
-	/* 태블릿 */
-	@media (max-width: 1024px) {
+	/* Tablet/Mobile (< 768px) */
+	@media (max-width: 768px) {
 		.asset-manager-page {
 			padding: 16px;
 		}
@@ -368,12 +354,27 @@
 			font-size: 1.3rem;
 			min-width: 160px;
 		}
-	}
 
-	/* 모바일 */
-	@media (max-width: 768px) {
-		.asset-manager-page {
-			padding: 12px;
+		.admin-link,
+		.add-btn {
+			justify-content: center;
+			flex: 1;
+			padding: 8px 12px;
+			font-size: 0.9rem;
+		}
+
+		.class-filter {
+			flex-wrap: wrap;
+			padding: 6px;
+			gap: 6px;
+			margin-bottom: 20px;
+		}
+
+		.class-btn {
+			flex: 1 1 calc(50% - 4px);
+			min-width: 80px;
+			padding: 8px 12px;
+			font-size: 0.85rem;
 		}
 
 		.page-header {
@@ -382,21 +383,9 @@
 			gap: 12px;
 		}
 
-		.page-header h1 {
-			font-size: 1.5rem;
-		}
-
 		.header-actions {
 			flex-direction: row;
 			width: 100%;
-		}
-
-		.admin-link,
-		.add-btn {
-			flex: 1;
-			justify-content: center;
-			padding: 8px 12px;
-			font-size: 0.9rem;
 		}
 
 		.month-selector {
@@ -405,31 +394,14 @@
 			margin-bottom: 20px;
 		}
 
-		.current-month {
-			font-size: 1.2rem;
-			min-width: 140px;
-		}
-
-		.class-filter {
-			padding: 6px;
-			gap: 6px;
-			margin-bottom: 20px;
-		}
-
-		.class-btn {
-			padding: 8px 12px;
-			font-size: 0.85rem;
-			min-width: 80px;
-		}
-
 		.part-btn {
 			font-size: 1.1rem;
 			padding: 6px;
 		}
 	}
 
-	/* 모바일 소형 */
-	@media (max-width: 480px) {
+	/* Mobile (< 320px) */
+	@media (max-width: 320px) {
 		.asset-manager-page {
 			padding: 8px;
 		}

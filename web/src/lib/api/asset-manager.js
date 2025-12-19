@@ -21,6 +21,19 @@ export async function deleteCategory(categoryId) {
 	return apiDelete(`${API_BASE}/categories/${categoryId}`);
 }
 
+// ===== Sub Categories (하위 카테고리) =====
+export async function getSubCategories(categoryId = null) {
+	return apiGet(`${API_BASE}/sub-categories`, categoryId ? { category_id: categoryId } : {});
+}
+
+export async function createSubCategory(subCategoryData) {
+	return apiPost(`${API_BASE}/sub-categories`, subCategoryData);
+}
+
+export async function deleteSubCategory(subCategoryId) {
+	return apiDelete(`${API_BASE}/sub-categories/${subCategoryId}`);
+}
+
 // ===== Tiers (티어) =====
 export async function getTiers(classId = null) {
 	return apiGet(`${API_BASE}/tiers`, classId ? { class_id: classId } : {});
@@ -41,6 +54,10 @@ export async function createTransaction(transactionData) {
 
 export async function getTransactions(filters = {}) {
 	return apiGet(`${API_BASE}/transactions`, filters);
+}
+
+export async function getUnclassifiedTransactions() {
+	return apiGet(`${API_BASE}/transactions/unclassified`);
 }
 
 export async function getTransaction(transactionId) {

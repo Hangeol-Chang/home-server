@@ -46,14 +46,24 @@ def init_database():
                 class_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
                 display_name TEXT NOT NULL,
+                tier_id INTEGER,
                 description TEXT,
                 is_active BOOLEAN DEFAULT TRUE,
                 sort_order INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (class_id) REFERENCES asset_classes(id),
+                FOREIGN KEY (tier_id) REFERENCES asset_tiers(id),
                 UNIQUE(class_id, name)
             )
         """)
+
+        # 마이그레이션: asset_categories 테이블에 tier_id 컬럼 추가
+        try:
+            cursor.execute("ALTER TABLE asset_categories ADD COLUMN tier_id INTEGER REFERENCES asset_tiers(id)")
+            print("Added tier_id column to asset_categories table")
+        except sqlite3.OperationalError:
+            # 이미 컬럼이 존재하는 경우 무시
+            pass
         
         # 3. asset_tiers 테이블
         cursor.execute("""
@@ -117,12 +127,35 @@ def init_database():
             )
         """)
 
+        # 7. asset_sub_categories 테이블 (새로 추가)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS asset_sub_categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                tier_id INTEGER NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (category_id) REFERENCES asset_categories(id),
+                FOREIGN KEY (tier_id) REFERENCES asset_tiers(id),
+                UNIQUE(category_id, name)
+            )
+        """)
+
+        # assets 테이블에 sub_category_id 컬럼 추가
+        try:
+            cursor.execute("ALTER TABLE assets ADD COLUMN sub_category_id INTEGER REFERENCES asset_sub_categories(id)")
+        except sqlite3.OperationalError:
+            pass
+
         # 인덱스 생성
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_date ON assets(date)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_class ON assets(class_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_category ON assets(category_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_sub_category ON assets(sub_category_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_date_class ON assets(date, class_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_categories_class ON asset_categories(class_id, is_active)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_sub_categories_category ON asset_sub_categories(category_id, is_active)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tiers_class ON asset_tiers(class_id, is_active)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_name ON asset_tags(name)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tag_relations_asset ON asset_tag_relations(asset_id)")
@@ -133,6 +166,116 @@ def init_database():
         cursor.execute("SELECT COUNT(*) FROM asset_classes")
         if cursor.fetchone()[0] == 0:
             insert_initial_data(cursor)
+            
+        # 데이터 마이그레이션 1: 기존 카테고리에 tier_id 할당 (tier_id가 NULL인 경우)
+        cursor.execute("SELECT id, class_id FROM asset_categories WHERE tier_id IS NULL")
+        categories_to_update = cursor.fetchall()
+        
+        if categories_to_update:
+            print(f"Migrating {len(categories_to_update)} categories to have tier_id...")
+            for cat_id, class_id in categories_to_update:
+                # 해당 카테고리의 거래 내역에서 가장 많이 사용된 tier_id 조회
+                cursor.execute("""
+                    SELECT tier_id, COUNT(*) as count 
+                    FROM assets 
+                    WHERE category_id = ? 
+                    GROUP BY tier_id 
+                    ORDER BY count DESC 
+                    LIMIT 1
+                """, (cat_id,))
+                result = cursor.fetchone()
+                
+                best_tier_id = None
+                if result:
+                    best_tier_id = result[0]
+                else:
+                    # 거래 내역이 없으면 해당 클래스의 기본 티어(보통 99: 구분없음) 또는 첫 번째 티어 할당
+                    # 99번 티어(구분없음) 찾기
+                    cursor.execute("SELECT id FROM asset_tiers WHERE class_id = ? AND tier_level = 99", (class_id,))
+                    tier_row = cursor.fetchone()
+                    if tier_row:
+                        best_tier_id = tier_row[0]
+                    else:
+                        # 없으면 첫 번째 티어
+                        cursor.execute("SELECT id FROM asset_tiers WHERE class_id = ? ORDER BY tier_level ASC LIMIT 1", (class_id,))
+                        tier_row = cursor.fetchone()
+                        best_tier_id = tier_row[0] if tier_row else None
+                
+                if best_tier_id:
+                    cursor.execute("UPDATE asset_categories SET tier_id = ? WHERE id = ?", (best_tier_id, cat_id))
+            print("Migration 1 completed.")
+
+        # 데이터 마이그레이션 2: Sub Category 생성 및 assets 업데이트
+        cursor.execute("SELECT COUNT(*) FROM asset_sub_categories")
+        if cursor.fetchone()[0] == 0:
+            print("Migrating to Sub Categories...")
+            cursor.execute("SELECT id, name, tier_id, class_id FROM asset_categories")
+            categories = cursor.fetchall()
+            
+            for cat in categories:
+                cat_id, cat_name, tier_id, class_id = cat
+                
+                final_tier_id = tier_id
+                if final_tier_id is None:
+                     # tier_id가 없으면 기본값(99: 구분없음) 찾기
+                    cursor.execute("SELECT id FROM asset_tiers WHERE class_id = ? AND tier_level = 99", (class_id,))
+                    tier_row = cursor.fetchone()
+                    if tier_row:
+                        final_tier_id = tier_row[0]
+                    else:
+                        cursor.execute("SELECT id FROM asset_tiers WHERE class_id = ? ORDER BY tier_level ASC LIMIT 1", (class_id,))
+                        tier_row = cursor.fetchone()
+                        final_tier_id = tier_row[0] if tier_row else None
+                
+                if final_tier_id:
+                    # 기본 서브 카테고리 생성 (이름: '일반')
+                    cursor.execute("""
+                        INSERT INTO asset_sub_categories (category_id, name, tier_id)
+                        VALUES (?, ?, ?)
+                    """, (cat_id, '일반', final_tier_id))
+                    sub_cat_id = cursor.lastrowid
+                    
+                    # 해당 카테고리의 assets 업데이트
+                    cursor.execute("""
+                        UPDATE assets 
+                        SET sub_category_id = ? 
+                        WHERE category_id = ? AND sub_category_id IS NULL
+                    """, (sub_cat_id, cat_id))
+            print("Sub Category Migration completed.")
+        
+        if categories_to_update:
+            print(f"Migrating {len(categories_to_update)} categories to have tier_id...")
+            for cat_id, class_id in categories_to_update:
+                # 해당 카테고리의 거래 내역에서 가장 많이 사용된 tier_id 조회
+                cursor.execute("""
+                    SELECT tier_id, COUNT(*) as count 
+                    FROM assets 
+                    WHERE category_id = ? 
+                    GROUP BY tier_id 
+                    ORDER BY count DESC 
+                    LIMIT 1
+                """, (cat_id,))
+                result = cursor.fetchone()
+                
+                best_tier_id = None
+                if result:
+                    best_tier_id = result[0]
+                else:
+                    # 거래 내역이 없으면 해당 클래스의 기본 티어(보통 99: 구분없음) 또는 첫 번째 티어 할당
+                    # 99번 티어(구분없음) 찾기
+                    cursor.execute("SELECT id FROM asset_tiers WHERE class_id = ? AND tier_level = 99", (class_id,))
+                    tier_row = cursor.fetchone()
+                    if tier_row:
+                        best_tier_id = tier_row[0]
+                    else:
+                        # 없으면 첫 번째 티어
+                        cursor.execute("SELECT id FROM asset_tiers WHERE class_id = ? ORDER BY tier_level ASC LIMIT 1", (class_id,))
+                        tier_row = cursor.fetchone()
+                        best_tier_id = tier_row[0] if tier_row else None
+                
+                if best_tier_id:
+                    cursor.execute("UPDATE asset_categories SET tier_id = ? WHERE id = ?", (best_tier_id, cat_id))
+            print("Migration completed.")
         
         conn.commit()
         print("Database initialized successfully!")

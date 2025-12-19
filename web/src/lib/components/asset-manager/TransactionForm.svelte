@@ -1,5 +1,5 @@
 <script>
-	import { createTransaction, getCategories, getTiers, getTags } from '$lib/api/asset-manager.js';
+	import { createTransaction, getCategories, getSubCategories, getTiers, getTags } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
 
 	let { 
@@ -12,6 +12,7 @@
 	// 거래 분류: 1=지출, 2=수익, 3=저축
 	let selectedClass = $state(1);
 	let categories = $state([]);
+	let subCategories = $state([]);
 	let tiers = $state([]);
 	let availableTags = $state([]);
 
@@ -20,7 +21,7 @@
 		name: '',
 		cost: '',
 		category_id: '',
-		tier_id: '',
+		sub_category_id: '',
 		date: initialDate || new Date().toISOString().split('T')[0],
 		description: '',
 		tags: []
@@ -74,13 +75,38 @@
 			if (categories.length > 0 && !formData.category_id) {
 				formData.category_id = categories[0].id;
 			}
-			if (tiers.length > 0 && !formData.tier_id) {
-				// 구분없음(tier_level=99) 찾기
-				const defaultTier = tiers.find(t => t.tier_level === 99) || tiers[0];
-				formData.tier_id = defaultTier.id;
+			
+			// 카테고리가 선택되어 있으면 하위 카테고리 로드
+			if (formData.category_id) {
+				await loadSubCategories(formData.category_id);
 			}
 		} catch (err) {
 			error = '카테고리/티어 로드 실패: ' + err.message;
+		}
+	}
+
+	// 하위 카테고리 로드
+	async function loadSubCategories(categoryId) {
+		try {
+			subCategories = await getSubCategories(categoryId);
+			if (subCategories.length > 0) {
+				formData.sub_category_id = subCategories[0].id;
+			} else {
+				formData.sub_category_id = '';
+			}
+		} catch (err) {
+			console.error('하위 카테고리 로드 실패:', err);
+			subCategories = [];
+		}
+	}
+
+	// 카테고리 변경 시 하위 카테고리 로드
+	function handleCategoryChange() {
+		if (formData.category_id) {
+			loadSubCategories(formData.category_id);
+		} else {
+			subCategories = [];
+			formData.sub_category_id = '';
 		}
 	}
 
@@ -146,14 +172,14 @@
 				cost: parseFloat(formData.cost),
 				class_id: selectedClass,
 				category_id: parseInt(formData.category_id),
-				tier_id: parseInt(formData.tier_id),
+				sub_category_id: formData.sub_category_id ? parseInt(formData.sub_category_id) : undefined,
 				date: formData.date,
 				description: formData.description || undefined,
 				tags: formData.tags.length > 0 ? formData.tags : undefined
 			};
 
 			console.log('거래 등록 요청:', transactionData);
-			const result = await createTransaction(transactionData);
+		const result = await createTransaction(transactionData);
 			console.log('거래 등록 성공:', result);
 			
 			// 성공 시 폼 리셋
@@ -181,12 +207,15 @@
 			name: '',
 			cost: '',
 			category_id: categories[0]?.id || '',
-			tier_id: tiers.find(t => t.tier_level === 99)?.id || tiers[0]?.id || '',
+			sub_category_id: '',
 			date: initialDate || new Date().toISOString().split('T')[0],
 			description: '',
 			tags: []
 		};
 		tagInput = '';
+		if (formData.category_id) {
+			loadSubCategories(formData.category_id);
+		}
 	}
 
 	function handleCancel() {
@@ -219,7 +248,7 @@
 					onclick={() => {
 						selectedClass = classType.id;
 						formData.category_id = '';
-						formData.tier_id = '';
+						loadCategoriesAndTiers();
 					}}
 				>
 					<span class="class-icon">{classType.icon}</span>
@@ -282,22 +311,26 @@
 				<label for="category">
 					카테고리 <span class="required">*</span>
 				</label>
-				<select id="category" bind:value={formData.category_id} required>
+				<select id="category" bind:value={formData.category_id} onchange={handleCategoryChange} required>
 					{#each categories as category}
 						<option value={category.id}>{category.display_name}</option>
 					{/each}
 				</select>
 			</div>
 
-			<!-- 티어 -->
+			<!-- 하위 카테고리 -->
 			<div class="form-group">
-				<label for="tier">
-					분류 <span class="required">*</span>
+				<label for="sub_category">
+					세부 분류 <span class="required">*</span>
 				</label>
-				<select id="tier" bind:value={formData.tier_id} required>
-					{#each tiers as tier}
-						<option value={tier.id}>{tier.display_name}</option>
-					{/each}
+				<select id="sub_category" bind:value={formData.sub_category_id} required disabled={!formData.category_id || subCategories.length === 0}>
+					{#if subCategories.length === 0}
+						<option value="">세부 분류 없음</option>
+					{:else}
+						{#each subCategories as subCategory}
+							<option value={subCategory.id}>{subCategory.name}</option>
+						{/each}
+					{/if}
 				</select>
 			</div>
 		</div>

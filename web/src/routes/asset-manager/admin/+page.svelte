@@ -4,33 +4,58 @@
 		getCategories, 
 		createCategory, 
 		deleteCategory,
+		getSubCategories,
+		createSubCategory,
+		deleteSubCategory,
 		getTiers,
 		createTier,
 		deleteTier,
 		getTags,
 		createTag,
 		updateTag,
-		deleteTag
+		deleteTag,
+		getUnclassifiedTransactions,
+		updateTransaction
 	} from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
 
 	// 상태 관리
 	let classes = $state([]);
 	let categories = $state([]);
+	let subCategories = $state([]);
 	let tiers = $state([]);
 	let tags = $state([]);
+	let unclassifiedTransactions = $state([]);
 	let loading = $state(true);
 	let error = $state('');
+
+	// 섹션 토글 상태
+	let expandedSections = $state({
+		unclassified: true,
+		category: false,
+		subCategory: false,
+		tier: false,
+		tag: false
+	});
 
 	// 선택된 분류
 	let selectedClassForCategory = $state(1);
 	let selectedClassForTier = $state(1);
+	let selectedCategoryForSub = $state(null);
 
 	// 폼 상태
 	let showCategoryForm = $state(false);
+	let showSubCategoryForm = $state(false);
 	let showTierForm = $state(false);
 	let showTagForm = $state(false);
 	let editingTag = $state(null);
+
+	// 미분류 거래 수정 상태
+	let editingTransactionId = $state(null);
+	let editTransactionForm = $state({
+		category_id: '',
+		sub_category_id: ''
+	});
 
 	// 카테고리 폼
 	let categoryForm = $state({
@@ -40,6 +65,14 @@
 		description: '',
 		is_active: true,
 		sort_order: 0
+	});
+
+	// 하위 카테고리 폼
+	let subCategoryForm = $state({
+		category_id: '',
+		name: '',
+		tier_id: '',
+		is_active: true
 	});
 
 	// 티어 폼
@@ -75,11 +108,13 @@
 		loading = true;
 		error = '';
 		try {
-			[classes, categories, tiers, tags] = await Promise.all([
+			[classes, categories, subCategories, tiers, tags, unclassifiedTransactions] = await Promise.all([
 				getClasses(),
 				getCategories(),
+				getSubCategories(),
 				getTiers(),
-				getTags(false) // 모든 태그 조회 (비활성 포함)
+				getTags(false), // 모든 태그 조회 (비활성 포함)
+				getUnclassifiedTransactions()
 			]);
 		} catch (err) {
 			error = '데이터를 불러오는데 실패했습니다: ' + err.message;
@@ -88,9 +123,52 @@
 		}
 	}
 
+	function toggleSection(section) {
+		expandedSections[section] = !expandedSections[section];
+	}
+
+	// 미분류 거래 관련
+	function startEditTransaction(transaction) {
+		editingTransactionId = transaction.id;
+		editTransactionForm = {
+			category_id: transaction.category_id,
+			sub_category_id: ''
+		};
+	}
+
+	function cancelEditTransaction() {
+		editingTransactionId = null;
+		editTransactionForm = {
+			category_id: '',
+			sub_category_id: ''
+		};
+	}
+
+	async function handleUpdateTransaction(e) {
+		e.preventDefault();
+		if (!editTransactionForm.sub_category_id) {
+			alert('세부 분류를 선택해주세요.');
+			return;
+		}
+		try {
+			await updateTransaction(editingTransactionId, editTransactionForm);
+			await loadData();
+			cancelEditTransaction();
+		} catch (err) {
+			alert('거래 업데이트 실패: ' + err.message);
+		}
+	}
+
 	// 카테고리 관련
 	const filteredCategories = $derived(
 		categories.filter(c => c.class_id === selectedClassForCategory)
+	);
+
+	// 하위 카테고리 관련
+	const filteredSubCategories = $derived(
+		selectedCategoryForSub 
+			? subCategories.filter(sc => sc.category_id === selectedCategoryForSub)
+			: []
 	);
 
 	async function handleCreateCategory(e) {
@@ -105,6 +183,21 @@
 		}
 	}
 
+	async function handleCreateSubCategory(e) {
+		e.preventDefault();
+		try {
+			await createSubCategory({
+				...subCategoryForm,
+				category_id: selectedCategoryForSub
+			});
+			await loadData();
+			resetSubCategoryForm();
+			showSubCategoryForm = false;
+		} catch (err) {
+			alert('하위 카테고리 생성 실패: ' + err.message);
+		}
+	}
+
 	async function handleDeleteCategory(categoryId) {
 		if (!confirm('이 카테고리를 삭제하시겠습니까?\n관련 거래가 있으면 비활성화됩니다.')) return;
 		try {
@@ -116,6 +209,17 @@
 		}
 	}
 
+	async function handleDeleteSubCategory(subCategoryId) {
+		if (!confirm('이 하위 카테고리를 삭제하시겠습니까?\n관련 거래가 있으면 비활성화됩니다.')) return;
+		try {
+			const result = await deleteSubCategory(subCategoryId);
+			alert(result.message);
+			await loadData();
+		} catch (err) {
+			alert('하위 카테고리 삭제 실패: ' + err.message);
+		}
+	}
+
 	function resetCategoryForm() {
 		categoryForm = {
 			class_id: selectedClassForCategory,
@@ -124,6 +228,15 @@
 			description: '',
 			is_active: true,
 			sort_order: 0
+		};
+	}
+
+	function resetSubCategoryForm() {
+		subCategoryForm = {
+			category_id: selectedCategoryForSub,
+			name: '',
+			tier_id: '',
+			is_active: true
 		};
 	}
 
@@ -276,24 +389,103 @@
 				</div>
 			</section>
 
+			<!-- 미분류 거래 관리 -->
+			<section class="manage-section">
+				<div class="section-header" onclick={() => toggleSection('unclassified')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSection('unclassified')}>
+					<h2>⚠️ 미분류 거래 관리 ({unclassifiedTransactions.length})</h2>
+					<span class="toggle-icon">{expandedSections.unclassified ? '▼' : '▶'}</span>
+				</div>
+				
+				{#if expandedSections.unclassified}
+					<div class="section-content">
+						{#if unclassifiedTransactions.length > 0}
+							<div class="table-wrapper">
+								<table class="data-table">
+									<thead>
+										<tr>
+											<th>날짜</th>
+											<th>내용</th>
+											<th>금액</th>
+											<th>현재 분류</th>
+											<th>분류 설정</th>
+											<th>작업</th>
+										</tr>
+									</thead>
+									<tbody>
+										{#each unclassifiedTransactions as transaction}
+											<tr>
+												<td>{transaction.date}</td>
+												<td>{transaction.name}</td>
+												<td>{transaction.cost.toLocaleString()}원</td>
+												<td>
+													{transaction.class_display_name} &gt; {transaction.category_display_name}
+												</td>
+												<td>
+													{#if editingTransactionId === transaction.id}
+														<div class="edit-row">
+															<select bind:value={editTransactionForm.category_id}>
+																{#each categories.filter(c => c.class_id === transaction.class_id) as cat}
+																	<option value={cat.id}>{cat.display_name}</option>
+																{/each}
+															</select>
+															<select bind:value={editTransactionForm.sub_category_id}>
+																<option value="">세부 분류 선택</option>
+																{#each subCategories.filter(sc => sc.category_id === editTransactionForm.category_id) as sub}
+																	<option value={sub.id}>{sub.name}</option>
+																{/each}
+															</select>
+														</div>
+													{:else}
+														<span class="text-muted">미지정</span>
+													{/if}
+												</td>
+												<td>
+													{#if editingTransactionId === transaction.id}
+														<div class="action-buttons">
+															<button class="save-btn" onclick={handleUpdateTransaction}>저장</button>
+															<button class="cancel-btn" onclick={cancelEditTransaction}>취소</button>
+														</div>
+													{:else}
+														<button class="edit-btn" onclick={() => startEditTransaction(transaction)}>수정</button>
+													{/if}
+												</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						{:else}
+							<p class="empty-message">미분류 거래가 없습니다. 모두 분류되었습니다! 🎉</p>
+						{/if}
+					</div>
+				{/if}
+			</section>
+
 			<!-- 카테고리 관리 -->
 			<section class="manage-section">
-				<div class="section-header">
+				<div class="section-header" onclick={() => toggleSection('category')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSection('category')}>
 					<h2>🏷️ 카테고리 관리</h2>
-					<button class="add-btn" onclick={() => { 
-						categoryForm.class_id = selectedClassForCategory;
-						showCategoryForm = !showCategoryForm;
-					}}>
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<line x1="12" y1="5" x2="12" y2="19"></line>
-							<line x1="5" y1="12" x2="19" y2="12"></line>
-						</svg>
-						{showCategoryForm ? '닫기' : '새 카테고리'}
-					</button>
+					<div class="header-actions">
+						<button class="add-btn" onclick={(e) => { 
+							e.stopPropagation();
+							categoryForm.class_id = selectedClassForCategory;
+							showCategoryForm = !showCategoryForm;
+							if(showCategoryForm) expandedSections.category = true;
+						}}>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<line x1="12" y1="5" x2="12" y2="19"></line>
+								<line x1="5" y1="12" x2="19" y2="12"></line>
+							</svg>
+							{showCategoryForm ? '닫기' : '새 카테고리'}
+						</button>
+						<span class="toggle-icon">{expandedSections.category ? '▼' : '▶'}</span>
+					</div>
 				</div>
 
-			<!-- 분류 선택 -->
-			<div class="class-filter">
+				{#if expandedSections.category}
+					<div class="section-content">
+						<!-- 분류 선택 -->
+						<div class="class-filter">
 				{#each classTypes as classType}
 					<button
 						class="class-btn"
@@ -400,24 +592,163 @@
 					<p class="empty-message">카테고리가 없습니다</p>
 				{/if}
 			</div>
-		</section>			<!-- 티어 관리 -->
-			<section class="manage-section">
-				<div class="section-header">
-					<h2>🎯 티어 관리</h2>
-					<button class="add-btn" onclick={() => { 
-						tierForm.class_id = selectedClassForTier;
-						showTierForm = !showTierForm;
+					</div>
+				{/if}
+			</section>
+
+		<!-- 하위 카테고리 관리 -->
+		<section class="manage-section">
+			<div class="section-header" onclick={() => toggleSection('subCategory')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSection('subCategory')}>
+				<h2>📑 세부 분류 관리</h2>
+				<div class="header-actions">
+					<button class="add-btn" onclick={(e) => { 
+						e.stopPropagation();
+						if (!selectedCategoryForSub) {
+							alert('먼저 카테고리를 선택해주세요.');
+							return;
+						}
+						subCategoryForm.category_id = selectedCategoryForSub;
+						showSubCategoryForm = !showSubCategoryForm;
+						if(showSubCategoryForm) expandedSections.subCategory = true;
 					}}>
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<line x1="12" y1="5" x2="12" y2="19"></line>
 							<line x1="5" y1="12" x2="19" y2="12"></line>
 						</svg>
-						{showTierForm ? '닫기' : '새 티어'}
+						{showSubCategoryForm ? '닫기' : '새 세부 분류'}
 					</button>
+					<span class="toggle-icon">{expandedSections.subCategory ? '▼' : '▶'}</span>
+				</div>
+			</div>
+
+			{#if expandedSections.subCategory}
+				<div class="section-content">
+					<!-- 카테고리 선택 -->
+					<div class="form-group" style="margin-bottom: 1rem;">
+				<label>카테고리 선택</label>
+				<select bind:value={selectedCategoryForSub} onchange={() => { showSubCategoryForm = false; }}>
+					<option value={null}>카테고리를 선택하세요</option>
+					{#each categories as category}
+						<option value={category.id}>[{classes.find(c => c.id === category.class_id)?.display_name}] {category.display_name}</option>
+					{/each}
+				</select>
+			</div>
+
+			<!-- 하위 카테고리 추가 폼 -->
+			{#if showSubCategoryForm && selectedCategoryForSub}
+				<div class="form-container">
+					<form class="admin-form" onsubmit={handleCreateSubCategory}>
+						<div class="form-row">
+							<div class="form-group">
+								<label>세부 분류명 *</label>
+								<input type="text" bind:value={subCategoryForm.name} placeholder="예: 점심" required />
+							</div>
+							<div class="form-group">
+								<label>티어 *</label>
+								<select bind:value={subCategoryForm.tier_id} required>
+									<option value="">선택하세요</option>
+									{#each tiers.filter(t => t.class_id === categories.find(c => c.id === selectedCategoryForSub)?.class_id) as tier}
+										<option value={tier.id}>{tier.display_name}</option>
+									{/each}
+								</select>
+							</div>
+						</div>
+						<div class="form-row">
+							<div class="form-group checkbox-group">
+								<label>
+									<input type="checkbox" bind:checked={subCategoryForm.is_active} />
+									활성화
+								</label>
+							</div>
+						</div>
+						<div class="form-actions">
+							<button type="button" class="btn-cancel" onclick={() => { showSubCategoryForm = false; resetSubCategoryForm(); }}>
+								취소
+							</button>
+							<button type="submit" class="btn-submit">생성</button>
+						</div>
+					</form>
+				</div>
+			{/if}
+
+			<!-- 하위 카테고리 리스트 -->
+			<div class="table-wrapper">
+				{#if selectedCategoryForSub}
+					{#if filteredSubCategories.length > 0}
+						<table class="data-table">
+							<thead>
+								<tr>
+									<th>세부 분류명</th>
+									<th>티어</th>
+									<th class="text-center">상태</th>
+									<th class="text-center">작업</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each filteredSubCategories as subCategory}
+									<tr>
+										<td><strong>{subCategory.name}</strong></td>
+										<td>
+											{tiers.find(t => t.id === subCategory.tier_id)?.display_name || '-'}
+										</td>
+										<td class="text-center">
+											<span class="badge" class:active={subCategory.is_active}>
+												{subCategory.is_active ? '활성' : '비활성'}
+											</span>
+										</td>
+										<td class="text-center">
+											<button
+												class="delete-btn"
+												onclick={() => handleDeleteSubCategory(subCategory.id)}
+												title="삭제"
+												aria-label="세부 분류 삭제"
+											>
+												<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+													<polyline points="3 6 5 6 21 6" />
+													<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+												</svg>
+											</button>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					{:else}
+						<p class="empty-message">등록된 세부 분류가 없습니다</p>
+					{/if}
+				{:else}
+					<p class="empty-message">카테고리를 선택해주세요</p>
+				{/if}
+			</div>
+				</div>
+			{/if}
+		</section>
+
+			<!-- 티어 관리 -->
+			<section class="manage-section">
+				<div class="section-header" onclick={() => toggleSection('tier')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSection('tier')}>
+					<h2>🎯 티어 관리</h2>
+					<div class="header-actions">
+						<button class="add-btn" onclick={(e) => { 
+							e.stopPropagation();
+							tierForm.class_id = selectedClassForTier;
+							showTierForm = !showTierForm;
+							if(showTierForm) expandedSections.tier = true;
+						}}>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<line x1="12" y1="5" x2="12" y2="19"></line>
+								<line x1="5" y1="12" x2="19" y2="12"></line>
+							</svg>
+							{showTierForm ? '닫기' : '새 티어'}
+						</button>
+						<span class="toggle-icon">{expandedSections.tier ? '▼' : '▶'}</span>
+					</div>
 				</div>
 
-			<!-- 분류 선택 -->
-			<div class="class-filter">
+				{#if expandedSections.tier}
+					<div class="section-content">
+						<!-- 분류 선택 -->
+						<div class="class-filter">
 				{#each classTypes as classType}
 					<button
 						class="class-btn"
@@ -530,24 +861,33 @@
 					<p class="empty-message">티어가 없습니다</p>
 				{/if}
 			</div>
-		</section>			<!-- 태그 관리 -->
+					</div>
+				{/if}
+			</section>			<!-- 태그 관리 -->
 			<section class="manage-section">
-				<div class="section-header">
+				<div class="section-header" onclick={() => toggleSection('tag')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSection('tag')}>
 					<h2>🏷️ 태그 관리</h2>
-					<button class="add-btn" onclick={() => { 
-						resetTagForm();
-						showTagForm = !showTagForm;
-					}}>
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<line x1="12" y1="5" x2="12" y2="19"></line>
-							<line x1="5" y1="12" x2="19" y2="12"></line>
-						</svg>
-						{showTagForm ? '닫기' : '새 태그'}
-					</button>
+					<div class="header-actions">
+						<button class="add-btn" onclick={(e) => { 
+							e.stopPropagation();
+							resetTagForm();
+							showTagForm = !showTagForm;
+							if(showTagForm) expandedSections.tag = true;
+						}}>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<line x1="12" y1="5" x2="12" y2="19"></line>
+								<line x1="5" y1="12" x2="19" y2="12"></line>
+							</svg>
+							{showTagForm ? '닫기' : '새 태그'}
+						</button>
+						<span class="toggle-icon">{expandedSections.tag ? '▼' : '▶'}</span>
+					</div>
 				</div>
 
-				<!-- 태그 추가/수정 폼 -->
-				{#if showTagForm}
+				{#if expandedSections.tag}
+					<div class="section-content">
+						<!-- 태그 추가/수정 폼 -->
+						{#if showTagForm}
 					<div class="form-container">
 						<form class="admin-form" onsubmit={handleCreateOrUpdateTag}>
 							<h3>{editingTag ? '태그 수정' : '새 태그 추가'}</h3>
@@ -666,6 +1006,8 @@
 				{:else}
 					<p class="empty-message">아직 태그가 없습니다</p>
 				{/if}
+					</div>
+				{/if}
 			</section>
 		</div>
 	{/if}
@@ -701,7 +1043,7 @@
 	.admin-content {
 		display: flex;
 		flex-direction: column;
-		gap: 32px;
+		gap: 10px;
 	}
 
 	.info-section,
@@ -710,7 +1052,6 @@
 		border: 1px solid var(--border-color);
 		border-radius: 12px;
 		padding: 24px;
-		margin-bottom: 20px;
 	}
 
 	.info-section h2,
@@ -824,36 +1165,6 @@
 		width: 18px;
 		height: 18px;
 		cursor: pointer;
-	}
-
-	/* 항목 카드 */
-	.item-info {
-		flex: 1;
-	}
-
-	.item-info h3 {
-		margin: 0 0 4px 0;
-		font-size: 1.1rem;
-		color: var(--text-primary);
-	}
-
-	.item-name {
-		margin: 0 0 8px 0;
-		font-size: 0.85rem;
-		color: var(--text-tertiary);
-		font-family: monospace;
-	}
-
-	.item-desc {
-		margin: 0 0 12px 0;
-		font-size: 0.9rem;
-		color: var(--text-secondary);
-	}
-
-	.item-meta {
-		display: flex;
-		gap: 8px;
-		flex-wrap: wrap;
 	}
 
 	.delete-btn {
@@ -980,44 +1291,83 @@
 		transform: scale(1.1);
 	}
 
-	/* 태그 관리 스타일 */
-	.section-description {
-		margin: 8px 0 0 0;
+	/* 섹션 헤더 및 토글 스타일 */
+	.section-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		cursor: pointer;
+		user-select: none;
+	}
+
+	.section-header:hover h2 {
+		color: var(--primary-color);
+	}
+
+	.header-actions {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+	}
+
+	.toggle-icon {
+		font-size: 1.2rem;
+		color: var(--text-tertiary);
+		transition: transform 0.2s;
+		width: 24px;
+		text-align: center;
+	}
+
+	.section-content {
+		margin-top: 16px;
+		animation: slideDown 0.3s ease-out;
+	}
+
+	@keyframes slideDown {
+		from { opacity: 0; transform: translateY(-10px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+
+	/* 미분류 거래 수정 스타일 */
+	.edit-row {
+		display: flex;
+		gap: 8px;
+	}
+
+	.edit-row select {
+		padding: 6px;
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
 		font-size: 0.9rem;
+	}
+
+	.action-buttons {
+		display: flex;
+		gap: 6px;
+		justify-content: center;
+	}
+
+	.save-btn, .cancel-btn {
+		padding: 6px 12px;
+		border-radius: 4px;
+		font-size: 0.85rem;
+		cursor: pointer;
+		border: none;
+	}
+
+	.save-btn {
+		background: var(--primary-color);
+		color: white;
+	}
+
+	.cancel-btn {
+		background: var(--bg-tertiary);
 		color: var(--text-secondary);
 	}
 
-	.tags-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-		gap: 12px;
-		margin-top: 20px;
-	}
-
-	.tag-item {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 12px 16px;
-		background: var(--bg-tertiary);
-		border: 1px solid var(--border-color);
-		border-radius: 8px;
-		transition: all 0.2s;
-	}
-
-	.tag-item:hover {
-		background: var(--bg-secondary);
-		transform: translateY(-2px);
-		box-shadow: var(--shadow-sm);
-	}
-
-	.tag-icon {
-		font-size: 1.2rem;
-	}
-
-	.tag-name {
-		font-weight: 500;
-		color: var(--text-primary);
+	.text-muted {
+		color: var(--text-tertiary);
+		font-style: italic;
 	}
 
 	.tag-stats {
@@ -1038,21 +1388,6 @@
 		font-size: 1.1rem;
 	}
 
-	/* 태그 카드 전용 스타일 */
-	.tag-card {
-		position: relative;
-		padding-left: 1.2rem;
-	}
-
-	.tag-color-indicator {
-		position: absolute;
-		left: 0;
-		top: 0;
-		bottom: 0;
-		width: 4px;
-		border-radius: 4px 0 0 4px;
-	}
-
 	.badge.active {
 		background: #d4edda;
 		color: #155724;
@@ -1065,19 +1400,6 @@
 			padding: 12px;
 		}
 
-		.admin-tabs {
-			gap: 8px;
-			flex-direction: column;
-			width: 100%;
-		}
-
-		.tab-btn {
-			padding: 10px 16px;
-			font-size: 0.9rem;
-			width: 100%;
-			justify-content: center;
-		}
-
 		.page-header {
 			flex-direction: column;
 			align-items: flex-start;
@@ -1086,15 +1408,6 @@
 
 		.page-header h1 {
 			font-size: 1.5rem;
-		}
-
-		.back-link {
-			padding: 8px 12px;
-			font-size: 0.9rem;
-		}
-
-		.section {
-			padding: 16px;
 		}
 
 		.section-header {
@@ -1143,20 +1456,6 @@
 
 		.page-header h1 {
 			font-size: 1.3rem;
-		}
-
-		.back-link {
-			padding: 8px 10px;
-			font-size: 0.85rem;
-		}
-
-		.tab-btn {
-			padding: 10px 12px;
-			font-size: 0.9rem;
-		}
-
-		.section {
-			padding: 12px;
 		}
 
 		.section-header h2 {

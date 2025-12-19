@@ -408,18 +408,6 @@ select {
 	margin-bottom: 24px;
 }
 
-.section-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 20px;
-}
-
-.section-header h2,
-.section-header h3 {
-	margin: 0;
-}
-
 /* 필터/탭 버튼 */
 .filter-buttons,
 .tab-buttons {
@@ -522,7 +510,7 @@ select {
 }
 
 .data-table td {
-	padding: 14px 16px;
+	padding: 6px 12px;
 	color: var(--text-primary);
 }
 

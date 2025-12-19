@@ -4,6 +4,7 @@ from datetime import datetime, date as date_type
 from models.asset import (
     AssetClass, AssetClassCreate,
     AssetCategory, AssetCategoryCreate,
+    AssetSubCategory, AssetSubCategoryCreate,
     AssetTier, AssetTierCreate,
     AssetTransaction, AssetTransactionCreate, AssetTransactionUpdate,
     AssetTransactionDetail, CategoryStatistics, TierStatistics,
@@ -115,7 +116,7 @@ async def get_categories(
         cursor = conn.cursor()
         if class_id:
             cursor.execute("""
-                SELECT id, class_id, name, display_name, description, 
+                SELECT id, class_id, name, display_name, tier_id, description, 
                        is_active, sort_order, created_at
                 FROM asset_categories
                 WHERE class_id = ? AND is_active = TRUE
@@ -123,7 +124,7 @@ async def get_categories(
             """, (class_id,))
         else:
             cursor.execute("""
-                SELECT id, class_id, name, display_name, description, 
+                SELECT id, class_id, name, display_name, tier_id, description, 
                        is_active, sort_order, created_at
                 FROM asset_categories
                 WHERE is_active = TRUE
@@ -145,20 +146,125 @@ async def create_category(category: AssetCategoryCreate):
                 detail=f"Class with id {category.class_id} not found"
             )
         
+        # 기존에 같은 이름의 카테고리가 있는지 확인 (비활성화된 것 포함)
         cursor.execute("""
-            INSERT INTO asset_categories 
-            (class_id, name, display_name, description, is_active, sort_order)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (category.class_id, category.name, category.display_name,
-              category.description, category.is_active, category.sort_order))
+            SELECT id, is_active FROM asset_categories 
+            WHERE class_id = ? AND name = ?
+        """, (category.class_id, category.name))
+        existing_category = cursor.fetchone()
+
+        if existing_category:
+            category_id = existing_category[0]
+            # 기존 카테고리 업데이트 및 활성화
+            cursor.execute("""
+                UPDATE asset_categories 
+                SET display_name = ?, tier_id = ?, description = ?, is_active = TRUE, sort_order = ?
+                WHERE id = ?
+            """, (category.display_name, category.tier_id, category.description, category.sort_order, category_id))
+        else:
+            # 새 카테고리 생성
+            cursor.execute("""
+                INSERT INTO asset_categories 
+                (class_id, name, display_name, tier_id, description, is_active, sort_order)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (category.class_id, category.name, category.display_name, category.tier_id,
+                  category.description, category.is_active, category.sort_order))
+            category_id = cursor.lastrowid
         
-        category_id = cursor.lastrowid
         cursor.execute("""
-            SELECT id, class_id, name, display_name, description, 
+            SELECT id, class_id, name, display_name, tier_id, description, 
                    is_active, sort_order, created_at
             FROM asset_categories WHERE id = ?
         """, (category_id,))
         return dict(cursor.fetchone())
+
+# ===== Sub Categories (하위 카테고리) API =====
+
+@router.get("/sub-categories", response_model=List[AssetSubCategory])
+async def get_sub_categories(
+    category_id: Optional[int] = Query(None, description="상위 카테고리 ID로 필터링")
+):
+    """하위 카테고리 목록 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if category_id:
+            cursor.execute("""
+                SELECT id, category_id, name, tier_id, is_active, created_at
+                FROM asset_sub_categories
+                WHERE category_id = ? AND is_active = TRUE
+                ORDER BY name
+            """, (category_id,))
+        else:
+            cursor.execute("""
+                SELECT id, category_id, name, tier_id, is_active, created_at
+                FROM asset_sub_categories
+                WHERE is_active = TRUE
+                ORDER BY category_id, name
+            """)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+@router.post("/sub-categories", response_model=AssetSubCategory, status_code=status.HTTP_201_CREATED)
+async def create_sub_category(sub_category: AssetSubCategoryCreate):
+    """새 하위 카테고리 생성"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # category_id 유효성 검사
+        cursor.execute("SELECT id FROM asset_categories WHERE id = ?", (sub_category.category_id,))
+        if not cursor.fetchone():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Category with id {sub_category.category_id} not found"
+            )
+            
+        # tier_id 유효성 검사
+        cursor.execute("SELECT id FROM asset_tiers WHERE id = ?", (sub_category.tier_id,))
+        if not cursor.fetchone():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Tier with id {sub_category.tier_id} not found"
+            )
+        
+        cursor.execute("""
+            INSERT INTO asset_sub_categories 
+            (category_id, name, tier_id, is_active)
+            VALUES (?, ?, ?, ?)
+        """, (sub_category.category_id, sub_category.name, sub_category.tier_id, sub_category.is_active))
+        
+        sub_category_id = cursor.lastrowid
+        cursor.execute("""
+            SELECT id, category_id, name, tier_id, is_active, created_at
+            FROM asset_sub_categories WHERE id = ?
+        """, (sub_category_id,))
+        return dict(cursor.fetchone())
+
+@router.delete("/sub-categories/{sub_category_id}")
+async def delete_sub_category(sub_category_id: int):
+    """하위 카테고리 삭제 (비활성화)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # 존재 확인
+        cursor.execute("SELECT * FROM asset_sub_categories WHERE id = ?", (sub_category_id,))
+        sub_category = cursor.fetchone()
+        if not sub_category:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Sub Category with id {sub_category_id} not found"
+            )
+        
+        # 사용 중인지 확인
+        cursor.execute("SELECT COUNT(*) FROM assets WHERE sub_category_id = ?", (sub_category_id,))
+        count = cursor.fetchone()[0]
+        
+        if count > 0:
+            cursor.execute("UPDATE asset_sub_categories SET is_active = FALSE WHERE id = ?", (sub_category_id,))
+            message = f"Sub Category {sub_category_id} deactivated (has {count} transactions)"
+        else:
+            cursor.execute("DELETE FROM asset_sub_categories WHERE id = ?", (sub_category_id,))
+            message = f"Sub Category {sub_category_id} deleted permanently"
+            
+        return {"message": message}
 
 # ===== Tiers (중요도/필수도) API =====
 
@@ -304,25 +410,52 @@ async def create_transaction(transaction: AssetTransactionCreate):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                               detail=f"Class with id {transaction.class_id} not found")
         
+        # 카테고리 확인
         cursor.execute("SELECT id FROM asset_categories WHERE id = ? AND class_id = ?",
                       (transaction.category_id, transaction.class_id))
         if not cursor.fetchone():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                               detail=f"Category {transaction.category_id} does not belong to class {transaction.class_id}")
         
+        # 하위 카테고리 확인 및 티어 결정
+        final_tier_id = transaction.tier_id
+        
+        if transaction.sub_category_id:
+            cursor.execute("SELECT id, tier_id FROM asset_sub_categories WHERE id = ? AND category_id = ?",
+                          (transaction.sub_category_id, transaction.category_id))
+            sub_cat_row = cursor.fetchone()
+            if not sub_cat_row:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                  detail=f"Sub Category {transaction.sub_category_id} does not belong to category {transaction.category_id}")
+            
+            # 하위 카테고리의 티어 사용 (명시적 입력이 없으면)
+            if final_tier_id is None:
+                final_tier_id = sub_cat_row[1]
+        else:
+            # 하위 카테고리가 없으면 카테고리의 기본 티어 사용 (하위 호환성)
+            cursor.execute("SELECT tier_id FROM asset_categories WHERE id = ?", (transaction.category_id,))
+            cat_row = cursor.fetchone()
+            if final_tier_id is None and cat_row:
+                final_tier_id = cat_row[0]
+
+        if final_tier_id is None:
+             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                              detail="Tier ID is required and no default tier found")
+
+        # 티어 유효성 검사
         cursor.execute("SELECT id FROM asset_tiers WHERE id = ? AND class_id = ?",
-                      (transaction.tier_id, transaction.class_id))
+                      (final_tier_id, transaction.class_id))
         if not cursor.fetchone():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                              detail=f"Tier {transaction.tier_id} does not belong to class {transaction.class_id}")
+                              detail=f"Tier {final_tier_id} does not belong to class {transaction.class_id}")
         
         # 데이터 삽입
         cursor.execute("""
             INSERT INTO assets 
-            (name, cost, class_id, category_id, tier_id, date, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (name, cost, class_id, category_id, sub_category_id, tier_id, date, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (transaction.name, transaction.cost, transaction.class_id,
-              transaction.category_id, transaction.tier_id, transaction.date,
+              transaction.category_id, transaction.sub_category_id, final_tier_id, transaction.date,
               transaction.description))
         
         transaction_id = cursor.lastrowid
@@ -332,7 +465,7 @@ async def create_transaction(transaction: AssetTransactionCreate):
             sync_asset_tags(cursor, transaction_id, transaction.tags)
         
         cursor.execute("""
-            SELECT id, name, cost, class_id, category_id, tier_id, date, description,
+            SELECT id, name, cost, class_id, category_id, sub_category_id, tier_id, date, description,
                    created_at, updated_at
             FROM assets WHERE id = ?
         """, (transaction_id,))
@@ -343,12 +476,45 @@ async def create_transaction(transaction: AssetTransactionCreate):
         
         return row
 
+@router.get("/transactions/unclassified", response_model=List[AssetTransactionDetail])
+async def get_unclassified_transactions():
+    """분류되지 않은 거래 내역 조회 (sub_category_id가 NULL인 경우)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 
+                t.id, t.name, t.cost, t.date, t.description, t.created_at, t.updated_at,
+                c.id as class_id, c.name as class_name, c.display_name as class_display_name,
+                cat.id as category_id, cat.name as category_name, cat.display_name as category_display_name,
+                sub.id as sub_category_id, sub.name as sub_category_name,
+                tr.id as tier_id, tr.name as tier_name, tr.display_name as tier_display_name, tr.tier_level
+            FROM assets t
+            JOIN asset_classes c ON t.class_id = c.id
+            JOIN asset_categories cat ON t.category_id = cat.id
+            LEFT JOIN asset_sub_categories sub ON t.sub_category_id = sub.id
+            JOIN asset_tiers tr ON t.tier_id = tr.id
+            WHERE t.sub_category_id IS NULL
+            ORDER BY t.date DESC, t.id DESC
+        """)
+        
+        transactions = []
+        rows = cursor.fetchall()
+        
+        for row in rows:
+            row_dict = dict(row)
+            # 태그 조회
+            row_dict['tags'] = get_asset_tags(cursor, row_dict['id'])
+            transactions.append(row_dict)
+            
+        return transactions
+
 @router.get("/transactions", response_model=List[AssetTransactionDetail])
 async def get_transactions(
     class_id: Optional[int] = Query(None, description="거래 분류 ID (1=지출, 2=수익, 3=저축)"),
     start_date: Optional[date_type] = Query(None, description="시작 날짜 (YYYY-MM-DD)"),
     end_date: Optional[date_type] = Query(None, description="종료 날짜 (YYYY-MM-DD)"),
     category_id: Optional[int] = Query(None, description="카테고리 ID"),
+    sub_category_id: Optional[int] = Query(None, description="하위 카테고리 ID"),
     tier_id: Optional[int] = Query(None, description="티어 ID"),
     limit: int = Query(100, ge=1, le=1000, description="조회 제한"),
     offset: int = Query(0, ge=0, description="조회 시작 위치")
@@ -362,11 +528,13 @@ async def get_transactions(
                 a.id, a.name, a.cost, a.date, a.description,
                 ac.name as class_name, ac.display_name as class_display_name,
                 cat.name as category_name, cat.display_name as category_display_name,
+                sc.name as sub_category_name,
                 t.tier_level, t.name as tier_name, t.display_name as tier_display_name,
                 a.created_at, a.updated_at
             FROM assets a
             JOIN asset_classes ac ON a.class_id = ac.id
             JOIN asset_categories cat ON a.category_id = cat.id
+            LEFT JOIN asset_sub_categories sc ON a.sub_category_id = sc.id
             JOIN asset_tiers t ON a.tier_id = t.id
             WHERE 1=1
         """
@@ -384,6 +552,9 @@ async def get_transactions(
         if category_id:
             query += " AND a.category_id = ?"
             params.append(category_id)
+        if sub_category_id:
+            query += " AND a.sub_category_id = ?"
+            params.append(sub_category_id)
         if tier_id:
             query += " AND a.tier_id = ?"
             params.append(tier_id)
@@ -413,11 +584,13 @@ async def get_transaction(transaction_id: int):
                 a.id, a.name, a.cost, a.date, a.description,
                 ac.name as class_name, ac.display_name as class_display_name,
                 cat.name as category_name, cat.display_name as category_display_name,
+                sc.name as sub_category_name,
                 t.tier_level, t.name as tier_name, t.display_name as tier_display_name,
                 a.created_at, a.updated_at
             FROM assets a
             JOIN asset_classes ac ON a.class_id = ac.id
             JOIN asset_categories cat ON a.category_id = cat.id
+            LEFT JOIN asset_sub_categories sc ON a.sub_category_id = sc.id
             JOIN asset_tiers t ON a.tier_id = t.id
             WHERE a.id = ?
         """, (transaction_id,))
@@ -455,14 +628,43 @@ async def update_transaction(transaction_id: int, transaction: AssetTransactionU
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                               detail="No fields to update")
         
-        # 카테고리/티어 변경 시 유효성 검사
+        # 카테고리/하위 카테고리/티어 변경 시 유효성 검사 및 티어 자동 업데이트
+        current_category_id = update_data.get('category_id')
+        if not current_category_id:
+            # 업데이트 데이터에 없으면 기존 값 조회
+            cursor.execute("SELECT category_id FROM assets WHERE id = ?", (transaction_id,))
+            current_category_id = cursor.fetchone()[0]
+
         if 'category_id' in update_data:
             cursor.execute("SELECT id FROM asset_categories WHERE id = ? AND class_id = ?",
                           (update_data['category_id'], class_id))
             if not cursor.fetchone():
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                   detail=f"Category does not belong to the same class")
+            
+            # 카테고리가 바뀌면 하위 카테고리 초기화 (명시적 업데이트가 없으면)
+            if 'sub_category_id' not in update_data:
+                update_data['sub_category_id'] = None
+                
+        if 'sub_category_id' in update_data and update_data['sub_category_id'] is not None:
+            cursor.execute("SELECT id, tier_id FROM asset_sub_categories WHERE id = ? AND category_id = ?",
+                          (update_data['sub_category_id'], current_category_id))
+            sub_cat_row = cursor.fetchone()
+            if not sub_cat_row:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                  detail=f"Sub Category does not belong to the category")
+            
+            # 하위 카테고리가 변경되면 티어도 자동 업데이트 (명시적 업데이트가 없으면)
+            if 'tier_id' not in update_data:
+                update_data['tier_id'] = sub_cat_row[1]
         
+        # 하위 카테고리가 없고 카테고리만 변경된 경우, 카테고리의 기본 티어 사용 (하위 호환성)
+        if 'category_id' in update_data and 'sub_category_id' not in update_data and 'tier_id' not in update_data:
+             cursor.execute("SELECT tier_id FROM asset_categories WHERE id = ?", (update_data['category_id'],))
+             cat_row = cursor.fetchone()
+             if cat_row and cat_row[0]:
+                 update_data['tier_id'] = cat_row[0]
+
         if 'tier_id' in update_data:
             cursor.execute("SELECT id FROM asset_tiers WHERE id = ? AND class_id = ?",
                           (update_data['tier_id'], class_id))
@@ -487,7 +689,7 @@ async def update_transaction(transaction_id: int, transaction: AssetTransactionU
             sync_asset_tags(cursor, transaction_id, tags)
         
         cursor.execute("""
-            SELECT id, name, cost, class_id, category_id, tier_id, date, description,
+            SELECT id, name, cost, class_id, category_id, sub_category_id, tier_id, date, description,
                    created_at, updated_at
             FROM assets WHERE id = ?
         """, (transaction_id,))

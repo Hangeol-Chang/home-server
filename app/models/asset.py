@@ -26,6 +26,7 @@ class AssetCategoryBase(BaseModel):
     class_id: int = Field(..., description="거래 분류 ID")
     name: str = Field(..., description="카테고리명")
     display_name: str = Field(..., description="표시명")
+    tier_id: Optional[int] = Field(None, description="기본 티어 ID")
     description: Optional[str] = None
     is_active: bool = True
     sort_order: int = 0
@@ -60,13 +61,31 @@ class AssetTier(AssetTierBase):
     class Config:
         from_attributes = True
 
+# ===== Asset Sub Categories (하위 카테고리) =====
+class AssetSubCategoryBase(BaseModel):
+    category_id: int = Field(..., description="상위 카테고리 ID")
+    name: str = Field(..., description="하위 카테고리명")
+    tier_id: int = Field(..., description="티어 ID")
+    is_active: bool = True
+
+class AssetSubCategoryCreate(AssetSubCategoryBase):
+    pass
+
+class AssetSubCategory(AssetSubCategoryBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 # ===== Assets (자산 거래) =====
 class AssetTransactionBase(BaseModel):
     name: str = Field(..., description="거래명")
     cost: float = Field(..., gt=0, description="금액")
     class_id: int = Field(..., description="거래 분류 ID")
     category_id: int = Field(..., description="카테고리 ID")
-    tier_id: int = Field(..., description="티어 ID")
+    sub_category_id: Optional[int] = Field(None, description="하위 카테고리 ID")
+    tier_id: Optional[int] = Field(None, description="티어 ID (하위 카테고리 기반 자동 설정)")
     date: date_type = Field(default_factory=date_type.today, description="거래 날짜")
     description: Optional[str] = None
     tags: Optional[List[str]] = Field(default=None, description="태그 목록")
@@ -78,6 +97,7 @@ class AssetTransactionUpdate(BaseModel):
     name: Optional[str] = None
     cost: Optional[float] = Field(None, gt=0)
     category_id: Optional[int] = None
+    sub_category_id: Optional[int] = None
     tier_id: Optional[int] = None
     date: Optional[date_type] = None
     description: Optional[str] = None

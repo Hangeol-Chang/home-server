@@ -375,17 +375,11 @@
 {/snippet}
 
 {#if isOpen}
-	{#if mode === 'modal'}
-		<div class="modal-overlay" onclick={handleCancel} role="presentation">
-			<div class="transaction-form-container modal" onclick={(e) => e.stopPropagation()} role="presentation">
-				{@render formContent()}
-			</div>
-		</div>
-	{:else}
-		<div class="transaction-form-container">
+	<div class="modal-overlay" onclick={handleCancel} role="presentation">
+		<div class="transaction-form-container modal" onclick={(e) => e.stopPropagation()} role="presentation">
 			{@render formContent()}
 		</div>
-	{/if}
+	</div>
 {/if}
 
 <style>
@@ -693,7 +687,6 @@
 		.class-btn {
 			padding: 10px 8px;
 			font-size: 0.85rem;
-			flex-direction: column;
 			gap: 4px;
 		}
 
@@ -793,7 +786,7 @@
 
 	.transaction-form-container.modal {
 		width: 90%;
-		max-width: 500px;
+		max-width: 700px;
 		max-height: 90vh;
 		overflow-y: auto;
 		margin: 0;

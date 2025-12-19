@@ -516,7 +516,7 @@ async def get_transactions(
     category_id: Optional[int] = Query(None, description="카테고리 ID"),
     sub_category_id: Optional[int] = Query(None, description="하위 카테고리 ID"),
     tier_id: Optional[int] = Query(None, description="티어 ID"),
-    limit: int = Query(100, ge=1, le=1000, description="조회 제한"),
+    limit: int = Query(100, ge=1, le=10000, description="조회 제한"),
     offset: int = Query(0, ge=0, description="조회 시작 위치")
 ):
     """거래 목록 조회 (상세 정보 포함, 필터링 옵션)"""
@@ -849,6 +849,20 @@ async def get_monthly_statistics(
             AND strftime('%m', a.date) = ?
         """, (str(year), f"{month:02d}"))
         save_total = cursor.fetchone()[0]
+
+        # 지출 티어별 합계
+        cursor.execute("""
+            SELECT t.name, t.display_name, COALESCE(SUM(a.cost), 0) as total
+            FROM assets a
+            JOIN asset_classes ac ON a.class_id = ac.id
+            JOIN asset_tiers t ON a.tier_id = t.id
+            WHERE ac.name = 'spend'
+            AND strftime('%Y', a.date) = ?
+            AND strftime('%m', a.date) = ?
+            GROUP BY t.id
+            ORDER BY t.sort_order
+        """, (str(year), f"{month:02d}"))
+        spend_by_tier = [dict(row) for row in cursor.fetchall()]
         
         return {
             "year": year,
@@ -856,7 +870,8 @@ async def get_monthly_statistics(
             "spend_total": spend_total,
             "earn_total": earn_total,
             "save_total": save_total,
-            "balance": earn_total - spend_total - save_total
+            "balance": earn_total - spend_total - save_total,
+            "spend_by_tier": spend_by_tier
         }
 
 # ===== Period Comparison (기간별 비교) API =====

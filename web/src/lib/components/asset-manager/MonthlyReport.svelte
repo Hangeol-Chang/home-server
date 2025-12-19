@@ -1,28 +1,79 @@
 <script>
-	import { getMonthlyStatistics } from '$lib/api/asset-manager.js';
+	import { getTransactions } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
 
 	let { year = new Date().getFullYear(), month = new Date().getMonth() + 1 } = $props();
 
 	// 기본 수익 가정값 (수익이 0일 때 사용)
 	let defaultIncome = $state(3200000);
-	let stats = $state(null);
+	let transactions = $state([]);
 	let loading = $state(true);
 	let error = $state('');
+    
+    // Tooltip state
+    let hoveredTier = $state(null);
+    let tooltipPosition = $state({ x: 0, y: 0 });
 
 	const circleRadius = 80; // 외부 원의 반지름
+    const TIER_COLORS = [
+        '#FF6B6B', // Red
+        '#4ECDC4', // Teal
+        '#45B7D1', // Blue
+        '#FFA07A', // Light Salmon
+        '#98D8C8', // Mint
+        '#F7DC6F', // Yellow
+        '#BB8FCE', // Purple
+        '#F1948A', // Light Red
+    ];
 
 	onMount(async () => {
 		await loadStatistics();
 	});
 
+    function handleMouseEnter(event, tier) {
+        hoveredTier = tier;
+        updateTooltipPosition(event);
+    }
+
+    function handleMouseMove(event) {
+        if (hoveredTier) {
+            updateTooltipPosition(event);
+        }
+    }
+
+    function handleMouseLeave() {
+        hoveredTier = null;
+    }
+
+    function updateTooltipPosition(event) {
+        tooltipPosition = {
+            x: event.clientX,
+            y: event.clientY
+        };
+    }
+
 	async function loadStatistics() {
 		loading = true;
 		error = '';
 		try {
-			stats = await getMonthlyStatistics(year, month);
+            // 해당 월의 시작일과 종료일 계산
+            const startDate = new Date(year, month - 1, 1);
+            const endDate = new Date(year, month, 0);
+            
+            const formatDate = (date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+
+			transactions = await getTransactions({
+                start_date: formatDate(startDate),
+                end_date: formatDate(endDate),
+                limit: 10000 // 충분히 큰 수
+            });
 		} catch (err) {
-			error = '통계를 불러오는데 실패했습니다: ' + err.message;
+			error = '데이터를 불러오는 중 오류가 발생했습니다: ' + err.message;
 		} finally {
 			loading = false;
 		}
@@ -34,25 +85,96 @@
 
 	// 차트 데이터 계산
 	const chartData = $derived(() => {
-		if (!stats) return null;
+		if (!transactions) return null;
 
-		const income = stats.earn_total > 0 ? stats.earn_total : defaultIncome;
-		const spend = stats.spend_total;
-		const save = stats.save_total;
-		const balance = stats.balance;
+        let earn_total = 0;
+        let spend_total = 0;
+        let save_total = 0;
+        const spendByTier = {};
+
+        // 트랜잭션 집계
+        transactions.forEach(tx => {
+            const cost = tx.cost;
+            if (tx.class_name === 'earn') {
+                earn_total += cost;
+            } else if (tx.class_name === 'spend') {
+                spend_total += cost;
+                
+                // 티어별 집계
+                const tierName = tx.tier_name;
+                const tierDisplayName = tx.tier_display_name || tierName;
+                const categoryName = tx.category_display_name || tx.category_name;
+                
+                if (!spendByTier[tierName]) {
+                    spendByTier[tierName] = {
+                        name: tierName,
+                        display_name: tierDisplayName,
+                        total: 0,
+                        categories: {}
+                    };
+                }
+                spendByTier[tierName].total += cost;
+
+                if (!spendByTier[tierName].categories[categoryName]) {
+                    spendByTier[tierName].categories[categoryName] = 0;
+                }
+                spendByTier[tierName].categories[categoryName] += cost;
+            } else if (tx.class_name === 'save') {
+                save_total += cost;
+            }
+        });
+
+		const income = earn_total > 0 ? earn_total : defaultIncome;
+		const spend = spend_total;
+		const save = save_total;
+		const balance = earn_total - spend_total - save_total;
 
 		const spendPercent = (spend / income) * 100;
 		const savePercent = (save / income) * 100;
 		const balancePercent = (balance / income) * 100;
 
+        // 티어 배열로 변환 및 정렬 (금액 내림차순)
+        const tiers = Object.values(spendByTier).sort((a, b) => b.total - a.total);
+
 		// SVG 원형 차트를 위한 각도 계산 (시작점은 -90도, 즉 12시 방향)
 		const circumference = 2 * Math.PI * circleRadius; // 외부 원의 둘레 (반지름 80)
-		const spendDash = (spendPercent / 100) * circumference;
-		const saveDash = (savePercent / 100) * circumference;
+        const labelRadius = circleRadius * 1.3; // 라벨 위치 반지름
+        const cx = 120;
+        const cy = 120;
+        
+        let currentRotation = -90;
+        
+        const tierSegments = tiers.map((tier, index) => {
+            const percent = spend > 0 ? (tier.total / spend) * 100 : 0;
+            const angleSize = (percent / 100) * 360;
+            const dash = (percent / 100) * circumference;
+            const rotation = currentRotation;
+            
+            // 라벨 위치 계산 (세그먼트의 중간 각도)
+            const midAngleDeg = rotation + (angleSize / 2);
+            const midAngleRad = (midAngleDeg * Math.PI) / 180;
+            
+            const labelX = cx + labelRadius * Math.cos(midAngleRad);
+            const labelY = cy + labelRadius * Math.sin(midAngleRad);
 
-		// 각 세그먼트의 시작 각도 (rotate 값)
-		const spendRotation = -90;
-		const saveRotation = -90 + (spendPercent * 360) / 100;
+            // 카테고리 정렬 (금액 내림차순)
+            const categoryList = Object.entries(tier.categories)
+                .map(([name, value]) => ({ name, value }))
+                .sort((a, b) => b.value - a.value);
+
+            currentRotation += angleSize;
+            
+            return {
+                ...tier,
+                percent: percent.toFixed(1),
+                dash,
+                rotation,
+                color: TIER_COLORS[index % TIER_COLORS.length],
+                labelX,
+                labelY,
+                categoryList
+            };
+        });
 
 		return {
 			income,
@@ -62,12 +184,9 @@
 			spendPercent: spendPercent.toFixed(1),
 			savePercent: savePercent.toFixed(1),
 			balancePercent: balancePercent.toFixed(1),
-			spendDash,
-			saveDash,
+            tierSegments,
 			circumference,
-			spendRotation,
-			saveRotation,
-			usingDefault: stats.earn_total === 0
+			usingDefault: earn_total === 0
 		};
 	});
 
@@ -79,7 +198,7 @@
 <div class="monthly-report">
 	<div class="report-header">
 		<h2>
-			📊 {year}년 {month}월
+			📊 {year}년 {month}월 지출 분석
 		</h2>
 		<button class="refresh-btn" onclick={loadStatistics} disabled={loading} aria-label="새로고침">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class:spinning={loading}>
@@ -100,33 +219,64 @@
 			<p>⚠️ {error}</p>
 			<button class="retry-btn" onclick={loadStatistics}>다시 시도</button>
 		</div>
-	{:else if stats && chartData()}
+	{:else if transactions && chartData()}
 		<!-- 동심원 차트 -->
 		<div class="circular-chart-container">
-			<svg class="circular-chart" viewBox="0 0 200 200">
+			<svg class="circular-chart" viewBox="0 0 240 240">
 				<!-- 배경 -->
-				<circle class="circle-bg" cx="100" cy="100" r="{circleRadius}"/>
-				<!-- 내부 원 (수익) - 채워진 부분 -->
-				<circle class="circle-inner income" cx="100" cy="100" r="{circleRadius - 14}" 
-					stroke-dasharray="{360} {0}"
+				<circle class="circle-bg" cx="120" cy="120" r="{circleRadius}"/>
+				
+                <!-- 내부 원 (총 지출) - 100% -->
+				<circle class="circle-inner" cx="120" cy="120" r="{circleRadius - 14}" 
+					stroke-dasharray="{chartData().circumference} {0}"
 				/>
 
-				<!-- 외부 원 - 세그먼트 -->
-				<circle class="circle-outer spend" cx="100" cy="100" r="{circleRadius}"
-					stroke-dasharray="{chartData().spendDash} {chartData().circumference}"
-					transform="rotate({chartData().spendRotation} 100 100)"
+				<!-- 외부 원 - 티어별 세그먼트 -->
+                {#each chartData().tierSegments as tier}
+				<circle class="circle-outer" cx="120" cy="120" r="{circleRadius}"
+					stroke-dasharray="{tier.dash} {chartData().circumference}"
+					transform="rotate({tier.rotation} 120 120)"
+                    stroke={tier.color}
+                    onmouseenter={(e) => handleMouseEnter(e, tier)}
+                    onmousemove={handleMouseMove}
+                    onmouseleave={handleMouseLeave}
+                    role="graphics-symbol" 
+                    aria-label="{tier.display_name}"
 				/>
-				<circle class="circle-outer save" cx="100" cy="100" r="{circleRadius}"
-					stroke-dasharray="{chartData().saveDash} {chartData().circumference}"
-					transform="rotate({chartData().saveRotation} 100 100)"
-				/>
+                <!-- 라벨 텍스트 (3% 이상일 때만 표시) -->
+                {#if parseFloat(tier.percent) > 3}
+                    <text x={tier.labelX} y={tier.labelY} class="chart-label" 
+                          text-anchor="middle" dominant-baseline="middle"
+                          fill={tier.color}>
+                        {tier.display_name}
+                    </text>
+                {/if}
+                {/each}
 
 				<!-- 중앙 텍스트 -->
-				<text x="100" y="95" class="chart-center-label">총 수익</text>
-				<text x="100" y="110" class="chart-center-value">
-					{formatCurrency(chartData().income)}
+				<text x="120" y="115" class="chart-center-label">총 지출</text>
+				<text x="120" y="130" class="chart-center-value">
+					{formatCurrency(chartData().spend)}
 				</text>
 			</svg>
+
+            <!-- 툴팁 -->
+            {#if hoveredTier}
+                <div class="chart-tooltip" style="top: {tooltipPosition.y}px; left: {tooltipPosition.x}px;">
+                    <div class="tooltip-header" style="border-bottom-color: {hoveredTier.color}">
+                        <span class="tooltip-title">{hoveredTier.display_name}</span>
+                        <span class="tooltip-total">{formatCurrency(hoveredTier.total)}</span>
+                    </div>
+                    <div class="tooltip-body">
+                        {#each hoveredTier.categoryList as cat}
+                            <div class="tooltip-row">
+                                <span>{cat.name}</span>
+                                <span>{formatCurrency(cat.value)}</span>
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+            {/if}
 
 			<!-- 범례 및 통계 테이블 -->
 			<div class="table-container">
@@ -193,11 +343,79 @@
 		margin-bottom: 32px;
 	}
 
+	.report-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 24px;
+	}
+
+	.report-header h2 {
+		margin: 0;
+		font-size: 1.4rem;
+		color: var(--text-primary);
+	}
+
+	.refresh-btn {
+		background: none;
+		border: none;
+		color: var(--text-secondary);
+		cursor: pointer;
+		padding: 8px;
+		border-radius: 50%;
+		transition: all 0.2s;
+	}
+
+	.refresh-btn:hover:not(:disabled) {
+		background: var(--bg-secondary);
+		color: var(--text-primary);
+	}
+
+	.refresh-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.spinning {
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		from { transform: rotate(0deg); }
+		to { transform: rotate(360deg); }
+	}
+
+	.loading, .error {
+		text-align: center;
+		padding: 40px 0;
+		color: var(--text-secondary);
+	}
+
+	.spinner {
+		width: 30px;
+		height: 30px;
+		border: 3px solid var(--bg-secondary);
+		border-top-color: var(--primary-color);
+		border-radius: 50%;
+		margin: 0 auto 16px;
+		animation: spin 1s linear infinite;
+	}
+
+	.retry-btn {
+		margin-top: 12px;
+		padding: 8px 16px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
+		cursor: pointer;
+		color: var(--text-primary);
+	}
+
 	/* 동심원 차트 컨테이너 */
 	.circular-chart-container {
 		display: grid;
-		grid-template-columns: 2fr 3fr;
-		gap: 10px;
+		grid-template-columns: 1fr 1fr;
+		gap: 20px;
 		align-items: center;
 	}
 
@@ -213,14 +431,11 @@
 		fill: var(--bg-secondary);
 	}
 
-	/* 내부 원 (수익) */
+	/* 내부 원 (총 지출) */
 	.circle-inner {
 		fill: none;
-		stroke: #9cffa6;
-		/* shadow */
-		filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+		stroke: var(--bg-tertiary); /* 은은한 배경색 */
 		stroke-width: 30;
-		animation: drawCircle 1s ease-out 0.2s backwards;
 	}
 
 	/* 외부 원 세그먼트 */
@@ -230,17 +445,14 @@
 		stroke-linecap: round;
 		transition: all 0.3s ease;
 		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        /* animation: drawCircle 1s ease-out backwards; */
+        cursor: pointer;
 	}
 
-	.circle-outer.spend {
-		stroke: #fa746b;
-		animation: drawCircle 1s ease-out 0.2s backwards;
-	}
-
-	.circle-outer.save {
-		stroke: #54b2fe;
-		animation: drawCircle 1s ease-out 0.4s backwards;
-	}
+    .circle-outer:hover {
+        stroke-width: 18;
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+    }
 
 	@keyframes drawCircle {
 		from {
@@ -263,7 +475,108 @@
 		font-weight: 700;
 	}
 
-	/* 행별 강조 색상 - 전역 스타일 오버라이드 */
+    .chart-label {
+        font-size: 11px;
+        font-weight: 400;
+        pointer-events: none;
+        text-shadow: 0 1px 2px var(--bg-primary);
+    }
+
+    /* 툴팁 스타일 */
+    .chart-tooltip {
+        position: fixed;
+        z-index: 1000;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        pointer-events: none;
+        transform: translate(15px, 15px);
+        min-width: 180px;
+    }
+
+    .tooltip-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+        border-bottom: 2px solid;
+        font-weight: 700;
+    }
+
+    .tooltip-title {
+        color: var(--text-primary);
+    }
+
+    .tooltip-total {
+        color: var(--text-primary);
+    }
+
+    .tooltip-body {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .tooltip-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+
+    /* 테이블 스타일 */
+    .table-container {
+        width: 100%;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table td {
+        padding: 12px 8px;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.95rem;
+    }
+
+    .data-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .cell-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-secondary);
+    }
+
+    .cell-icon {
+        font-size: 1.2rem;
+    }
+
+
+    .cell-amount {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .cell-percent {
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: 12px;
+        background: var(--bg-secondary);
+        color: var(--text-secondary);
+    }
+
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+
+    /* 행별 강조 색상 - 전역 스타일 오버라이드 */
 	.cell-percent.spend {
 		background: rgba(244, 67, 54, 0.1);
 		color: var(--text-danger);
@@ -278,8 +591,6 @@
 		background: var(--bg-tertiary);
 		color: var(--text-secondary);
 	}
-
-
 
 	/* Tablet/Mobile (< 768px) */
 	@media (max-width: 768px) {
@@ -301,7 +612,7 @@
 		}
 
 		.circular-chart {
-			max-width: 240px;
+			max-width: 70%;
 		}
 
 		.chart-center-label {

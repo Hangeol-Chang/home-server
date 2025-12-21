@@ -3,6 +3,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import Header from '$lib/components/layout/Header.svelte';
 	import Footer from '$lib/components/layout/Footer.svelte';
+	import { device } from '$lib/stores/device';
 
 	let { children, data } = $props();
 </script>
@@ -11,7 +12,7 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="app-container">
+<div class="app-container" class:mobile={$device.isMobile} class:tablet={$device.isTablet} class:desktop={$device.isDesktop}>
 	<Header session={data.session} />
 
 	<main class="app-main">
@@ -45,17 +46,13 @@
 	}
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.app-main {
-			padding: 12px;
-			box-shadow: none;
-		}
+	.app-container.tablet .app-main {
+		padding: 12px;
+		box-shadow: none;
 	}
 
 	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.app-main {
-			padding: 8px;
-		}
+	.app-container.mobile .app-main {
+		padding: 8px;
 	}
 </style>

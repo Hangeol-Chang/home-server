@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { Chart, registerables } from 'chart.js';
 	import { getPeriodComparison } from '$lib/api/asset-manager.js';
+	import { device } from '$lib/stores/device';
 
 	Chart.register(...registerables);
 
@@ -352,7 +353,7 @@
 	}
 </script>
 
-<div class="period-comparison">
+<div class="period-comparison" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="comparison-header">
 		<div class="controls">
 			<div class="unit-selector">
@@ -622,62 +623,60 @@
 
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.period-comparison {
+	.period-comparison {
+		&.tablet {
 			padding: 16px;
+
+			.chart-section {
+				flex-direction: column;
+				align-items: center;
+				gap: 20px;
+			}
+
+			.chart-container {
+				height: 260px;
+			}
+
+			.data-table.compact {
+				max-width: 100%;
+				font-size: 0.85rem;
+
+				th,
+				td {
+					padding: 6px 4px;
+				}
+			}
+
+			.period-value {
+				font-size: 0.9rem;
+			}
 		}
 
-		.chart-section {
-			flex-direction: column;
-			align-items: center;
-			gap: 20px;
-		}
-
-		.chart-container {
-			height: 260px;
-		}
-
-		.data-table.compact {
-			max-width: 100%;
-			font-size: 0.85rem;
-		}
-
-		.data-table.compact th,
-		.data-table.compact td {
-			padding: 6px 4px;
-		}
-
-		.period-value {
-			font-size: 0.9rem;
-		}
-	}
-
-	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.period-comparison {
+		/* Mobile (< 320px) */
+		&.mobile {
 			padding: 12px;
-		}
 
-		.chart-container {
-			height: 220px;
-		}
+			.chart-container {
+				height: 220px;
+			}
 
-		.data-table.compact {
-			font-size: 0.8rem;
-		}
+			.data-table.compact {
+				font-size: 0.8rem;
 
-		.data-table.compact th,
-		.data-table.compact td {
-			padding: 5px 3px;
-			font-size: 0.75rem;
-		}
+				th,
+				td {
+					padding: 5px 3px;
+					font-size: 0.75rem;
+				}
+			}
 
-		.period-label {
-			font-size: 0.7rem;
-		}
+			.period-label {
+				font-size: 0.7rem;
+			}
 
-		.period-value {
-			font-size: 0.85rem;
+			.period-value {
+				font-size: 0.85rem;
+			}
 		}
 	}
 </style>

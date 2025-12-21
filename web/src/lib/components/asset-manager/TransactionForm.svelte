@@ -1,12 +1,12 @@
 <script>
 	import { createTransaction, getCategories, getSubCategories, getTiers, getTags } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
+	import { device } from '$lib/stores/device';
 
 	let { 
 		isOpen = $bindable(false), 
 		onSuccess = () => {},
 		initialDate = null,
-		mode = 'modal' // 'inline' | 'modal'
 	} = $props();
 
 	// 거래 분류: 1=지출, 2=수익, 3=저축
@@ -409,7 +409,7 @@
 
 {#if isOpen}
 	<div class="modal-overlay" onclick={handleCancel} role="presentation">
-		<div class="transaction-form-container modal" onclick={(e) => e.stopPropagation()} role="presentation">
+		<div class="transaction-form-container modal" class:mobile={$device.isMobile} class:tablet={$device.isTablet} onclick={(e) => e.stopPropagation()} role="presentation">
 			{@render formContent()}
 		</div>
 	</div>
@@ -693,138 +693,122 @@
 
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.transaction-form-container {
+	.transaction-form-container {
+		&.tablet {
 			padding: 12px;
+
+			.transaction-form {
+				padding: 16px;
+				max-width: 100%;
+			}
+
+			.form-header h3 {
+				font-size: 1.3rem;
+			}
+
+			.close-btn {
+				padding: 6px;
+			}
+
+			.class-selector {
+				max-width: 100%;
+				flex-direction: row;
+				gap: 6px;
+			}
+
+			.class-btn {
+				padding: 10px 8px;
+				font-size: 0.85rem;
+				gap: 4px;
+			}
+
+			label {
+				font-size: 0.9rem;
+				margin-bottom: 6px;
+			}
+
+			input[type='text'],
+			input[type='number'],
+			input[type='date'],
+			select,
+			textarea {
+				padding: 10px 12px;
+				font-size: 0.95rem;
+			}
+
+			.tag-input-wrapper {
+				flex-direction: column;
+			}
+
+			.btn-add-tag {
+				width: 100%;
+				padding: 10px 16px;
+			}
+
+			.form-actions {
+				flex-direction: column-reverse;
+				gap: 10px;
+			}
+
+			.btn-cancel,
+			.btn-submit {
+				width: 100%;
+				justify-content: center;
+			}
 		}
 
-		.transaction-form {
-			padding: 16px;
-			max-width: 100%;
-		}
-
-		.form-header h3 {
-			font-size: 1.3rem;
-		}
-
-		.close-btn {
-			padding: 6px;
-		}
-
-		.class-selector {
-			max-width: 100%;
-			flex-direction: row;
-			gap: 6px;
-		}
-
-		.class-btn {
-			padding: 10px 8px;
-			font-size: 0.85rem;
-			gap: 4px;
-		}
-
-		label {
-			font-size: 0.9rem;
-			margin-bottom: 6px;
-		}
-
-		input[type='text'],
-		input[type='number'],
-		input[type='date'],
-		select,
-		textarea {
-			padding: 10px 12px;
-			font-size: 0.95rem;
-		}
-
-		.tag-input-wrapper {
-			flex-direction: column;
-		}
-
-		.btn-add-tag {
-			width: 100%;
-			padding: 10px 16px;
-		}
-
-		.form-actions {
-			flex-direction: column-reverse;
-			gap: 10px;
-		}
-
-		.btn-cancel,
-		.btn-submit {
-			width: 100%;
-			justify-content: center;
-		}
-	}
-
-	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.transaction-form-container {
+		/* Mobile (< 320px) */
+		&.mobile {
 			padding: 8px;
+
+			.transaction-form {
+				padding: 12px;
+			}
+
+			.form-header h3 {
+				font-size: 1.2rem;
+			}
+
+			.class-selector {
+				flex-direction: column;
+				gap: 6px;
+			}
+
+			.class-btn {
+				flex-direction: row;
+				padding: 10px 12px;
+				font-size: 0.9rem;
+			}
+
+			label {
+				font-size: 0.85rem;
+			}
+
+			input[type='text'],
+			input[type='number'],
+			input[type='date'],
+			select,
+			textarea {
+				padding: 8px 10px;
+				font-size: 0.9rem;
+			}
+
+			.tag {
+				font-size: 0.85rem;
+				padding: 5px 10px;
+			}
 		}
 
-		.transaction-form {
-			padding: 12px;
+		/* Modal Styles */
+		&.modal {
+			width: 90%;
+			max-width: 700px;
+			max-height: 90vh;
+			overflow-y: auto;
+			margin: 0;
+			box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+			animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 		}
-
-		.form-header h3 {
-			font-size: 1.2rem;
-		}
-
-		.class-selector {
-			flex-direction: column;
-			gap: 6px;
-		}
-
-		.class-btn {
-			flex-direction: row;
-			padding: 10px 12px;
-			font-size: 0.9rem;
-		}
-
-		label {
-			font-size: 0.85rem;
-		}
-
-		input[type='text'],
-		input[type='number'],
-		input[type='date'],
-		select,
-		textarea {
-			padding: 8px 10px;
-			font-size: 0.9rem;
-		}
-
-		.tag {
-			font-size: 0.85rem;
-			padding: 5px 10px;
-		}
-	}
-	/* Modal Styles */
-	.modal-overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background-color: rgba(0, 0, 0, 0.5);
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		z-index: 1000;
-		backdrop-filter: blur(4px);
-		animation: fadeIn 0.2s ease-out;
-	}
-
-	.transaction-form-container.modal {
-		width: 90%;
-		max-width: 700px;
-		max-height: 90vh;
-		overflow-y: auto;
-		margin: 0;
-		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-		animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 	}
 
 	@keyframes fadeIn {

@@ -1,5 +1,6 @@
 <script>
 	import { deleteTransaction } from '$lib/api/asset-manager.js';
+	import { device } from '$lib/stores/device';
 
 	let {
 		transactions = [],
@@ -34,7 +35,7 @@
 	}
 </script>
 
-<section class="transactions-section">
+<section class="transactions-section" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="section-header">
 		<h2>거래 내역</h2>
 		<span class="transaction-count">{transactions.length}건</span>
@@ -356,204 +357,206 @@
 
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.transactions-section {
+	.transactions-section {
+		&.tablet {
 			margin-top: 20px;
+
+			.section-header {
+				flex-direction: column;
+				align-items: flex-start;
+				gap: 10px;
+
+				h2 {
+					font-size: 1.2rem;
+				}
+			}
+
+			.transaction-count {
+				padding: 4px 12px;
+				font-size: 0.85rem;
+			}
+
+			.table-scroll-wrapper {
+				max-height: 450px;
+				font-size: 0.85rem;
+			}
+
+			/* 테이블 컬럼 조정 */
+			.col-icon {
+				width: 40px;
+			}
+
+			.col-name {
+				min-width: 140px;
+			}
+
+			.col-category {
+				min-width: 180px;
+			}
+
+			.col-date {
+				width: 120px;
+				font-size: 0.8rem;
+			}
+
+			.col-tags {
+				min-width: 100px;
+			}
+
+			.col-amount {
+				width: 120px;
+			}
+
+			.col-actions {
+				width: 60px;
+			}
+
+			.cell-icon {
+				font-size: 1.2rem;
+			}
+
+			.cell-name {
+				.name {
+					font-size: 0.9rem;
+				}
+
+				.description {
+					font-size: 0.75rem;
+				}
+			}
+
+			.badge {
+				padding: 2px 8px;
+				font-size: 0.7rem;
+			}
+
+			.cell-tags .tag {
+				padding: 3px 6px;
+				font-size: 0.65rem;
+			}
+
+			.cell-amount {
+				font-size: 1rem;
+			}
+
+			.icon-btn {
+				padding: 5px;
+
+				svg {
+					width: 14px;
+					height: 14px;
+				}
+			}
+
+			.empty-state {
+				padding: 40px 16px;
+
+				svg {
+					width: 48px;
+					height: 48px;
+				}
+
+				p {
+					font-size: 0.95rem;
+				}
+			}
 		}
 
-		.section-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 10px;
-		}
-
-		.section-header h2 {
-			font-size: 1.2rem;
-		}
-
-		.transaction-count {
-			padding: 4px 12px;
-			font-size: 0.85rem;
-		}
-
-		.table-scroll-wrapper {
-			max-height: 450px;
-			font-size: 0.85rem;
-		}
-
-		/* 테이블 컬럼 조정 */
-		.col-icon {
-			width: 40px;
-		}
-
-		.col-name {
-			min-width: 140px;
-		}
-
-		.col-category {
-			min-width: 180px;
-		}
-
-		.col-date {
-			width: 120px;
-			font-size: 0.8rem;
-		}
-
-		.col-tags {
-			min-width: 100px;
-		}
-
-		.col-amount {
-			width: 120px;
-		}
-
-		.col-actions {
-			width: 60px;
-		}
-
-		.cell-icon {
-			font-size: 1.2rem;
-		}
-
-		.cell-name .name {
-			font-size: 0.9rem;
-		}
-
-		.cell-name .description {
-			font-size: 0.75rem;
-		}
-
-		.badge {
-			padding: 2px 8px;
-			font-size: 0.7rem;
-		}
-
-		.cell-tags .tag {
-			padding: 3px 6px;
-			font-size: 0.65rem;
-		}
-
-		.cell-amount {
-			font-size: 1rem;
-		}
-
-		.icon-btn {
-			padding: 5px;
-		}
-
-		.icon-btn svg {
-			width: 14px;
-			height: 14px;
-		}
-
-		.empty-state {
-			padding: 40px 16px;
-		}
-
-		.empty-state svg {
-			width: 48px;
-			height: 48px;
-		}
-
-		.empty-state p {
-			font-size: 0.95rem;
-		}
-	}
-
-	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.transactions-section {
+		/* Mobile (< 320px) */
+		&.mobile {
 			margin-top: 16px;
-		}
 
-		.section-header h2 {
-			font-size: 1.1rem;
-		}
+			.section-header h2 {
+				font-size: 1.1rem;
+			}
 
-		.transaction-count {
-			padding: 3px 10px;
-			font-size: 0.8rem;
-		}
+			.transaction-count {
+				padding: 3px 10px;
+				font-size: 0.8rem;
+			}
 
-		/* 작은 화면에서는 스크롤 가능하도록 */
-		.table-scroll-wrapper {
-			overflow-x: auto;
-			-webkit-overflow-scrolling: touch;
-			border: none;
-			border-radius: 0;
-			max-height: none;
-		}
+			/* 작은 화면에서는 스크롤 가능하도록 */
+			.table-scroll-wrapper {
+				overflow-x: auto;
+				-webkit-overflow-scrolling: touch;
+				border: none;
+				border-radius: 0;
+				max-height: none;
+			}
 
-		.data-table {
-			display: table; /* 테이블 유지 */
-			min-width: 600px; /* 최소 너비 설정 */
-		}
+			.data-table {
+				display: table; /* 테이블 유지 */
+				min-width: 600px; /* 최소 너비 설정 */
 
-		.data-table th {
-			padding: 8px 4px;
-			font-size: 0.7rem;
-		}
+				th {
+					padding: 8px 4px;
+					font-size: 0.7rem;
+				}
 
-		.data-table td {
-			padding: 10px 4px;
-		}
+				td {
+					padding: 10px 4px;
+				}
+			}
 
-		.col-icon {
-			width: 35px;
-		}
+			.col-icon {
+				width: 35px;
+			}
 
-		.col-name {
-			min-width: 120px;
-		}
+			.col-name {
+				min-width: 120px;
+			}
 
-		.col-category {
-			min-width: 150px;
-		}
+			.col-category {
+				min-width: 150px;
+			}
 
-		.col-date {
-			width: 100px;
-		}
+			.col-date {
+				width: 100px;
+			}
 
-		.col-tags {
-			min-width: 80px;
-		}
+			.col-tags {
+				min-width: 80px;
+			}
 
-		.col-amount {
-			width: 100px;
-		}
+			.col-amount {
+				width: 100px;
+			}
 
-		.col-actions {
-			width: 50px;
-		}
+			.col-actions {
+				width: 50px;
+			}
 
-		.cell-icon {
-			font-size: 1.1rem;
-		}
+			.cell-icon {
+				font-size: 1.1rem;
+			}
 
-		.cell-name .name {
-			font-size: 0.85rem;
-		}
+			.cell-name {
+				.name {
+					font-size: 0.85rem;
+				}
 
-		.cell-name .description {
-			font-size: 0.7rem;
-		}
+				.description {
+					font-size: 0.7rem;
+				}
+			}
 
-		.badge {
-			padding: 2px 6px;
-			font-size: 0.65rem;
-		}
+			.badge {
+				padding: 2px 6px;
+				font-size: 0.65rem;
+			}
 
-		.cell-amount {
-			font-size: 0.9rem;
-		}
+			.cell-amount {
+				font-size: 0.9rem;
+			}
 
-		.empty-state {
-			padding: 30px 12px;
-		}
+			.empty-state {
+				padding: 30px 12px;
 
-		.empty-state svg {
-			width: 40px;
-			height: 40px;
+				svg {
+					width: 40px;
+					height: 40px;
+				}
+			}
 		}
 	}
 </style>

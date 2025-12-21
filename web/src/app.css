@@ -1,6 +1,11 @@
 /* Color Theme Variables */
 /* https://digitalsynopsis.com/design/minimal-web-color-palettes-combination-hex-code/ */
 :root {
+	/* Breakpoints */
+	--mobile: 320px;
+	--tablet: 768px;
+	--desktop: 1024px;
+
 	/* Primary Colors - 밝은 순서 */
 	--color-lightest: #eee2df; 
 	--color-light: #eed7c5; 
@@ -957,6 +962,25 @@ select {
 	font-size: 0.9rem;
 	color: var(--text-tertiary);
 	white-space: nowrap;
+}
+
+.nav-btn {
+	background: var(--bg-secondary);
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	padding: 4px 6px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s;
+	color: var(--text-primary);
+}
+
+.nav-btn:hover {
+	background: var(--color-medium);
+	color: white;
+	transform: scale(1.1);
 }
 
 /* 모바일 대응 - 확장 공통 스타일 */

@@ -1,18 +1,22 @@
 <script>
 	import { getTransactions } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
+	import { device } from '$lib/stores/device';
+	import PieChart from './module/PieChart.svelte';
+	import TransactionDropdown from './TransactionDropdown.svelte';
 
-	let { year = new Date().getFullYear(), month = new Date().getMonth() + 1 } = $props();
+	let year = $state(new Date().getFullYear());
+	let month = $state(new Date().getMonth() + 1);
 
 	// 기본 수익 가정값 (수익이 0일 때 사용)
 	let defaultIncome = $state(3200000);
 	let transactions = $state([]);
 	let loading = $state(true);
 	let error = $state('');
-    
-    // Tooltip state
-    let hoveredTier = $state(null);
-    let tooltipPosition = $state({ x: 0, y: 0 });
+
+	let selectedTierTransactions = $state([]);
+	let isDropdownVisible = $state(false);
+	let dropdownTitle = $state('');
 
 	const circleRadius = 80; // 외부 원의 반지름
     const TIER_COLORS = [
@@ -30,27 +34,23 @@
 		await loadStatistics();
 	});
 
-    function handleMouseEnter(event, tier) {
-        hoveredTier = tier;
-        updateTooltipPosition(event);
-    }
+	function changeMonth(delta) {
+		month += delta;
+		if (month > 12) {
+			month = 1;
+			year += 1;
+		} else if (month < 1) {
+			month = 12;
+			year -= 1;
+		}
+		loadStatistics();
+	}
 
-    function handleMouseMove(event) {
-        if (hoveredTier) {
-            updateTooltipPosition(event);
-        }
-    }
-
-    function handleMouseLeave() {
-        hoveredTier = null;
-    }
-
-    function updateTooltipPosition(event) {
-        tooltipPosition = {
-            x: event.clientX,
-            y: event.clientY
-        };
-    }
+	function handleTierClick(tier) {
+		selectedTierTransactions = transactions.filter(t => t.tier_name === tier.name);
+		dropdownTitle = tier.display_name;
+		isDropdownVisible = true;
+	}
 
 	async function loadStatistics() {
 		loading = true;
@@ -195,11 +195,23 @@
 	});
 </script>
 
-<div class="monthly-report">
+<div class="monthly-report" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="report-header">
-		<h2>
-			📊 {year}년 {month}월 지출 분석
-		</h2>
+		<div class="month-selector">
+			<button class="nav-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<polyline points="15 18 9 12 15 6"></polyline>
+				</svg>
+			</button>
+			<h2>
+				📊 {year}-{month}
+			</h2>
+			<button class="nav-btn" onclick={() => changeMonth(1)} aria-label="다음 달">
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<polyline points="9 18 15 12 9 6"></polyline>
+				</svg>
+			</button>
+		</div>
 		<button class="refresh-btn" onclick={loadStatistics} disabled={loading} aria-label="새로고침">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class:spinning={loading}>
 				<polyline points="23 4 23 10 17 10"></polyline>
@@ -222,61 +234,13 @@
 	{:else if transactions && chartData()}
 		<!-- 동심원 차트 -->
 		<div class="circular-chart-container">
-			<svg class="circular-chart" viewBox="0 0 240 240">
-				<!-- 배경 -->
-				<circle class="circle-bg" cx="120" cy="120" r="{circleRadius}"/>
-				
-                <!-- 내부 원 (총 지출) - 100% -->
-				<circle class="circle-inner" cx="120" cy="120" r="{circleRadius - 14}" 
-					stroke-dasharray="{chartData().circumference} {0}"
-				/>
-
-				<!-- 외부 원 - 티어별 세그먼트 -->
-                {#each chartData().tierSegments as tier}
-				<circle class="circle-outer" cx="120" cy="120" r="{circleRadius}"
-					stroke-dasharray="{tier.dash} {chartData().circumference}"
-					transform="rotate({tier.rotation} 120 120)"
-                    stroke={tier.color}
-                    onmouseenter={(e) => handleMouseEnter(e, tier)}
-                    onmousemove={handleMouseMove}
-                    onmouseleave={handleMouseLeave}
-                    role="graphics-symbol" 
-                    aria-label="{tier.display_name}"
-				/>
-                <!-- 라벨 텍스트 (3% 이상일 때만 표시) -->
-                {#if parseFloat(tier.percent) > 3}
-                    <text x={tier.labelX} y={tier.labelY} class="chart-label" 
-                          text-anchor="middle" dominant-baseline="middle"
-                          fill={tier.color}>
-                        {tier.display_name}
-                    </text>
-                {/if}
-                {/each}
-
-				<!-- 중앙 텍스트 -->
-				<text x="120" y="115" class="chart-center-label">총 지출</text>
-				<text x="120" y="130" class="chart-center-value">
-					{formatCurrency(chartData().spend)}
-				</text>
-			</svg>
-
-            <!-- 툴팁 -->
-            {#if hoveredTier}
-                <div class="chart-tooltip" style="top: {tooltipPosition.y}px; left: {tooltipPosition.x}px;">
-                    <div class="tooltip-header" style="border-bottom-color: {hoveredTier.color}">
-                        <span class="tooltip-title">{hoveredTier.display_name}</span>
-                        <span class="tooltip-total">{formatCurrency(hoveredTier.total)}</span>
-                    </div>
-                    <div class="tooltip-body">
-                        {#each hoveredTier.categoryList as cat}
-                            <div class="tooltip-row">
-                                <span>{cat.name}</span>
-                                <span>{formatCurrency(cat.value)}</span>
-                            </div>
-                        {/each}
-                    </div>
-                </div>
-            {/if}
+			<PieChart 
+				tierSegments={chartData().tierSegments} 
+				circumference={chartData().circumference} 
+				spend={chartData().spend}
+				{circleRadius}
+				onTierClick={handleTierClick}
+			/>
 
 			<!-- 범례 및 통계 테이블 -->
 			<div class="table-container">
@@ -333,7 +297,15 @@
 			</div>
 		</div>
 	{/if}
+
+	<TransactionDropdown 
+		bind:visible={isDropdownVisible}
+		transactions={selectedTierTransactions}
+		mode="list"
+		title={dropdownTitle}
+	/>
 </div>
+
 <style>
 	.monthly-report {
 		background: var(--bg-primary);
@@ -348,6 +320,13 @@
 		justify-content: space-between;
 		align-items: center;
 		margin-bottom: 24px;
+	}
+
+	.month-selector {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 4px;
 	}
 
 	.report-header h2 {
@@ -419,114 +398,6 @@
 		align-items: center;
 	}
 
-	/* SVG 차트 */
-	.circular-chart {
-		max-width: 320px;
-		width: 100%;
-		margin: 0 auto;
-	}
-
-	/* 원 배경 */
-	.circle-bg {
-		fill: var(--bg-secondary);
-	}
-
-	/* 내부 원 (총 지출) */
-	.circle-inner {
-		fill: none;
-		stroke: var(--bg-tertiary); /* 은은한 배경색 */
-		stroke-width: 30;
-	}
-
-	/* 외부 원 세그먼트 */
-	.circle-outer {
-		fill: none;
-		stroke-width: 14;
-		stroke-linecap: round;
-		transition: all 0.3s ease;
-		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-        /* animation: drawCircle 1s ease-out backwards; */
-        cursor: pointer;
-	}
-
-    .circle-outer:hover {
-        stroke-width: 18;
-        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-    }
-
-	@keyframes drawCircle {
-		from {
-			stroke-dasharray: 0 502;
-		}
-	}
-
-	/* 중앙 텍스트 */
-	.chart-center-label {
-		font-size: 10px;
-		fill: var(--text-secondary);
-		text-anchor: middle;
-		font-weight: 600;
-	}
-
-	.chart-center-value {
-		font-size: 11px;
-		fill: var(--text-primary);
-		text-anchor: middle;
-		font-weight: 700;
-	}
-
-    .chart-label {
-        font-size: 11px;
-        font-weight: 400;
-        pointer-events: none;
-        text-shadow: 0 1px 2px var(--bg-primary);
-    }
-
-    /* 툴팁 스타일 */
-    .chart-tooltip {
-        position: fixed;
-        z-index: 1000;
-        background: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        pointer-events: none;
-        transform: translate(15px, 15px);
-        min-width: 180px;
-    }
-
-    .tooltip-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-bottom: 8px;
-        margin-bottom: 8px;
-        border-bottom: 2px solid;
-        font-weight: 700;
-    }
-
-    .tooltip-title {
-        color: var(--text-primary);
-    }
-
-    .tooltip-total {
-        color: var(--text-primary);
-    }
-
-    .tooltip-body {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .tooltip-row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-    }
-
     /* 테이블 스타일 */
     .table-container {
         width: 100%;
@@ -593,66 +464,40 @@
 	}
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.monthly-report {
+	.monthly-report {
+		&.tablet {
 			padding: 16px;
+
+			.report-header {
+				margin-bottom: 20px;
+
+				h2 {
+					font-size: 1.2rem;
+				}
+			}
+
+			.circular-chart-container {
+				grid-template-columns: 1fr;
+				gap: 20px;
+			}
 		}
 
-		.report-header {
-			margin-bottom: 20px;
-		}
-
-		.report-header h2 {
-			font-size: 1.2rem;
-		}
-
-		.circular-chart-container {
-			grid-template-columns: 1fr;
-			gap: 20px;
-		}
-
-		.circular-chart {
-			max-width: 70%;
-		}
-
-		.chart-center-label {
-			font-size: 9px;
-		}
-
-		.chart-center-value {
-			font-size: 10px;
-		}
-	}
-
-	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.monthly-report {
+		/* Mobile (< 320px) */
+		&.mobile {
 			padding: 12px;
-		}
 
-		.report-header h2 {
-			font-size: 1.1rem;
-		}
+			.report-header h2 {
+				font-size: 1.1rem;
+			}
 
-		.circular-chart {
-			max-width: 200px;
-		}
+			.refresh-btn {
+				padding: 6px;
 
-		.chart-center-label {
-			font-size: 8px;
-		}
-
-		.chart-center-value {
-			font-size: 9px;
-		}
-
-		.refresh-btn {
-			padding: 6px;
-		}
-
-		.refresh-btn svg {
-			width: 16px;
-			height: 16px;
+				svg {
+					width: 16px;
+					height: 16px;
+				}
+			}
 		}
 	}
 </style>

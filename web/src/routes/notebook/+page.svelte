@@ -1,6 +1,7 @@
 <script>
 	import { getFolders, getFiles, getFileContent, searchNotes, getVaultStats } from '$lib/api/notebook.js';
 	import { onMount } from 'svelte';
+	import { device } from '$lib/stores/device';
 
 	let currentPath = $state('');
 	let folders = $state([]);
@@ -150,7 +151,7 @@
 	<title>Notebook - Obsidian Vault</title>
 </svelte:head>
 
-<div class="notebook-page">
+<div class="notebook-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<header class="page-header">
 		<div class="header-content">
 			<h1>📓 Notebook</h1>
@@ -476,23 +477,6 @@
 		color: var(--text-tertiary);
 	}
 
-	.nav-btn {
-		width: 100%;
-		padding: 8px 12px;
-		background: var(--bg-tertiary);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		cursor: pointer;
-		color: var(--text-primary);
-		text-align: left;
-		margin-bottom: 8px;
-		transition: all 0.2s;
-	}
-
-	.nav-btn:hover {
-		background: var(--bg-primary);
-	}
-
 	.folder-section, .file-section, .search-results {
 		margin-bottom: 24px;
 	}
@@ -686,13 +670,26 @@
 	}
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.notebook-container {
-			grid-template-columns: 1fr;
+	.notebook-page {
+		&.tablet {
+			.notebook-container {
+				grid-template-columns: 1fr;
+			}
+
+			.sidebar {
+				max-height: 400px;
+			}
 		}
 
-		.sidebar {
-			max-height: 400px;
+		/* Mobile (< 320px) */
+		&.mobile {
+			.notebook-container {
+				grid-template-columns: 1fr;
+			}
+
+			.sidebar {
+				max-height: 300px;
+			}
 		}
 	}
 </style>

@@ -7,6 +7,7 @@
 	import PeriodComparison from '$lib/components/asset-manager/PeriodComparison.svelte';
 	import { getTransactions } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
+	import { device } from '$lib/stores/device';
 
 	// 상태 관리
 	let isFormOpen = $state(false);
@@ -61,17 +62,6 @@
 		await loadTransactions();
 	}
 
-	function changeMonth(delta) {
-		currentMonth += delta;
-		if (currentMonth > 12) {
-			currentMonth = 1;
-			currentYear += 1;
-		} else if (currentMonth < 1) {
-			currentMonth = 12;
-			currentYear -= 1;
-		}
-	}
-
 	// 필터 변경 시 자동 로드
 	$effect(() => {
 		loadTransactions();
@@ -82,7 +72,7 @@
 	<title>가계부 - Home Server</title>
 </svelte:head>
 
-<div class="asset-manager-page">
+<div class="asset-manager-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<!-- 헤더 -->
 	<header class="page-header">
 		<h1>💰 가계부</h1>
@@ -111,23 +101,8 @@
 	<!-- 거래 등록 폼 -->
 	<TransactionForm bind:isOpen={isFormOpen} onSuccess={handleTransactionSuccess} />
 
-	<!-- 월 선택 -->
-	<div class="month-selector">
-		<button class="month-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<polyline points="15 18 9 12 15 6"></polyline>
-			</svg>
-		</button>
-		<h2 class="current-month">{currentYear}년 {currentMonth}월</h2>
-		<button class="month-btn" onclick={() => changeMonth(1)} aria-label="다음 달">
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<polyline points="9 18 15 12 9 6"></polyline>
-			</svg>
-		</button>
-	</div>
-
 	<!-- 월간 리포트 -->
-	<MonthlyReport year={currentYear} month={currentMonth} />
+	<MonthlyReport />
 
 	<hr>
 	<button class="part-btn">
@@ -136,7 +111,7 @@
 	<hr>
 
 	<!-- 월간 캘린더 뷰 -->
-	<CalendarView year={currentYear} month={currentMonth} />
+	<CalendarView />
 
 	<hr>
 	<button class="part-btn">
@@ -229,72 +204,6 @@
 		transform: translateY(-2px);
 	}
 
-	.month-selector {
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		gap: 24px;
-		margin-bottom: 32px;
-		padding: 16px;
-		background: var(--bg-secondary);
-		border-radius: 12px;
-	}
-
-	.month-btn {
-		background: var(--bg-primary);
-		border: 1px solid var(--border-color);
-		border-radius: 4px;
-		padding: 8px 12px;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.2s;
-		color: var(--text-primary);
-	}
-
-	.month-btn:hover {
-		background: var(--bg-tertiary);
-		transform: scale(1.1);
-	}
-
-	.current-month {
-		margin: 0;
-		font-size: 1.5rem;
-		font-weight: 700;
-		color: var(--text-primary);
-		min-width: 180px;
-		text-align: center;
-	}
-
-	.class-filter {
-		display: flex;
-		gap: 8px;
-		background: #f5f5f5;
-		padding: 4px;
-		border-radius: 10px;
-		margin-bottom: 32px;
-		flex-wrap: wrap;
-	}
-
-	.class-btn {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 8px 16px;
-		background: transparent;
-		border: none;
-		border-radius: 8px;
-		cursor: pointer;
-		font-size: 14px;
-		font-weight: 500;
-		color: #666;
-		transition: all 0.2s ease;
-		flex: 1;
-		min-width: 100px;
-		justify-content: center;
-	}
-
 	.class-btn:hover {
 		background: rgba(var(--class-color-rgb, 33, 150, 243), 0.1);
 		color: var(--class-color, #2196f3);
@@ -341,127 +250,93 @@
 	}
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.asset-manager-page {
+	.asset-manager-page {
+		&.tablet {
 			padding: 16px;
+
+			.page-header {
+				flex-direction: column;
+				align-items: stretch;
+				gap: 12px;
+
+				h1 {
+					font-size: 1.7rem;
+				}
+			}
+
+			.admin-link,
+			.add-btn {
+				justify-content: center;
+				flex: 1;
+				padding: 8px 12px;
+				font-size: 0.9rem;
+			}
+
+			.class-filter {
+				flex-wrap: wrap;
+				padding: 6px;
+				gap: 6px;
+				margin-bottom: 20px;
+			}
+
+			.class-btn {
+				flex: 1 1 calc(50% - 4px);
+				min-width: 80px;
+				padding: 8px 12px;
+				font-size: 0.85rem;
+			}
+
+			.header-actions {
+				flex-direction: row;
+				width: 100%;
+			}
+
+			.part-btn {
+				font-size: 1.1rem;
+				padding: 6px;
+			}
 		}
 
-		.page-header h1 {
-			font-size: 1.7rem;
-		}
-
-		.current-month {
-			font-size: 1.3rem;
-			min-width: 160px;
-		}
-
-		.admin-link,
-		.add-btn {
-			justify-content: center;
-			flex: 1;
-			padding: 8px 12px;
-			font-size: 0.9rem;
-		}
-
-		.class-filter {
-			flex-wrap: wrap;
-			padding: 6px;
-			gap: 6px;
-			margin-bottom: 20px;
-		}
-
-		.class-btn {
-			flex: 1 1 calc(50% - 4px);
-			min-width: 80px;
-			padding: 8px 12px;
-			font-size: 0.85rem;
-		}
-
-		.page-header {
-			flex-direction: column;
-			align-items: stretch;
-			gap: 12px;
-		}
-
-		.header-actions {
-			flex-direction: row;
-			width: 100%;
-		}
-
-		.month-selector {
-			padding: 12px;
-			gap: 16px;
-			margin-bottom: 20px;
-		}
-
-		.part-btn {
-			font-size: 1.1rem;
-			padding: 6px;
-		}
-	}
-
-	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.asset-manager-page {
+		/* Mobile (< 320px) */
+		&.mobile {
 			padding: 8px;
-		}
 
-		.page-header h1 {
-			font-size: 1.3rem;
-		}
+			.page-header h1 {
+				font-size: 1.3rem;
+			}
 
-		.header-actions {
-			gap: 8px;
-		}
+			.header-actions {
+				gap: 8px;
+			}
 
-		.admin-link,
-		.add-btn {
-			padding: 8px 10px;
-			font-size: 0.85rem;
-			gap: 4px;
-		}
+			.admin-link,
+			.add-btn {
+				padding: 8px 10px;
+				font-size: 0.85rem;
+				gap: 4px;
 
-		.admin-link svg,
-		.add-btn svg {
-			width: 16px;
-			height: 16px;
-		}
+				svg {
+					width: 16px;
+					height: 16px;
+				}
+			}
 
-		.month-selector {
-			padding: 10px;
-			gap: 12px;
-			margin-bottom: 16px;
-		}
+			.class-filter {
+				flex-direction: column;
+				padding: 4px;
+				gap: 4px;
+			}
 
-		.month-btn {
-			padding: 6px 8px;
-		}
+			.class-btn {
+				width: 100%;
+				padding: 10px;
+				font-size: 0.9rem;
+			}
 
-		.month-btn svg {
-			width: 18px;
-			height: 18px;
-		}
-
-		.current-month {
-			font-size: 1.1rem;
-			min-width: 120px;
-		}
-
-		.class-filter {
-			flex-direction: column;
-			padding: 4px;
-			gap: 4px;
-		}
-
-		.class-btn {
-			width: 100%;
-			padding: 10px;
-			font-size: 0.9rem;
-		}
-
-		.part-btn {
-			font-size: 1rem;
-			padding: 6px;
+			.part-btn {
+				font-size: 1rem;
+				padding: 6px;
+			}
 		}
 	}
 </style>

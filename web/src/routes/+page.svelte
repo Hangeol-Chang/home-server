@@ -1,12 +1,13 @@
 <script>
 	import Dashboard from './asset-manager/dashboard.svelte';
+	import { device } from '$lib/stores/device';
 </script>
 
 <svelte:head>
 	<title>홈 - Home Server</title>
 </svelte:head>
 
-<div class="home-page">
+<div class="home-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="dashboard-container">
 		<!-- compact 모드로 Dashboard 표시 -->
 		<Dashboard compact={true} />
@@ -87,67 +88,65 @@
 	}
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.home-page {
+	.home-page {
+		&.tablet {
 			padding: 16px;
+
+			.dashboard-container {
+				margin-bottom: 36px;
+			}
+
+			.quick-links h2 {
+				font-size: 1.3rem;
+				margin-bottom: 16px;
+			}
+
+			.links-grid {
+				grid-template-columns: 1fr;
+				gap: 16px;
+			}
+
+			.link-card {
+				padding: 24px 20px;
+
+				h3 {
+					font-size: 1.2rem;
+				}
+
+				p {
+					font-size: 0.9rem;
+				}
+			}
+
+			.link-icon {
+				font-size: 2.5rem;
+				margin-bottom: 12px;
+			}
 		}
 
-		.dashboard-container {
-			margin-bottom: 36px;
-		}
-
-		.quick-links h2 {
-			font-size: 1.3rem;
-			margin-bottom: 16px;
-		}
-
-		.links-grid {
-			grid-template-columns: 1fr;
-			gap: 16px;
-		}
-
-		.link-card {
-			padding: 24px 20px;
-		}
-
-		.link-icon {
-			font-size: 2.5rem;
-			margin-bottom: 12px;
-		}
-
-		.link-card h3 {
-			font-size: 1.2rem;
-		}
-
-		.link-card p {
-			font-size: 0.9rem;
-		}
-	}
-
-	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.home-page {
+		/* Mobile (< 320px) */
+		&.mobile {
 			padding: 8px;
-		}
 
-		.quick-links h2 {
-			font-size: 1.2rem;
-		}
+			.quick-links h2 {
+				font-size: 1.2rem;
+			}
 
-		.link-card {
-			padding: 20px 16px;
-		}
+			.link-card {
+				padding: 20px 16px;
 
-		.link-icon {
-			font-size: 2.2rem;
-		}
+				h3 {
+					font-size: 1.1rem;
+				}
 
-		.link-card h3 {
-			font-size: 1.1rem;
-		}
+				p {
+					font-size: 0.85rem;
+				}
+			}
 
-		.link-card p {
-			font-size: 0.85rem;
+			.link-icon {
+				font-size: 2.2rem;
+			}
 		}
 	}
 </style>

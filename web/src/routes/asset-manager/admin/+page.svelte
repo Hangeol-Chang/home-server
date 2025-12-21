@@ -18,6 +18,7 @@
 		updateTransaction
 	} from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
+	import { device } from '$lib/stores/device';
 
 	// 상태 관리
 	let classes = $state([]);
@@ -344,7 +345,7 @@
 	<title>관리자 설정 - 가계부</title>
 </svelte:head>
 
-<div class="admin-page">
+<div class="admin-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<header class="page-header">
 		<div>
 			<h1>⚙️ 관리자 설정</h1>
@@ -1395,85 +1396,83 @@
 	}
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.admin-page {
+	.admin-page {
+		&.tablet {
 			padding: 12px;
+
+			.page-header {
+				flex-direction: column;
+				align-items: flex-start;
+				gap: 12px;
+
+				h1 {
+					font-size: 1.5rem;
+				}
+			}
+
+			.section-header {
+				flex-direction: column;
+				align-items: flex-start;
+				gap: 12px;
+
+				h2 {
+					font-size: 1.3rem;
+				}
+			}
+
+			.class-grid {
+				grid-template-columns: 1fr 1fr;
+				gap: 8px;
+			}
+
+			.class-btn {
+				padding: 10px 12px;
+				font-size: 0.85rem;
+			}
+
+			.form-group {
+				flex-direction: column;
+				align-items: stretch;
+
+				label {
+					min-width: auto;
+				}
+			}
+
+			.form-actions {
+				flex-direction: column-reverse;
+
+				button {
+					width: 100%;
+				}
+			}
 		}
 
-		.page-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 12px;
-		}
-
-		.page-header h1 {
-			font-size: 1.5rem;
-		}
-
-		.section-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 12px;
-		}
-
-		.section-header h2 {
-			font-size: 1.3rem;
-		}
-
-		.class-grid {
-			grid-template-columns: 1fr 1fr;
-			gap: 8px;
-		}
-
-		.class-btn {
-			padding: 10px 12px;
-			font-size: 0.85rem;
-		}
-
-		.form-group {
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.form-group label {
-			min-width: auto;
-		}
-
-		.form-actions {
-			flex-direction: column-reverse;
-		}
-
-		.form-actions button {
-			width: 100%;
-		}
-	}
-
-	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.admin-page {
+		/* Mobile (< 320px) */
+		&.mobile {
 			padding: 8px;
-		}
 
-		.page-header h1 {
-			font-size: 1.3rem;
-		}
+			.page-header h1 {
+				font-size: 1.3rem;
+			}
 
-		.section-header h2 {
-			font-size: 1.2rem;
-		}
+			.section-header h2 {
+				font-size: 1.2rem;
+			}
 
-		.class-grid {
-			grid-template-columns: 1fr;
-			gap: 6px;
-		}
+			.class-grid {
+				grid-template-columns: 1fr;
+				gap: 6px;
+			}
 
-		.class-btn {
-			width: 100%;
-		}
+			.class-btn {
+				width: 100%;
+			}
 
-		.badge {
-			font-size: 0.7rem;
-			padding: 2px 6px;
+			.badge {
+				font-size: 0.7rem;
+				padding: 2px 6px;
+			}
 		}
 	}
 </style>

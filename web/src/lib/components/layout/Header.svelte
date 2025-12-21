@@ -1,5 +1,6 @@
 <script>
 	import { signOut } from '@auth/sveltekit/client';
+	import { device } from '$lib/stores/device';
 
 	let { session } = $props();
 	let isProfileDropdownOpen = $state(false);
@@ -31,7 +32,7 @@
 <svelte:window onclick={handleClickOutside} />
 
 {#if session?.user}
-	<header class="app-header">
+	<header class="app-header" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 		<div class="header-content">
 			<div class="logo">
 				<a href="/" style="text-decoration: none;">
@@ -316,88 +317,90 @@
 
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.header-content {
-			padding: 8px 12px;
-			gap: 12px;
+	.app-header {
+		&.tablet {
+			.header-content {
+				padding: 8px 12px;
+				gap: 12px;
+			}
+
+			.app-title {
+				font-size: 0.95rem;
+			}
+
+			.header-right {
+				gap: 12px;
+			}
+
+			.menu-button {
+				padding: 6px 10px;
+				font-size: 0.85rem;
+
+				span {
+					display: none;
+				}
+			}
+
+			.menu-dropdown {
+				min-width: 180px;
+			}
+
+			.menu-dropdown-item {
+				padding: 10px 12px;
+				font-size: 0.9rem;
+			}
+
+			.user-avatar,
+			.user-avatar-placeholder {
+				width: 36px;
+				height: 36px;
+				font-size: 1rem;
+			}
+
+			.dropdown {
+				min-width: 200px;
+			}
+
+			.dropdown-item {
+				padding: 10px 12px;
+				font-size: 0.9rem;
+			}
 		}
 
-		.app-title {
-			font-size: 0.95rem;
-		}
+		/* Mobile (< 320px) */
+		&.mobile {
+			.header-content {
+				padding: 8px;
+				gap: 8px;
+			}
 
-		.header-right {
-			gap: 12px;
-		}
+			.app-title {
+				font-size: 0.9rem;
+			}
 
-		.menu-button {
-			padding: 6px 10px;
-			font-size: 0.85rem;
-		}
+			.header-right {
+				gap: 8px;
+			}
 
-		.menu-button span {
-			display: none;
-		}
+			.menu-button {
+				padding: 6px 8px;
+			}
 
-		.menu-dropdown {
-			min-width: 180px;
-		}
+			.menu-dropdown {
+				min-width: 160px;
+			}
 
-		.menu-dropdown-item {
-			padding: 10px 12px;
-			font-size: 0.9rem;
-		}
+			.menu-dropdown-item {
+				padding: 8px 10px;
+				font-size: 0.85rem;
+			}
 
-		.user-avatar,
-		.user-avatar-placeholder {
-			width: 36px;
-			height: 36px;
-			font-size: 1rem;
-		}
-
-		.dropdown {
-			min-width: 200px;
-		}
-
-		.dropdown-item {
-			padding: 10px 12px;
-			font-size: 0.9rem;
-		}
-	}
-
-	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.header-content {
-			padding: 8px;
-			gap: 8px;
-		}
-
-		.app-title {
-			font-size: 0.9rem;
-		}
-
-		.header-right {
-			gap: 8px;
-		}
-
-		.menu-button {
-			padding: 6px 8px;
-		}
-
-		.menu-dropdown {
-			min-width: 160px;
-		}
-
-		.menu-dropdown-item {
-			padding: 8px 10px;
-			font-size: 0.85rem;
-		}
-
-		.user-avatar,
-		.user-avatar-placeholder {
-			width: 32px;
-			height: 32px;
-			font-size: 0.9rem;
+			.user-avatar,
+			.user-avatar-placeholder {
+				width: 32px;
+				height: 32px;
+				font-size: 0.9rem;
+			}
 		}
 	}
 </style>

@@ -2,6 +2,8 @@
 	import TransactionForm from '$lib/components/asset-manager/TransactionForm.svelte';
 	import { getMonthlyStatistics, getTransactions, getPeriodStatistics } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
+	import { device } from '$lib/stores/device';
+	import MonthlyReport from '$lib/components/asset-manager/MonthlyReport.svelte';
 
 	// Dashboard props
 	let { compact = false } = $props();
@@ -83,14 +85,14 @@
 	}
 </script>
 
-<div class="dashboard" class:compact>
+<div class="dashboard" class:compact class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	{#if loading}
 		<div class="loading">데이터 로딩 중...</div>
 	{:else if error}
 		<div class="error">{error}</div>
 	{:else if stats}
 		<div class="dashboard-header">
-			<h2>이번 달 가계부</h2>
+			<h2>💵 Asset Manager</h2>
 			<div class="header-actions">
 				<button class="add-transaction-btn" onclick={openForm} title="거래 등록">
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -106,20 +108,7 @@
 			</div>
 		</div>
 
-		<div class="stats-grid">
-			<div class="stat-card income">
-				<div class="stat-label">수입</div>
-				<div class="stat-value">{formatCurrency(stats.earn_total || 0)}</div>
-			</div>
-			<div class="stat-card expense">
-				<div class="stat-label">지출</div>
-				<div class="stat-value">{formatCurrency(stats.spend_total || 0)}</div>
-			</div>
-			<div class="stat-card highlight">
-				<div class="stat-label">잔액</div>
-				<div class="stat-value">{formatCurrency(stats.balance || 0)}</div>
-			</div>
-		</div>
+		<MonthlyReport {currentYear} {currentMonth} />
 
 		<div class="category-section">
 			<h3>카테고리별 지출</h3>
@@ -251,55 +240,9 @@
 		text-decoration: underline;
 	}
 
-	.stats-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-		gap: 16px;
-		margin-bottom: 24px;
-	}
-
-	.stat-card {
-		background: var(--bg-secondary);
-		border-radius: 8px;
-		padding: 8px 12px;
-		border: 1px solid var(--border-color);
-		transition: transform 0.2s, box-shadow 0.2s;
-	}
-
-	.stat-card:hover {
-		transform: translateY(-2px);
-		box-shadow: var(--shadow-md);
-	}
-
-	.stat-card.income {
-		background: #e8f5e9;
-		border-color: #4caf50;
-	}
-
-	.stat-card.expense {
-		background: #ffebee;
-		border-color: #f44336;
-	}
-
-	.stat-card.highlight {
-		background: var(--accent);
-		color: white;
-		border-color: var(--accent);
-	}
-
-	.stat-label {
-		font-size: 0.85rem;
-		opacity: 0.8;
-	}
-
-	.stat-value {
-		font-size: 1.5rem;
-		font-weight: 700;
-	}
-
 	.category-section,
 	.recent-section {
-		margin-top: 24px;
+		margin-top: 12px;
 	}
 
 	.category-section h3,
@@ -312,7 +255,7 @@
 	.category-list {
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
+		gap: 6px;
 		max-height: 300px;
 		overflow-y: auto;
 		padding-right: 4px;
@@ -346,11 +289,10 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 12px 16px;
+		padding: 6px 16px;
 		background: var(--bg-secondary);
 		border-radius: 8px;
 		border: 1px solid var(--border-color);
-		transition: background 0.2s;
 	}
 
 	.category-item:hover {
@@ -360,7 +302,7 @@
 	.category-info {
 		display: flex;
 		align-items: center;
-		gap: 12px;
+		gap: 6px;
 	}
 
 	.category-name {
@@ -422,17 +364,16 @@
 	}
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.stats-grid {
-			grid-template-columns: 1fr;
-		}
+	.dashboard {
+		&.tablet,
+		&.mobile {
+			.dashboard-header {
+				flex-wrap: wrap;
+			}
 
-		.dashboard-header {
-			flex-wrap: wrap;
-		}
-
-		.header-actions {
-			flex-direction: row-reverse;
+			.header-actions {
+				flex-direction: row-reverse;
+			}
 		}
 	}
 </style>

@@ -1,4 +1,8 @@
-<footer class="app-footer">
+<script>
+	import { device } from '$lib/stores/device';
+</script>
+
+<footer class="app-footer" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="footer-content">
 		<p>&copy; 2025 Home Server. All rights reserved.</p>
 	</div>
@@ -25,24 +29,26 @@
 	}
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.footer-content {
-			padding: 12px 16px;
+	.app-footer {
+		&.tablet {
+			.footer-content {
+				padding: 12px 16px;
+
+				p {
+					font-size: 0.8rem;
+				}
+			}
 		}
 
-		.footer-content p {
-			font-size: 0.8rem;
-		}
-	}
+		/* Mobile (< 320px) */
+		&.mobile {
+			.footer-content {
+				padding: 10px 12px;
 
-	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.footer-content {
-			padding: 10px 12px;
-		}
-
-		.footer-content p {
-			font-size: 0.75rem;
+				p {
+					font-size: 0.75rem;
+				}
+			}
 		}
 	}
 </style>

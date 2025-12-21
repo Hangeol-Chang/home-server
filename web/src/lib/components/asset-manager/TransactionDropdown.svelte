@@ -4,7 +4,9 @@
 		visible = $bindable(false),
 		transactions = [],
 		dailyData = {},
-		onAddTransaction = () => {}
+		onAddTransaction = () => {},
+		mode = 'date', // 'date' | 'list'
+		title = '' // Used in 'list' mode
 	} = $props();
 
 	function formatCurrency(value) {
@@ -19,33 +21,46 @@
 
 	function close() {
 		visible = false;
-		selectedDate = null;
+		if (mode === 'date') {
+			selectedDate = null;
+		}
 	}
 
 	function getTransactionsForDate() {
+		if (mode === 'list') return transactions;
 		if (!selectedDate) return [];
 		return transactions.filter((t) => t.date === selectedDate);
 	}
 
 	function getDayData() {
+		if (mode === 'list') {
+			return transactions.reduce((acc, t) => {
+				if (t.class_name === 'earn') acc.earn += t.cost;
+				else if (t.class_name === 'spend') acc.spend += t.cost;
+				else if (t.class_name === 'save') acc.save += t.cost;
+				return acc;
+			}, { earn: 0, spend: 0, save: 0 });
+		}
 		return dailyData[selectedDate] || { earn: 0, spend: 0, save: 0 };
 	}
 </script>
 
-{#if visible && selectedDate}
+{#if visible && (selectedDate || mode === 'list')}
 	{@const dayTransactions = getTransactionsForDate()}
 	{@const dayData = getDayData()}
 	<div class="dropdown-overlay" onclick={close} role="presentation"></div>
 	<div class="transaction-dropdown">
 		<div class="dropdown-header">
-			<h4>{selectedDate}</h4>
+			<h4>{mode === 'list' ? title : selectedDate}</h4>
 			<div class="header-actions">
+				{#if mode === 'date'}
 				<button class="add-btn" onclick={() => onAddTransaction(selectedDate)} aria-label="거래 추가" title="거래 추가">
 					<svg style="position: relative;" width="28" height="28" viewBox="0 0 24 24" fill="none">
 						<line x1="12" y1="5" x2="12" y2="19" stroke="white" stroke-width="2" stroke-linecap="round"/>
 						<line x1="5" y1="12" x2="19" y2="12" stroke="white" stroke-width="2" stroke-linecap="round"/>
 					</svg>
 				</button>
+				{/if}
 				<button class="close-btn" onclick={close} aria-label="닫기">✕</button>
 			</div>
 		</div>
@@ -57,6 +72,7 @@
 					<table class="data-table compact">
 						<thead>
 							<tr>
+								<th class="col-date">날짜</th>
 								<th class="col-name">항목</th>
 								<th class="col-category">분류</th>
 								<th class="text-right">금액</th>
@@ -69,6 +85,7 @@
 									class:row-earn={trans.class_name === 'earn'}
 									class:row-save={trans.class_name === 'save'}
 								>
+									<td class="trans-date">{trans.date.slice(5)}</td>
 									<td class="trans-name">{trans.name}</td>
 									<td class="trans-category">{trans.category_display_name}</td>
 									<td class="text-right">
@@ -148,7 +165,7 @@
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 		z-index: 999;
 		width: 90%;
-		max-width: 500px;
+		max-width: 700px;
 		max-height: 80vh;
 		overflow: hidden;
 		display: flex;
@@ -243,6 +260,12 @@
 	}
 
 	/* 컴포넌트별 커스텀 스타일 */
+	.trans-date {
+		font-size: 13px;
+		color: var(--text-secondary);
+		white-space: nowrap;
+	}
+
 	.trans-name {
 		font-size: 15px;
 		font-weight: 600;

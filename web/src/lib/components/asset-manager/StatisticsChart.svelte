@@ -1,6 +1,7 @@
 <script>
 	import { getPeriodStatistics } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
+	import { device } from '$lib/stores/device';
 
 	let {
 		classId = 1,
@@ -55,7 +56,7 @@
 	});
 </script>
 
-<div class="statistics-chart">
+<div class="statistics-chart" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="chart-header">
 		<h3>
 			{stats?.class_display_name || '거래'} 통계
@@ -226,15 +227,13 @@
 
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.statistics-chart {
+	.statistics-chart {
+		&.tablet {
 			padding: 16px;
 		}
-	}
 
-	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.statistics-chart {
+		/* Mobile (< 320px) */
+		&.mobile {
 			padding: 12px;
 		}
 	}

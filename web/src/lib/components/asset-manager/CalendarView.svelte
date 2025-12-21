@@ -3,6 +3,7 @@
 	import { getTransactions } from '$lib/api/asset-manager.js';
 	import TransactionDropdown from './TransactionDropdown.svelte';
 	import TransactionForm from './TransactionForm.svelte';
+	import { device } from '$lib/stores/device';
 
 	let { year = new Date().getFullYear(), month = new Date().getMonth() + 1 } = $props();
 
@@ -241,16 +242,16 @@
 	}
 </script>
 
-<div class="calendar-view">
+<div class="calendar-view" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="calendar-header">
 		<div class="month-nav">
-			<button class="month-nav-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
+			<button class="nav-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<polyline points="15 18 9 12 15 6"></polyline>
 				</svg>
 			</button>
-			<h3>📅 {year}년 {month}월</h3>
-			<button class="month-nav-btn" onclick={() => changeMonth(1)} aria-label="다음 달">
+			<h3>📅 {year}-{month}</h3>
+			<button class="nav-btn" onclick={() => changeMonth(1)} aria-label="다음 달">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<polyline points="9 18 15 12 9 6"></polyline>
 				</svg>
@@ -388,7 +389,6 @@
 	<TransactionForm 
 		bind:isOpen={isFormOpen} 
 		initialDate={formDate}
-		mode="modal"
 		onSuccess={handleFormSuccess} 
 	/>
 {/if}
@@ -417,7 +417,6 @@
 		align-items: center;
 		gap: 16px;
 		flex: 1;
-		justify-content: center;
 	}
 
 	.filters {
@@ -430,13 +429,13 @@
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		padding: 8px 16px;
-		border-radius: 24px;
+		padding: 4px 12px;
+		border-radius: 20px;
 		border: 1px solid var(--border-color);
 		background: var(--bg-primary);
 		color: var(--text-secondary);
-		font-size: 0.9rem;
-		font-weight: 600;
+		font-size: 0.8rem;
+		font-weight: 500;
 		cursor: pointer;
 		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 		user-select: none;
@@ -455,11 +454,6 @@
 		padding-left: 12px; /* Icon space adjustment */
 	}
 
-	.filter-chip.active:hover {
-		filter: brightness(1.1);
-		transform: translateY(-1px);
-	}
-
 	.check-icon {
 		display: flex;
 		align-items: center;
@@ -474,25 +468,6 @@
 		color: var(--text-primary);
 		margin: 0;
 		text-align: center;
-	}
-
-	.month-nav-btn {
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: 8px;
-		padding: 8px 12px;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.2s;
-		color: var(--text-primary);
-	}
-
-	.month-nav-btn:hover {
-		background: var(--color-medium);
-		color: white;
-		transform: scale(1.1);
 	}
 
 	.calendar-container {
@@ -664,77 +639,75 @@
 	}
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.calendar-view {
+	.calendar-view {
+		&.tablet {
 			padding: 16px;
+
+			.calendar-grid {
+				gap: 4px;
+			}
+
+			.calendar-day {
+				min-height: 80px;
+				padding: 4px;
+				font-size: 0.85rem;
+			}
+
+			.week-stats-column {
+				width: 60px;
+				gap: 4px;
+			}
+
+			.week-stats-cell {
+				padding: 4px 2px;
+				font-size: 0.7rem;
+				min-height: 80px;
+			}
+
+			.amount-full {
+				display: none;
+			}
+
+			.amount-compact {
+				display: inline;
+			}
+
+			.day-number {
+				font-size: 14px;
+			}
+
+			.amount {
+				font-size: 10px;
+			}
 		}
 
-		.calendar-grid {
-			gap: 4px;
-		}
-
-		.calendar-day {
-			min-height: 80px;
-			padding: 4px;
-			font-size: 0.85rem;
-		}
-
-		.week-stats-column {
-			width: 60px;
-			gap: 4px;
-		}
-
-		.week-stats-cell {
-			padding: 4px 2px;
-			font-size: 0.7rem;
-            min-height: 80px;
-		}
-
-		.amount-full {
-			display: none;
-		}
-
-		.amount-compact {
-			display: inline;
-		}
-
-        .day-number {
-			font-size: 14px;
-		}
-
-		.amount {
-			font-size: 10px;
-		}
-	}
-
-	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.calendar-view {
+		/* Mobile (< 320px) */
+		&.mobile {
 			padding: 12px;
-		}
 
-		.calendar-grid {
-			gap: 2px;
-		}
+			.calendar-grid {
+				gap: 2px;
+			}
 
-		.calendar-day {
-			min-height: 70px;
-			padding: 3px;
-			font-size: 0.8rem;
-		}
+			.calendar-day {
+				min-height: 70px;
+				padding: 3px;
+				font-size: 0.8rem;
+			}
 
-		.week-stats-column {
-			width: 50px;
-			gap: 2px;
-		}
+			.week-stats-column {
+				width: 50px;
+				gap: 2px;
+			}
 
-		.week-stats-cell {
-			padding: 3px 1px;
-			font-size: 0.65rem;
-		}
+			.week-stats-cell {
+				padding: 3px 1px;
+				font-size: 0.65rem;
+			}
 
-		.amount-compact {
-			font-size: 0.75rem;
+			.amount-compact {
+				font-size: 0.75rem;
+			}
 		}
 	}
 </style>

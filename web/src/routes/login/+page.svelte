@@ -1,6 +1,7 @@
 <script>
 	import { signIn } from '@auth/sveltekit/client';
 	import fbLogo from '$lib/assets/favicon.png';
+	import { device } from '$lib/stores/device';
 
 	let error = '';
 	
@@ -21,7 +22,7 @@
 	<title>로그인 - Home Server</title>
 </svelte:head>
 
-<div class="login-container">
+<div class="login-container" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="login-background"></div>
 	<div class="login-card">
 		<img src={fbLogo} alt="Logo" class="logo" />
@@ -147,70 +148,68 @@
 	}
 
 	/* Tablet/Mobile (< 768px) */
-	@media (max-width: 768px) {
-		.login-card {
-			padding: 32px;
-			max-width: 100%;
-		}
-
-		h1 {
-			font-size: 2rem;
-		}
-
-		.subtitle {
-			font-size: 1.2rem;
-		}
-
-		.login-container {
+	.login-container {
+		&.tablet {
 			margin: -12px;
 			padding: 20px;
+
+			.login-card {
+				padding: 32px;
+				max-width: 100%;
+			}
+
+			h1 {
+				font-size: 2rem;
+			}
+
+			.subtitle {
+				font-size: 1.2rem;
+			}
+
+			.logo {
+				width: 70px;
+				height: 70px;
+			}
+
+			.google-signin-btn {
+				padding: 12px 20px;
+				font-size: 0.95rem;
+			}
 		}
 
-		.logo {
-			width: 70px;
-			height: 70px;
-		}
-
-		.google-signin-btn {
-			padding: 12px 20px;
-			font-size: 0.95rem;
-		}
-	}
-
-	/* Mobile (< 320px) */
-	@media (max-width: 320px) {
-		.login-container {
+		/* Mobile (< 320px) */
+		&.mobile {
 			margin: -8px;
 			padding: 16px;
-		}
 
-		.login-card {
-			padding: 24px;
-		}
+			.login-card {
+				padding: 24px;
+			}
 
-		.logo {
-			width: 60px;
-			height: 60px;
-		}
+			.logo {
+				width: 60px;
+				height: 60px;
+			}
 
-		h1 {
-			font-size: 1.8rem;
-		}
+			h1 {
+				font-size: 1.8rem;
+			}
 
-		.subtitle {
-			font-size: 1.1rem;
-			margin-bottom: 16px;
-		}
+			.subtitle {
+				font-size: 1.1rem;
+				margin-bottom: 16px;
+			}
 
-		.google-signin-btn {
-			padding: 12px 16px;
-			font-size: 0.9rem;
-		}
+			.google-signin-btn {
+				padding: 12px 16px;
+				font-size: 0.9rem;
+			}
 
-		.error-message {
-			padding: 10px 12px;
-			font-size: 0.85rem;
-			margin-bottom: 20px;
+			.error-message {
+				padding: 10px 12px;
+				font-size: 0.85rem;
+				margin-bottom: 20px;
+			}
 		}
 	}
 </style>

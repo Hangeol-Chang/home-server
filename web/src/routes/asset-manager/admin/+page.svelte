@@ -32,7 +32,7 @@
 
 	// 섹션 토글 상태
 	let expandedSections = $state({
-		unclassified: true,
+		unclassified: false,
 		category: false,
 		subCategory: false,
 		tier: false,
@@ -373,20 +373,21 @@
 	{:else}
 		<div class="admin-content">
 			<!-- 거래 분류 정보 -->
-			<section class="info-section">
-				<h2>📊 거래 분류</h2>
-				<div class="class-grid">
-					{#each classes as classItem}
-						<div class="class-card" style="--class-color: {getClassColor(classItem.id)}">
-							<div class="class-info">
-								<h3>{classItem.display_name}</h3>
-								<p class="class-name">{classItem.name}</p>
-								{#if classItem.description}
-									<p class="class-desc">{classItem.description}</p>
-								{/if}
+			<section class="manage-section">
+				<div class="section-header">
+					<h2>📊 거래 분류</h2>
+				</div>
+				<div class="section-content">
+					<div class="class-grid">
+						{#each classes as classItem}
+							<div class="class-card">
+								<div class="class-info">
+									<h3>{classItem.display_name}</h3>
+									<p class="class-name">{classItem.name}</p>
+								</div>
 							</div>
-						</div>
-					{/each}
+						{/each}
+					</div>
 				</div>
 			</section>
 
@@ -1047,18 +1048,11 @@
 		gap: 10px;
 	}
 
-	.info-section,
 	.manage-section {
 		background: var(--bg-primary);
 		border: 1px solid var(--border-color);
 		border-radius: 12px;
 		padding: 24px;
-	}
-
-	.info-section h2,
-	.manage-section h2 {
-		font-size: 1.3rem;
-		color: var(--text-primary);
 	}
 
 	.class-grid {
@@ -1069,8 +1063,8 @@
 
 	.class-card {
 		background: var(--bg-secondary);
-		border: 2px solid var(--class-color);
-		border-radius: 10px;
+		border: 2px solid var(--border-color);
+		border-radius: 8px;
 		padding: 8px 12px;
 	}
 	.class-info {
@@ -1080,22 +1074,14 @@
 	}
 
 	.class-info h3 {
-		margin: 0 0 8px 0;
 		font-size: 1.2rem;
-		color: var(--class-color);
+		color: var(--text-primary);
 	}
 
 	.class-name {
-		margin: 0 0 8px 0;
 		font-size: 0.9rem;
 		color: var(--text-tertiary);
 		font-family: monospace;
-	}
-
-	.class-desc {
-		margin: 0;
-		font-size: 0.9rem;
-		color: var(--text-secondary);
 	}
 
 	.class-filter {
@@ -1411,9 +1397,8 @@
 			}
 
 			.section-header {
-				flex-direction: column;
 				align-items: flex-start;
-				gap: 12px;
+				gap: 8px;
 
 				h2 {
 					font-size: 1.3rem;
@@ -1421,8 +1406,7 @@
 			}
 
 			.class-grid {
-				grid-template-columns: 1fr 1fr;
-				gap: 8px;
+				gap: 4px;
 			}
 
 			.class-btn {
@@ -1456,12 +1440,18 @@
 				font-size: 1.3rem;
 			}
 
+			.section-header {
+				flex-direction: column;
+				align-items: flex-start;
+				gap: 4px;
+			}
+
 			.section-header h2 {
 				font-size: 1.2rem;
 			}
 
 			.class-grid {
-				grid-template-columns: 1fr;
+				grid-template-columns: 1fr 1fr;
 				gap: 6px;
 			}
 

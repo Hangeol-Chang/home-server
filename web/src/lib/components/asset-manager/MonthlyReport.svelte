@@ -83,6 +83,11 @@
 		return new Intl.NumberFormat('ko-KR').format(value) + '원';
 	}
 
+	function getMaskedCurrency(value) {
+		const formatted = new Intl.NumberFormat('ko-KR').format(Math.floor(Math.abs(value)));
+		return formatted.replace(/[0-9]/g, '*') + '원';
+	}
+
 	// 차트 데이터 계산
 	const chartData = $derived(() => {
 		if (!transactions) return null;
@@ -254,7 +259,12 @@
 									<span class="cell-badge">기본값</span>
 								{/if}
 							</td>
-							<td class="cell-amount text-right">{formatCurrency(chartData().income)}</td>
+							<td class="cell-amount text-right">
+								<span class="masked-container">
+									<span class="masked-value">{getMaskedCurrency(chartData().income)}</span>
+									<span class="real-value">{formatCurrency(chartData().income)}</span>
+								</span>
+							</td>
 							<td class="text-center">
 								<span class="cell-percent">100%</span>
 							</td>
@@ -287,7 +297,12 @@
 								<span class="cell-icon">{chartData().balance >= 0 ? '📈' : '📉'}</span>
 								<span>잔액</span>
 							</td>
-							<td class="cell-amount text-right">{formatCurrency(Math.abs(chartData().balance))}</td>
+							<td class="cell-amount text-right">
+								<span class="masked-container">
+									<span class="masked-value">{getMaskedCurrency(Math.abs(chartData().balance))}</span>
+									<span class="real-value">{formatCurrency(Math.abs(chartData().balance))}</span>
+								</span>
+							</td>
 							<td class="text-center">
 								<span class="cell-percent balance">{chartData().balancePercent}%</span>
 							</td>
@@ -500,4 +515,14 @@
 			}
 		}
 	}
+
+    /* 마스킹 스타일 */
+    .masked-container {
+        cursor: pointer;
+    }
+    .masked-container .real-value { display: none; }
+    .masked-container .masked-value { display: inline; }
+    
+    .masked-container:hover .real-value { display: inline; }
+    .masked-container:hover .masked-value { display: none; }
 </style>

@@ -58,7 +58,7 @@
 		sub_category_id: ''
 	});
 
-	// 카테고리 폼
+	// 카테고리 폼	
 	let categoryForm = $state({
 		class_id: 1,
 		name: '',

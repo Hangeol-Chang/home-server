@@ -9,7 +9,8 @@ from models.asset import (
     AssetTransaction, AssetTransactionCreate, AssetTransactionUpdate,
     AssetTransactionDetail, CategoryStatistics, TierStatistics,
     PeriodSummary, MonthlyStatistics,
-    AssetTag, AssetTagCreate, AssetTagUpdate
+    AssetTag, AssetTagCreate, AssetTagUpdate,
+    AssetBudget, AssetBudgetCreate, AssetBudgetUpdate
 )
 from utils.database import get_db_connection
 
@@ -117,7 +118,7 @@ async def get_categories(
         if class_id:
             cursor.execute("""
                 SELECT id, class_id, name, display_name, tier_id, description, 
-                       is_active, sort_order, created_at
+                       is_active, sort_order, created_at, default_budget
                 FROM asset_categories
                 WHERE class_id = ? AND is_active = TRUE
                 ORDER BY sort_order, id
@@ -125,7 +126,7 @@ async def get_categories(
         else:
             cursor.execute("""
                 SELECT id, class_id, name, display_name, tier_id, description, 
-                       is_active, sort_order, created_at
+                       is_active, sort_order, created_at, default_budget
                 FROM asset_categories
                 WHERE is_active = TRUE
                 ORDER BY class_id, sort_order, id
@@ -158,22 +159,22 @@ async def create_category(category: AssetCategoryCreate):
             # 기존 카테고리 업데이트 및 활성화
             cursor.execute("""
                 UPDATE asset_categories 
-                SET display_name = ?, tier_id = ?, description = ?, is_active = TRUE, sort_order = ?
+                SET display_name = ?, tier_id = ?, description = ?, is_active = TRUE, sort_order = ?, default_budget = ?
                 WHERE id = ?
-            """, (category.display_name, category.tier_id, category.description, category.sort_order, category_id))
+            """, (category.display_name, category.tier_id, category.description, category.sort_order, category.default_budget, category_id))
         else:
             # 새 카테고리 생성
             cursor.execute("""
                 INSERT INTO asset_categories 
-                (class_id, name, display_name, tier_id, description, is_active, sort_order)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (class_id, name, display_name, tier_id, description, is_active, sort_order, default_budget)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (category.class_id, category.name, category.display_name, category.tier_id,
-                  category.description, category.is_active, category.sort_order))
+                  category.description, category.is_active, category.sort_order, category.default_budget))
             category_id = cursor.lastrowid
         
         cursor.execute("""
             SELECT id, class_id, name, display_name, tier_id, description, 
-                   is_active, sort_order, created_at
+                   is_active, sort_order, created_at, default_budget
             FROM asset_categories WHERE id = ?
         """, (category_id,))
         return dict(cursor.fetchone())
@@ -526,10 +527,10 @@ async def get_transactions(
         query = """
             SELECT 
                 a.id, a.name, a.cost, a.date, a.description,
-                ac.name as class_name, ac.display_name as class_display_name,
-                cat.name as category_name, cat.display_name as category_display_name,
-                sc.name as sub_category_name,
-                t.tier_level, t.name as tier_name, t.display_name as tier_display_name,
+                a.class_id, ac.name as class_name, ac.display_name as class_display_name,
+                a.category_id, cat.name as category_name, cat.display_name as category_display_name,
+                a.sub_category_id, sc.name as sub_category_name,
+                a.tier_id, t.tier_level, t.name as tier_name, t.display_name as tier_display_name,
                 a.created_at, a.updated_at
             FROM assets a
             JOIN asset_classes ac ON a.class_id = ac.id
@@ -1270,3 +1271,172 @@ async def search_transactions(
             "total_results": len(rows),
             "results": [dict(row) for row in rows]
         }
+
+# ===== Budget (예산) API =====
+
+def calculate_budget_for_month(cursor, category_id: int, year: int, month: int) -> dict:
+    """특정 월의 예산을 계산하고 DB에 저장 (이월 로직 포함)"""
+    # 1. 이미 존재하는지 확인
+    cursor.execute("""
+        SELECT id, category_id, year, month, budget_amount, rollover_amount, created_at, updated_at
+        FROM asset_budgets
+        WHERE category_id = ? AND year = ? AND month = ?
+    """, (category_id, year, month))
+    existing = cursor.fetchone()
+    if existing:
+        return dict(existing)
+
+    # 2. 카테고리 기본 정보 조회
+    cursor.execute("SELECT default_budget FROM asset_categories WHERE id = ?", (category_id,))
+    category = cursor.fetchone()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    default_budget = category['default_budget'] or 0
+
+    # 3. 이전 달 정보 조회 (이월 계산용)
+    prev_year = year
+    prev_month = month - 1
+    if prev_month == 0:
+        prev_year -= 1
+        prev_month = 12
+    
+    rollover_amount = 0
+    
+    # 이전 달 예산 조회
+    cursor.execute("""
+        SELECT budget_amount
+        FROM asset_budgets
+        WHERE category_id = ? AND year = ? AND month = ?
+    """, (category_id, prev_year, prev_month))
+    prev_budget_row = cursor.fetchone()
+    
+    if prev_budget_row:
+        prev_budget = prev_budget_row['budget_amount']
+        
+        # 이전 달 지출 조회
+        start_date = f"{prev_year}-{prev_month:02d}-01"
+        if prev_month == 12:
+            end_date = f"{prev_year+1}-01-01"
+        else:
+            end_date = f"{prev_year}-{prev_month+1:02d}-01"
+            
+        cursor.execute("""
+            SELECT SUM(cost) 
+            FROM assets 
+            WHERE category_id = ? AND date >= ? AND date < ?
+        """, (category_id, start_date, end_date))
+        prev_spent_row = cursor.fetchone()
+        prev_spent = prev_spent_row[0] if prev_spent_row and prev_spent_row[0] else 0
+        
+        remaining = prev_budget - prev_spent
+        if remaining > 0:
+            rollover_amount = remaining * 0.5
+    
+    # 4. 새 예산 계산
+    new_budget = default_budget + rollover_amount
+    
+    # 이월외는 예산이 많더라도 최대 2N원을 넘어가지 않게 해줘
+    if default_budget > 0:
+        max_cap = default_budget * 2
+        if new_budget > max_cap:
+            new_budget = max_cap
+    elif default_budget == 0 and rollover_amount > 0:
+        # 기본 예산이 0인 경우, 이월금이 있어도 예산은 0이 됨 (2N = 0)
+        # 하지만 사용자가 의도적으로 0으로 설정했을 수 있으므로, 
+        # 이월금만이라도 유지할지, 아니면 0으로 날릴지 결정해야 함.
+        # 요구사항: "최대 2N원을 넘어가지 않게 해줘" -> N=0이면 0이어야 함.
+        new_budget = 0
+            
+    # 5. DB 저장
+    cursor.execute("""
+        INSERT INTO asset_budgets (category_id, year, month, budget_amount, rollover_amount)
+        VALUES (?, ?, ?, ?, ?)
+    """, (category_id, year, month, new_budget, rollover_amount))
+    
+    new_id = cursor.lastrowid
+    
+    cursor.execute("""
+        SELECT id, category_id, year, month, budget_amount, rollover_amount, created_at, updated_at
+        FROM asset_budgets WHERE id = ?
+    """, (new_id,))
+    return dict(cursor.fetchone())
+
+@router.get("/budgets", response_model=List[AssetBudget])
+async def get_budgets(
+    year: int,
+    month: int,
+    class_id: Optional[int] = Query(None, description="거래 분류 ID로 필터링")
+):
+    """특정 월의 모든 카테고리 예산 조회 (없으면 자동 생성)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # 대상 카테고리 조회
+        if class_id:
+            cursor.execute("SELECT id FROM asset_categories WHERE class_id = ? AND is_active = TRUE", (class_id,))
+        else:
+            cursor.execute("SELECT id FROM asset_categories WHERE is_active = TRUE")
+            
+        categories = cursor.fetchall()
+        
+        budgets = []
+        for cat in categories:
+            budget = calculate_budget_for_month(cursor, cat['id'], year, month)
+            budgets.append(budget)
+            
+        return budgets
+
+@router.put("/budgets/{category_id}/{year}/{month}", response_model=AssetBudget)
+async def update_budget(
+    category_id: int,
+    year: int,
+    month: int,
+    budget_update: AssetBudgetUpdate
+):
+    """특정 월의 예산 수정"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # 예산 레코드가 있는지 확인 (없으면 생성)
+        calculate_budget_for_month(cursor, category_id, year, month)
+        
+        if budget_update.budget_amount is not None:
+            cursor.execute("""
+                UPDATE asset_budgets
+                SET budget_amount = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE category_id = ? AND year = ? AND month = ?
+            """, (budget_update.budget_amount, category_id, year, month))
+            
+        cursor.execute("""
+            SELECT id, category_id, year, month, budget_amount, rollover_amount, created_at, updated_at
+            FROM asset_budgets
+            WHERE category_id = ? AND year = ? AND month = ?
+        """, (category_id, year, month))
+        
+        return dict(cursor.fetchone())
+
+@router.put("/categories/{category_id}/default-budget", response_model=AssetCategory)
+async def update_category_default_budget(
+    category_id: int,
+    default_budget: float = Query(..., description="기본 월 예산")
+):
+    """카테고리 기본 예산 수정"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            UPDATE asset_categories
+            SET default_budget = ?
+            WHERE id = ?
+        """, (default_budget, category_id))
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Category not found")
+            
+        cursor.execute("""
+            SELECT id, class_id, name, display_name, tier_id, description, 
+                   is_active, sort_order, created_at, default_budget
+            FROM asset_categories WHERE id = ?
+        """, (category_id,))
+        return dict(cursor.fetchone())

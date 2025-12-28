@@ -142,6 +142,29 @@ def init_database():
             )
         """)
 
+        # 8. asset_budgets 테이블 (월별 예산)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS asset_budgets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category_id INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                month INTEGER NOT NULL,
+                budget_amount REAL NOT NULL DEFAULT 0,
+                rollover_amount REAL NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (category_id) REFERENCES asset_categories(id),
+                UNIQUE(category_id, year, month)
+            )
+        """)
+
+        # 마이그레이션: asset_categories 테이블에 default_budget 컬럼 추가
+        try:
+            cursor.execute("ALTER TABLE asset_categories ADD COLUMN default_budget REAL DEFAULT 0")
+            print("Added default_budget column to asset_categories table")
+        except sqlite3.OperationalError:
+            pass
+
         # assets 테이블에 sub_category_id 컬럼 추가
         try:
             cursor.execute("ALTER TABLE assets ADD COLUMN sub_category_id INTEGER REFERENCES asset_sub_categories(id)")

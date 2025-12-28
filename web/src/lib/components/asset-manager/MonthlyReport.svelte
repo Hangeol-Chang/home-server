@@ -4,6 +4,7 @@
 	import { device } from '$lib/stores/device';
 	import PieChart from './module/PieChart.svelte';
 	import TransactionDropdown from './TransactionDropdown.svelte';
+    import BudgetManager from './BudgetManager.svelte';
 
 	let year = $state(new Date().getFullYear());
 	let month = $state(new Date().getMonth() + 1);
@@ -311,6 +312,9 @@
 				</table>
 			</div>
 		</div>
+
+        <!-- 예산 관리 컴포넌트 -->
+        <BudgetManager {year} {month} {transactions} />
 	{/if}
 
 	<TransactionDropdown 
@@ -477,6 +481,69 @@
 		background: var(--bg-tertiary);
 		color: var(--text-secondary);
 	}
+
+    /* 예산 관리 스타일 */
+    .budget-container {
+        margin-top: 32px;
+        border-top: 1px solid var(--border-color);
+        padding-top: 24px;
+    }
+
+    .budget-container h3 {
+        margin: 0 0 16px 0;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+    }
+
+    .budget-table-wrapper {
+        overflow-x: auto;
+    }
+
+    .budget-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .budget-table th {
+        text-align: left;
+        padding: 8px;
+        color: var(--text-secondary);
+        font-weight: 500;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .budget-table td {
+        padding: 8px;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+    }
+
+    .budget-table input {
+        width: 100px;
+        padding: 4px 8px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+
+    .input-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .rollover-badge {
+        font-size: 0.75rem;
+        color: var(--text-success);
+        background: rgba(76, 175, 80, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .text-red { color: var(--text-danger); }
+    .text-green { color: var(--text-success); }
 
 	/* Tablet/Mobile (< 768px) */
 	.monthly-report {

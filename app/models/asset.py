@@ -30,6 +30,7 @@ class AssetCategoryBase(BaseModel):
     description: Optional[str] = None
     is_active: bool = True
     sort_order: int = 0
+    default_budget: float = Field(0, description="기본 월 예산")
 
 class AssetCategoryCreate(AssetCategoryBase):
     pass
@@ -37,6 +38,28 @@ class AssetCategoryCreate(AssetCategoryBase):
 class AssetCategory(AssetCategoryBase):
     id: int
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ===== Asset Budgets (월별 예산) =====
+class AssetBudgetBase(BaseModel):
+    category_id: int = Field(..., description="카테고리 ID")
+    year: int = Field(..., description="년도")
+    month: int = Field(..., description="월")
+    budget_amount: float = Field(..., description="예산 금액")
+    rollover_amount: float = Field(0, description="이월된 금액")
+
+class AssetBudgetCreate(AssetBudgetBase):
+    pass
+
+class AssetBudgetUpdate(BaseModel):
+    budget_amount: Optional[float] = None
+
+class AssetBudget(AssetBudgetBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
@@ -119,12 +142,20 @@ class AssetTransactionDetail(BaseModel):
     date: date_type
     description: Optional[str]
     tags: Optional[List[str]]
+    class_id: int
     class_name: str
     class_display_name: str
+    category_id: int
     category_name: str
     category_display_name: str
+    sub_category_id: Optional[int]
+    sub_category_name: Optional[str]
+    tier_id: int
     tier_level: int
     tier_name: str
+    tier_display_name: str
+    created_at: datetime
+    updated_at: datetime
     tier_display_name: str
     created_at: datetime
     updated_at: datetime

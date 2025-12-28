@@ -47,6 +47,21 @@ export async function deleteTier(tierId) {
 	return apiDelete(`${API_BASE}/tiers/${tierId}`);
 }
 
+// ===== Budgets (예산) =====
+export async function getBudgets(year, month, classId = null) {
+    const params = { year, month };
+    if (classId) params.class_id = classId;
+    return apiGet(`${API_BASE}/budgets`, params);
+}
+
+export async function updateBudget(categoryId, year, month, budgetData) {
+    return apiPut(`${API_BASE}/budgets/${categoryId}/${year}/${month}`, budgetData);
+}
+
+export async function updateCategoryDefaultBudget(categoryId, defaultBudget) {
+    return apiPut(`${API_BASE}/categories/${categoryId}/default-budget?default_budget=${defaultBudget}`, {});
+}
+
 // ===== Transactions (거래) =====
 export async function createTransaction(transactionData) {
 	return apiPost(`${API_BASE}/transactions`, transactionData);

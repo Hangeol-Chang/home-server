@@ -203,17 +203,17 @@
 	});
 </script>
 
-<div class="monthly-report {className}" {style} class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
-	<div class="report-header">
-		<div class="month-selector">
+<div class="section {className}" {style}>
+	<div class="chart-header">
+		<div class="month-nav">
 			<button class="nav-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<polyline points="15 18 9 12 15 6"></polyline>
 				</svg>
 			</button>
-			<h2>
+			<h3>
 				📊 {year}-{month}
-			</h2>
+			</h3>
 			<button class="nav-btn" onclick={() => changeMonth(1)} aria-label="다음 달">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<polyline points="9 18 15 12 9 6"></polyline>
@@ -333,86 +333,6 @@
 </div>
 
 <style>
-	.monthly-report {
-		background: var(--bg-primary);
-		border-radius: 12px;
-	}
-
-	.report-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 24px;
-	}
-
-	.month-selector {
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		gap: 4px;
-	}
-
-	.report-header h2 {
-		margin: 0;
-		font-size: 1.4rem;
-		color: var(--text-primary);
-	}
-
-	.refresh-btn {
-		background: none;
-		border: none;
-		color: var(--text-secondary);
-		cursor: pointer;
-		padding: 8px;
-		border-radius: 50%;
-		transition: all 0.2s;
-	}
-
-	.refresh-btn:hover:not(:disabled) {
-		background: var(--bg-secondary);
-		color: var(--text-primary);
-	}
-
-	.refresh-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.spinning {
-		animation: spin 1s linear infinite;
-	}
-
-	@keyframes spin {
-		from { transform: rotate(0deg); }
-		to { transform: rotate(360deg); }
-	}
-
-	.loading, .error {
-		text-align: center;
-		padding: 40px 0;
-		color: var(--text-secondary);
-	}
-
-	.spinner {
-		width: 30px;
-		height: 30px;
-		border: 3px solid var(--bg-secondary);
-		border-top-color: var(--primary-color);
-		border-radius: 50%;
-		margin: 0 auto 16px;
-		animation: spin 1s linear infinite;
-	}
-
-	.retry-btn {
-		margin-top: 12px;
-		padding: 8px 16px;
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		cursor: pointer;
-		color: var(--text-primary);
-	}
-
 	/* 동심원 차트 컨테이너 */
 	.circular-chart-container {
 		display: grid;
@@ -420,55 +340,6 @@
 		gap: 20px;
 		align-items: center;
 	}
-
-    /* 테이블 스타일 */
-    .table-container {
-        width: 100%;
-    }
-
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .data-table td {
-        padding: 12px 8px;
-        border-bottom: 1px solid var(--border-color);
-        font-size: 0.95rem;
-    }
-
-    .data-table tr:last-child td {
-        border-bottom: none;
-    }
-
-    .cell-label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--text-secondary);
-    }
-
-    .cell-icon {
-        font-size: 1.2rem;
-    }
-
-
-    .cell-amount {
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-    .cell-percent {
-        font-size: 0.85rem;
-        font-weight: 600;
-        padding: 4px 8px;
-        border-radius: 12px;
-        background: var(--bg-secondary);
-        color: var(--text-secondary);
-    }
-
-    .text-right { text-align: right; }
-    .text-center { text-align: center; }
 
     /* 행별 강조 색상 - 전역 스타일 오버라이드 */
 	.cell-percent.spend {
@@ -488,40 +359,10 @@
 
 
 	/* Tablet/Mobile (< 768px) */
-	.monthly-report {
-		&.tablet {
-			padding: 16px;
-
-			.report-header {
-				margin-bottom: 20px;
-
-				h2 {
-					font-size: 1.2rem;
-				}
-			}
-
-			.circular-chart-container {
-				grid-template-columns: 1fr;
-				gap: 20px;
-			}
-		}
-
-		/* Mobile (< 320px) */
-		&.mobile {
-			padding: 12px;
-
-			.report-header h2 {
-				font-size: 1.1rem;
-			}
-
-			.refresh-btn {
-				padding: 6px;
-
-				svg {
-					width: 16px;
-					height: 16px;
-				}
-			}
+	@media (max-width: 768px) {
+		.circular-chart-container {
+			grid-template-columns: 1fr;
+			gap: 20px;
 		}
 	}
 

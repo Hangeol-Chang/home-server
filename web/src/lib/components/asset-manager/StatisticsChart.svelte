@@ -1,7 +1,6 @@
 <script>
 	import { getPeriodStatistics } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
-	import { device } from '$lib/stores/device';
 
 	let {
 		classId = 1,
@@ -56,7 +55,7 @@
 	});
 </script>
 
-<div class="statistics-chart" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
+<div class="section">
 	<div class="chart-header">
 		<h3>
 			{stats?.class_display_name || '거래'} 통계
@@ -161,80 +160,5 @@
 </div>
 
 <style>
-	.statistics-chart {
-		background: var(--bg-primary);
-		border: 1px solid var(--border-color);
-		border-radius: 12px;
-		padding: 24px;
-		margin-bottom: 32px;
-	}
-
-	.chart-header {
-		flex-wrap: wrap;
-		gap: 16px;
-	}
-
-	.date-range {
-		font-weight: normal;
-	}
-
-	.view-toggle {
-		background: var(--bg-secondary);
-	}
-
-	.toggle-btn.active {
-		background: var(--accent);
-		color: white;
-	}
-
-	/* 차트 레이아웃 */
-	.chart-content {
-		margin-top: 20px;
-	}
-
-	.total-summary {
-		border: 2px solid var(--accent);
-	}
-
-	.total-label {
-		font-size: 0.95rem;
-		color: var(--text-secondary);
-		font-weight: 600;
-	}
-
-	.total-value {
-		font-size: 1.4rem;
-		font-weight: 700;
-		color: var(--accent);
-	}
-
-	.total-count {
-		font-size: 1.1rem;
-		color: var(--text-secondary);
-		padding: 8px 16px;
-		background: var(--bg-primary);
-		border-radius: 8px;
-	}
-
-	.total-count {
-		font-size: 1.1rem;
-		color: var(--text-secondary);
-		padding: 8px 16px;
-		background: var(--bg-primary);
-		border-radius: 8px;
-	}
-
-
-
-	/* Tablet/Mobile (< 768px) */
-	.statistics-chart {
-		&.tablet {
-			padding: 16px;
-		}
-
-		/* Mobile (< 320px) */
-		&.mobile {
-			padding: 12px;
-		}
-	}
+	/* 추가적인 커스텀 스타일이 필요한 경우 여기에 작성 */
 </style>

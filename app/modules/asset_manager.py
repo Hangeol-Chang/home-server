@@ -1334,7 +1334,10 @@ def calculate_budget_for_month(cursor, category_id: int, year: int, month: int) 
             
             remaining = prev_budget - prev_spent
             if remaining > 0:
-                rollover_amount = remaining * 0.5
+                if remaining > default_budget:
+                    rollover_amount = default_budget * 0.5
+                else:
+                    rollover_amount = remaining * 0.5
     
     # 4. 새 예산 계산
     new_budget = default_budget + rollover_amount

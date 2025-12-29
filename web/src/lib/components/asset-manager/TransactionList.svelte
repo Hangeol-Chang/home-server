@@ -267,14 +267,6 @@
 		gap: 6px;
 	}
 
-	.badge {
-		padding: 3px 10px;
-		border-radius: 12px;
-		font-size: 0.75rem;
-		font-weight: 500;
-		display: inline-block;
-	}
-
 	.badge-class {
 		background: var(--bg-tertiary);
 		color: var(--text-secondary);
@@ -312,12 +304,6 @@
 		font-weight: 500;
 	}
 
-	.cell-amount {
-		font-size: 1.2rem;
-		font-weight: 700;
-		font-variant-numeric: tabular-nums;
-	}
-
 	.amount-earn {
 		color: var(--text-success);
 	}
@@ -329,32 +315,6 @@
 	.amount-save {
 		color: var(--text-info);
 	}
-
-	.icon-btn {
-		padding: 6px;
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.2s;
-		color: var(--text-secondary);
-	}
-
-	.icon-btn:hover {
-		background: var(--bg-tertiary);
-		transform: scale(1.1);
-	}
-
-	.icon-btn.danger:hover {
-		background: #fee;
-		border-color: #fcc;
-		color: #c33;
-	}
-
-
 
 	/* Tablet/Mobile (< 768px) */
 	.transactions-section {

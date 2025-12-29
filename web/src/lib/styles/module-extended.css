@@ -1,0 +1,392 @@
+/* ========================================
+   확장 공통 컴포넌트 스타일
+   ======================================== */
+
+/* 공통 헤더 스타일 */
+.chart-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 24px;
+}
+
+.chart-header h3 {
+	margin: 0;
+	font-size: 1.5rem;
+	color: var(--text-primary);
+}
+
+.chart-header h3 {
+	font-size: 1.4rem;
+}
+
+.date-range {
+	font-size: 0.85rem;
+	color: var(--text-tertiary);
+	margin-left: 8px;
+}
+
+/* 공통 버튼 확장 */
+.refresh-btn,
+.icon-btn {
+	background: var(--bg-secondary);
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	padding: 8px;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s;
+	color: var(--text-secondary);
+}
+
+.refresh-btn:hover:not(:disabled),
+.icon-btn:hover {
+	background: var(--bg-tertiary);
+	transform: scale(1.1);
+}
+
+.refresh-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.icon-btn.danger:hover {
+	background: #fee;
+	border-color: #fcc;
+	color: #c33;
+}
+
+/* 토글 버튼 그룹 */
+.view-toggle {
+	display: flex;
+	gap: 8px;
+	background: #f5f5f5;
+	padding: 4px;
+	border-radius: 8px;
+}
+
+.toggle-btn {
+	padding: 8px 16px;
+	background: transparent;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.9rem;
+	font-weight: 500;
+	color: var(--text-secondary);
+	transition: all 0.2s;
+}
+
+.toggle-btn:hover {
+	background: rgba(99, 102, 241, 0.1);
+}
+
+.toggle-btn.active {
+	background: white;
+	color: var(--accent);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 스피닝 애니메이션 */
+.spinning {
+	animation: spin 1s linear infinite;
+}
+
+/* 차트 컨텐츠 */
+.chart-content {
+	margin-top: 24px;
+}
+
+.total-summary {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 20px;
+	background: var(--bg-secondary);
+	border-radius: 10px;
+	margin-bottom: 24px;
+}
+
+.total-info {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.total-value {
+	font-size: 1.6rem;
+	font-weight: 700;
+	color: var(--accent);
+}
+
+.total-count {
+	font-size: 1.1rem;
+	color: var(--text-secondary);
+	padding: 8px 16px;
+	background: var(--bg-primary);
+	border-radius: 8px;
+}
+
+/* 데이터 없음 메시지 */
+.no-data {
+	text-align: center;
+	padding: 40px;
+	color: var(--text-tertiary);
+	font-size: 1rem;
+}
+
+/* 막대 차트 스타일 */
+.bar-chart {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.bar-item {
+	display: grid;
+	grid-template-columns: 1fr 3fr auto;
+	gap: 16px;
+	align-items: center;
+}
+
+.bar-info {
+	display: flex;
+	gap: 4px;
+	justify-content: space-between;
+}
+
+.bar-name {
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.bar-value {
+	font-size: 0.85rem;
+	color: var(--text-secondary);
+}
+
+.bar-wrapper {
+	background: var(--bg-secondary);
+	border-radius: 8px;
+	height: 36px;
+	overflow: hidden;
+	position: relative;
+}
+
+.bar-fill {
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	padding-right: 12px;
+	transition: width 0.5s ease-out;
+	min-width: 60px;
+}
+
+.bar-percentage {
+	color: white;
+	font-weight: 600;
+	font-size: 0.85rem;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.bar-count {
+	font-size: 0.9rem;
+	color: var(--text-tertiary);
+	white-space: nowrap;
+}
+
+.month-nav {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.nav-btn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 4px;
+	color: var(--text-primary);
+}
+
+.nav-btn:hover {
+	background: var(--bg-secondary);
+}
+
+/* 모바일 대응 - 확장 공통 스타일 */
+/* Tablet/Mobile (< 768px) */
+@media (max-width: 768px) {
+	.chart-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+		margin-bottom: 20px;
+	}
+
+	.chart-header h3 {
+		font-size: 1.2rem;
+	}
+
+	.date-range {
+		font-size: 0.75rem;
+	}
+
+	.view-toggle {
+		width: 100%;
+	}
+
+	.toggle-btn {
+		flex: 1;
+		padding: 8px 12px;
+		font-size: 0.85rem;
+	}
+
+	.total-summary {
+		flex-direction: column;
+		gap: 12px;
+		align-items: flex-start;
+		padding: 16px;
+	}
+
+	.total-value {
+		font-size: 1.3rem;
+	}
+
+	.total-count {
+		font-size: 1rem;
+		padding: 6px 12px;
+	}
+
+	.bar-item {
+		grid-template-columns: 1fr;
+		gap: 8px;
+	}
+
+	.bar-info {
+		flex-direction: row;
+		justify-content: space-between;
+	}
+
+	.bar-name {
+		font-size: 0.9rem;
+	}
+
+	.bar-value {
+		font-size: 0.8rem;
+	}
+
+	.bar-wrapper {
+		height: 32px;
+	}
+
+	.bar-percentage {
+		font-size: 0.8rem;
+		padding-right: 8px;
+	}
+
+	.bar-count {
+		text-align: right;
+		margin-top: 4px;
+		font-size: 0.85rem;
+	}
+
+	.no-data {
+		padding: 30px 20px;
+		font-size: 0.9rem;
+	}
+}
+
+/* Mobile (< 320px) */
+@media (max-width: 320px) {
+	.report-header h2,
+	.chart-header h3 {
+		font-size: 1.1rem;
+	}
+
+	.date-range {
+		display: block;
+		margin-top: 4px;
+		font-size: 0.7rem;
+		margin-left: 0;
+	}
+
+	.toggle-btn {
+		padding: 8px;
+		font-size: 0.8rem;
+	}
+
+	.total-value {
+		font-size: 1.2rem;
+	}
+
+	.total-count {
+		font-size: 0.9rem;
+	}
+
+	.bar-name {
+		font-size: 0.85rem;
+	}
+
+	.bar-value {
+		font-size: 0.75rem;
+	}
+
+	.bar-wrapper {
+		height: 28px;
+	}
+
+	.bar-percentage {
+		font-size: 0.75rem;
+	}
+
+	.bar-count {
+		font-size: 0.8rem;
+	}
+}
+
+
+
+/* Unit Selector (Global) */
+.unit-selector {
+	display: flex;
+	gap: 8px;
+	background: #f5f5f5;
+	padding: 4px;
+	border-radius: 10px;
+	width: fit-content;
+}
+
+.unit-btn {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 16px;
+	background: transparent;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 500;
+	color: #666;
+	transition: all 0.2s ease;
+}
+
+.unit-btn:hover {
+	background: rgba(33, 150, 243, 0.1);
+	color: #2196f3;
+}
+
+.unit-btn.active {
+	background: white;
+	color: #2196f3;
+	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+}
+
+.unit-icon {
+	font-size: 16px;
+}

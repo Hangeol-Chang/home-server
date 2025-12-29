@@ -19,6 +19,7 @@
 	} from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
+	import '$lib/styles/module.css';
 
 	// 상태 관리
 	let classes = $state([]);
@@ -1119,14 +1120,6 @@
 		background: white;
 		color: var(--class-color);
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-	}
-
-	.form-container {
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: 10px;
-		padding: 20px;
-		margin-bottom: 20px;
 	}
 
 	.admin-form {

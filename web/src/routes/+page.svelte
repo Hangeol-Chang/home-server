@@ -1,6 +1,9 @@
 <script>
-	import Dashboard from './asset-manager/dashboard.svelte';
+	import AssetManager_Dashboard from './asset-manager/dashboard.svelte';
+	import ScheduleManager_Dashboard from './schedule-manager/dashboard.svelte';
 	import { device } from '$lib/stores/device';
+	import '$lib/styles/module.css';
+	import '$lib/styles/module-header.css';
 </script>
 
 <svelte:head>
@@ -9,8 +12,13 @@
 
 <div class="home-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="dashboard-container">
-		<!-- Dashboard 표시 -->
-		<Dashboard />
+		<!-- Asset Manager Dashboard -->
+		<AssetManager_Dashboard />
+	</div>
+
+	<div class="dashboard-container">
+		<!-- Schedule Manager Dashboard -->
+		<ScheduleManager_Dashboard />
 	</div>
 </div>
 

@@ -243,7 +243,7 @@
 </script>
 
 <div class="calendar-view" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
-	<div class="calendar-header">
+	<div class="chart-header">
 		<div class="month-nav">
 			<button class="nav-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -403,15 +403,6 @@
 		container-type: inline-size;
 	}
 
-	.calendar-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 20px;
-		gap: 16px;
-		flex-wrap: wrap;
-	}
-
 	.filters {
 		display: flex;
 		gap: 8px;
@@ -453,14 +444,6 @@
 		justify-content: center;
 		width: 14px;
 		height: 14px;
-	}
-
-	.calendar-header h3 {
-		font-size: 20px;
-		font-weight: 700;
-		color: var(--text-primary);
-		margin: 0;
-		text-align: center;
 	}
 
 	.calendar-container {

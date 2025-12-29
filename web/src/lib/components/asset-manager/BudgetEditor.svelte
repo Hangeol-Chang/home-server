@@ -167,7 +167,7 @@
                     {:else if subCategories.length > 0}
                         <div class="tags">
                             {#each subCategories as sub}
-                                <span class="tag">{sub.name}</span>
+                                <span class="badge">{sub.name}</span>
                             {/each}
                         </div>
                     {:else}
@@ -218,7 +218,7 @@
             </div>
         </div>
     {:else if !selectedCategoryId}
-        <div class="placeholder">
+        <div class="no-data">
             <p>카테고리를 선택하여 예산을 설정하세요.</p>
         </div>
     {/if}
@@ -288,14 +288,6 @@
         gap: 8px;
     }
 
-    .tag {
-        font-size: 0.85rem;
-        padding: 4px 10px;
-        background: var(--bg-tertiary);
-        border-radius: 12px;
-        color: var(--text-primary);
-    }
-
     .empty-text, .loading-text {
         font-size: 0.9rem;
         color: var(--text-secondary);
@@ -344,14 +336,6 @@
 
     .stat-item .value.positive { color: var(--text-success); }
     .stat-item .value.negative { color: var(--text-danger); }
-
-    .placeholder {
-        text-align: center;
-        padding: 40px;
-        background: var(--bg-secondary);
-        border-radius: 12px;
-        color: var(--text-secondary);
-    }
 
 
     @media (max-width: 768px) {

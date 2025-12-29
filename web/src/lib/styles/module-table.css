@@ -1,0 +1,293 @@
+/* ========================================
+   테이블 전역 스타일
+   ======================================== */
+
+/* 기본 테이블 스타일 */
+.data-table {
+	width: 100%;
+	border-collapse: collapse;
+	background: var(--bg-white);
+}
+
+.data-table thead {
+	background: var(--bg-secondary);
+	border-bottom: 2px solid var(--border-color);
+}
+
+.data-table th {
+	padding: 12px 16px;
+	text-align: left;
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.data-table th.text-right {
+	text-align: right;
+}
+
+.data-table th.text-center {
+	text-align: center;
+}
+
+.data-table tbody tr {
+	border-bottom: 1px solid var(--border-color);
+	transition: all 0.2s;
+}
+
+.data-table tbody tr:last-child {
+	border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+	background: var(--bg-tertiary);
+}
+
+.data-table td {
+	padding: 6px 12px;
+	color: var(--text-primary);
+}
+
+.data-table td.text-right {
+	text-align: right;
+}
+
+.data-table td.text-center {
+	text-align: center;
+}
+
+/* 컴팩트 테이블 (더 작은 패딩) */
+.data-table.compact th {
+	padding: 8px 8px;
+}
+
+.data-table.compact td {
+	padding: 8px 8px;
+}
+
+/* 테이블 래퍼 (스크롤 지원) */
+.table-wrapper {
+	overflow-x: auto;
+	margin-bottom: 20px;
+}
+
+/* 테이블 컨테이너 (그림자와 배경) */
+.table-container {
+	background: var(--bg-primary);
+	border-radius: 8px;
+	overflow: hidden;
+	box-shadow: var(--shadow-md);
+}
+
+/* 테이블 셀 내용 스타일 */
+.cell-label {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.cell-icon {
+	font-size: 1.3rem;
+	display: inline-flex;
+	align-items: center;
+}
+
+.cell-amount {
+	font-size: 1.2rem;
+	font-weight: 700;
+	color: var(--text-primary);
+	font-variant-numeric: tabular-nums;
+}
+
+/* 배지 */
+.cell-badge {
+	font-size: 0.75rem;
+	padding: 3px 8px;
+	border-radius: 10px;
+	font-weight: 600;
+	margin-left: 8px;
+	background: var(--bg-tertiary);
+	color: var(--text-secondary);
+}
+
+/* 퍼센트 표시 */
+.cell-percent {
+	padding: 6px 12px;
+	border-radius: 16px;
+	font-weight: 700;
+	font-size: 0.9rem;
+	display: inline-block;
+	min-width: 60px;
+	text-align: center;
+	background-color: var(--bg-tertiary);
+	color: var(--text-secondary);
+}
+
+/* 반응형 유틸리티 */
+/* Tablet/Mobile (< 768px) */
+@media (max-width: 768px) {
+	.form-row {
+		grid-template-columns: 1fr;
+	}
+
+	.data-table {
+		font-size: 0.9rem;
+	}
+
+	.data-table th,
+	.data-table td {
+		padding: 10px 12px;
+	}
+
+	/* 전역 폰트 크기 조정 */
+	body {
+		font-size: 14px;
+	}
+
+	/* 페이지 헤더 */
+	.page-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 16px;
+		padding-bottom: 16px;
+		margin-bottom: 20px;
+	}
+
+	.page-header h1 {
+		font-size: 1.5rem;
+	}
+
+	/* 버튼 */
+	.btn-primary,
+	.add-btn,
+	.btn-secondary {
+		padding: 8px 16px;
+		font-size: 0.9rem;
+	}
+
+	/* 폼 */
+	.form-container {
+		padding: 16px;
+	}
+
+	.form-group {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 6px;
+	}
+
+	.form-group label {
+		min-width: auto;
+		font-size: 0.85rem;
+	}
+
+	.form-actions {
+		width: 100%;
+		flex-direction: column;
+	}
+
+	.form-actions button {
+		width: 100%;
+	}
+
+	/* 필터/탭 버튼 */
+	.filter-buttons,
+	.tab-buttons {
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.filter-btn,
+	.tab-btn {
+		width: 100%;
+		justify-content: center;
+		padding: 8px 16px;
+	}
+
+	/* 카드 */
+	.card,
+	.stat-card {
+		padding: 16px;
+	}
+
+	/* 섹션 */
+	.section {
+		padding: 16px;
+		margin-bottom: 16px;
+	}
+
+	/* 테이블 */
+	.data-table {
+		font-size: 0.85rem;
+	}
+
+	.data-table th,
+	.data-table td {
+		padding: 8px 6px;
+	}
+
+	.data-table th {
+		font-size: 0.75rem;
+	}
+
+	.cell-amount {
+		font-size: 1rem;
+	}
+
+	/* 빈 상태 */
+	.empty-state {
+		padding: 40px 16px;
+	}
+
+	.empty-state svg {
+		width: 48px;
+		height: 48px;
+	}
+
+	.empty-state p {
+		font-size: 1rem;
+	}
+}
+
+/* Mobile (< 320px) */
+@media (max-width: 320px) {
+	/* 모바일 소형 화면 추가 조정 */
+	body {
+		font-size: 13px;
+	}
+
+	.page-header h1 {
+		font-size: 1.3rem;
+	}
+
+	.card,
+	.stat-card,
+	.section {
+		padding: 12px;
+	}
+
+	.form-container {
+		padding: 12px;
+	}
+
+	.btn-primary,
+	.add-btn,
+	.btn-secondary {
+		padding: 6px 12px;
+		font-size: 0.8rem;
+	}
+
+	.data-table th,
+	.data-table td {
+		padding: 6px 4px;
+		font-size: 0.75rem;
+	}
+
+	.cell-amount {
+		font-size: 0.9rem;
+	}
+}

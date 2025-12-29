@@ -353,12 +353,12 @@
 	}
 </script>
 
-<div class="period-comparison" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
-	<div class="comparison-header">
-		<div class="unit-selector">
+<div class="section" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
+	<div class="chart-header">
+		<div class="tab-buttons">
 			{#each units as unitOption}
 				<button
-					class="unit-btn"
+					class="tab-btn"
 					class:active={selectedUnit === unitOption.value}
 					onclick={() => handleUnitChange(unitOption.value)}
 				>
@@ -501,46 +501,6 @@
 </div>
 
 <style>
-	.period-comparison {
-		background: white;
-		border-radius: 16px;
-		padding: 28px;
-		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-		margin: 24px 0;
-	}
-
-	.comparison-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 28px;
-		flex-wrap: wrap;
-		gap: 16px;
-	}
-
-	.refresh-btn {
-		padding: 10px;
-		background: white;
-		border: 1px solid #e0e0e0;
-		border-radius: 8px;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.refresh-btn:hover:not(:disabled) {
-		background: #f5f5f5;
-		border-color: #2196f3;
-		color: #2196f3;
-	}
-
-	.refresh-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
 	.chart-section {
 		display: flex;
 		gap: 16px;
@@ -578,7 +538,7 @@
 
 
 	/* Tablet/Mobile (< 768px) */
-	.period-comparison {
+	.section {
 		&.tablet {
 			padding: 16px;
 

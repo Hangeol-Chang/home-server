@@ -11,6 +11,8 @@
 	import BudgetManager from '$lib/components/asset-manager/BudgetManager.svelte';
 	import BudgetComparisonChart from '$lib/components/asset-manager/BudgetComparisonChart.svelte';
 	import BudgetEditor from '$lib/components/asset-manager/BudgetEditor.svelte';
+	import '$lib/styles/module.css';
+	import '$lib/styles/module-header.css';
 
 	// 상태 관리
 	let isFormOpen = $state(false);
@@ -228,30 +230,6 @@
 		padding: 20px;
 	}
 
-	.header-actions {
-		display: flex;
-		gap: 12px;
-	}
-
-	.admin-link {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 10px 20px;
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: 8px;
-		color: var(--text-primary);
-		text-decoration: none;
-		font-weight: 600;
-		transition: all 0.2s;
-	}
-
-	.admin-link:hover {
-		background: var(--bg-tertiary);
-		transform: translateY(-2px);
-	}
-
 	.class-icon {
 		font-size: 16px;
 	}
@@ -289,29 +267,6 @@
 		&.tablet {
 			padding: 16px;
 
-			.page-header {
-				flex-direction: column;
-				align-items: stretch;
-				gap: 12px;
-
-				h1 {
-					font-size: 1.7rem;
-				}
-			}
-
-			.admin-link,
-			.add-btn {
-				justify-content: center;
-				flex: 1;
-				padding: 8px 12px;
-				font-size: 0.9rem;
-			}
-
-			.header-actions {
-				flex-direction: row;
-				width: 100%;
-			}
-
 			.part-btn {
 				font-size: 1.1rem;
 				padding: 6px;
@@ -321,26 +276,6 @@
 		/* Mobile (< 320px) */
 		&.mobile {
 			padding: 8px;
-
-			.page-header h1 {
-				font-size: 1.3rem;
-			}
-
-			.header-actions {
-				gap: 8px;
-			}
-
-			.admin-link,
-			.add-btn {
-				padding: 8px 10px;
-				font-size: 0.85rem;
-				gap: 4px;
-
-				svg {
-					width: 16px;
-					height: 16px;
-				}
-			}
 
 			.part-btn {
 				font-size: 1rem;

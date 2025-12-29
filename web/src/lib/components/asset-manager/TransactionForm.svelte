@@ -227,9 +227,9 @@
 
 {#snippet formContent()}
 	<form class="transaction-form" onsubmit={handleSubmit}>
-		<div class="form-header">
+		<div class="chart-header">
 			<h3>📝 거래 등록</h3>
-			<button type="button" class="close-btn" onclick={handleCancel} aria-label="닫기">
+			<button type="button" class="icon-btn" onclick={handleCancel} aria-label="닫기">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<line x1="18" y1="6" x2="6" y2="18"></line>
 					<line x1="6" y1="6" x2="18" y2="18"></line>
@@ -458,36 +458,6 @@
 		margin: 0 auto;
 	}
 
-	.form-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 24px;
-		padding-bottom: 16px;
-		border-bottom: 2px solid var(--border-color);
-	}
-
-	.form-header h3 {
-		margin: 0;
-		font-size: 1.5rem;
-		color: var(--text-primary);
-	}
-
-	.close-btn {
-		background: none;
-		border: none;
-		cursor: pointer;
-		padding: 4px;
-		color: var(--text-tertiary);
-		transition: all 0.2s;
-		border-radius: 4px;
-	}
-
-	.close-btn:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-	}
-
 	.class-selector {
 		display: flex;
 		max-width: 400px;
@@ -529,42 +499,8 @@
 		font-size: 16px;
 	}
 
-	/* 폼 스타일 커스터마이징 */
-	.error-message {
-		background: #fee;
-		border: 1px solid #fcc;
-		border-radius: 8px;
-		padding: 12px 16px;
-		color: #c33;
-		margin-bottom: 20px;
-		font-size: 0.9rem;
-	}
-
-	label {
-		display: block;
-		margin-bottom: 8px;
-		font-weight: 600;
-		color: var(--text-primary);
-		font-size: 0.95rem;
-	}
-
 	.required {
 		color: #f44336;
-	}
-
-	input[type='text'],
-	input[type='number'],
-	input[type='date'],
-	select,
-	textarea {
-		width: 100%;
-		padding: 12px 16px;
-		border: 1px solid var(--border-color);
-		border-radius: 8px;
-		font-size: 1rem;
-		background: var(--bg-secondary);
-		color: var(--text-primary);
-		transition: all 0.2s;
 	}
 
 	.tag-input-container {
@@ -674,39 +610,10 @@
 		background: rgba(255, 255, 255, 0.2);
 	}
 
-	input:focus,
-	select:focus,
-	textarea:focus {
-		outline: none;
-		border-color: var(--accent);
-		box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-	}
-
 	textarea {
 		resize: vertical;
 		font-family: inherit;
 	}
-
-	/* 폼 액션 오버라이드 */
-	.form-actions {
-		margin-top: 24px;
-		padding-top: 20px;
-		border-top: 1px solid var(--border-color);
-	}
-
-	.btn-cancel,
-	.btn-submit {
-		padding: 12px 24px;
-		font-size: 1rem;
-	}
-
-	.btn-cancel:disabled,
-	.btn-submit:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-
 
 	/* Tablet/Mobile (< 768px) */
 	.transaction-form-container {
@@ -716,14 +623,6 @@
 			.transaction-form {
 				padding: 16px;
 				max-width: 100%;
-			}
-
-			.form-header h3 {
-				font-size: 1.3rem;
-			}
-
-			.close-btn {
-				padding: 6px;
 			}
 
 			.class-selector {
@@ -738,20 +637,6 @@
 				gap: 4px;
 			}
 
-			label {
-				font-size: 0.9rem;
-				margin-bottom: 6px;
-			}
-
-			input[type='text'],
-			input[type='number'],
-			input[type='date'],
-			select,
-			textarea {
-				padding: 10px 12px;
-				font-size: 0.95rem;
-			}
-
 			.tag-input-wrapper {
 				flex-direction: column;
 			}
@@ -759,17 +644,6 @@
 			.btn-add-tag {
 				width: 100%;
 				padding: 10px 16px;
-			}
-
-			.form-actions {
-				flex-direction: column-reverse;
-				gap: 10px;
-			}
-
-			.btn-cancel,
-			.btn-submit {
-				width: 100%;
-				justify-content: center;
 			}
 		}
 
@@ -781,10 +655,6 @@
 				padding: 12px;
 			}
 
-			.form-header h3 {
-				font-size: 1.2rem;
-			}
-
 			.class-selector {
 				flex-direction: column;
 				gap: 6px;
@@ -793,19 +663,6 @@
 			.class-btn {
 				flex-direction: row;
 				padding: 10px 12px;
-				font-size: 0.9rem;
-			}
-
-			label {
-				font-size: 0.85rem;
-			}
-
-			input[type='text'],
-			input[type='number'],
-			input[type='date'],
-			select,
-			textarea {
-				padding: 8px 10px;
 				font-size: 0.9rem;
 			}
 

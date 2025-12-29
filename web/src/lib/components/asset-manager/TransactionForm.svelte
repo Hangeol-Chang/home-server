@@ -271,6 +271,7 @@
 				type="date"
 				bind:value={formData.date}
 				required
+				onclick={(e) => e.currentTarget.showPicker()}
 			/>
 		</div>
 

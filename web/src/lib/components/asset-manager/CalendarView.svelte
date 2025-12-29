@@ -412,13 +412,6 @@
 		flex-wrap: wrap;
 	}
 
-	.month-nav {
-		display: flex;
-		align-items: center;
-		gap: 16px;
-		flex: 1;
-	}
-
 	.filters {
 		display: flex;
 		gap: 8px;
@@ -484,7 +477,10 @@
 	}
 
 	.calendar-weekday {
-		text-align: center;
+		align-items: center;
+		justify-content: center;
+		display: flex;
+		height: 54px;
 		font-weight: 600;
 		font-size: 14px;
 		padding: 4px 6px;
@@ -511,6 +507,7 @@
 
 	.week-stats-header {
 		text-align: center;
+		height: 54px;
 		font-size: 14px;
 		padding: 4px 6px;
 		background: var(--bg-tertiary);

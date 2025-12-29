@@ -9,24 +9,8 @@
 
 <div class="home-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="dashboard-container">
-		<!-- compact 모드로 Dashboard 표시 -->
-		<Dashboard compact={true} />
-	</div>
-
-	<div class="quick-links">
-		<h2>빠른 링크</h2>
-		<div class="links-grid">
-			<a href="/asset-manager" class="link-card">
-				<div class="link-icon">💰</div>
-				<h3>자산 관리</h3>
-				<p>자산을 추가하고 관리하세요</p>
-			</a>
-			<a href="/schedule-manager" class="link-card">
-				<div class="link-icon">📅</div>
-				<h3>일정 관리</h3>
-				<p>일정을 확인하고 추가하세요</p>
-			</a>
-		</div>
+		<!-- Dashboard 표시 -->
+		<Dashboard />
 	</div>
 </div>
 

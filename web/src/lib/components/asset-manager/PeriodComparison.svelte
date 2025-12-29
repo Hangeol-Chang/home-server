@@ -355,19 +355,17 @@
 
 <div class="period-comparison" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="comparison-header">
-		<div class="controls">
-			<div class="unit-selector">
-				{#each units as unitOption}
-					<button
-						class="unit-btn"
-						class:active={selectedUnit === unitOption.value}
-						onclick={() => handleUnitChange(unitOption.value)}
-					>
-						<span class="unit-icon">{unitOption.icon}</span>
-						<span>{unitOption.label}</span>
-					</button>
-				{/each}
-			</div>
+		<div class="unit-selector">
+			{#each units as unitOption}
+				<button
+					class="unit-btn"
+					class:active={selectedUnit === unitOption.value}
+					onclick={() => handleUnitChange(unitOption.value)}
+				>
+					<span class="unit-icon">{unitOption.icon}</span>
+					<span>{unitOption.label}</span>
+				</button>
+			{/each}
 		</div>
 
         <button class="refresh-btn" onclick={loadData} disabled={loading} aria-label="새로고침">
@@ -429,7 +427,7 @@
 		{/if}
 
 		<!-- 저축 추이 차트 -->
-        <h3>💰 SAVE</h3>
+        <!-- <h3>💰 SAVE</h3>
 		<div class="chart-section">
             <table class="data-table compact">
                 <thead>
@@ -454,7 +452,7 @@
 			<div class="chart-container">
 				<canvas bind:this={saveChartCanvas}></canvas>
 			</div>
-		</div>
+		</div> -->
 
 		<!-- 기간별 상세 정보 -->
 		<!-- <div class="periods-grid">
@@ -508,6 +506,7 @@
 		border-radius: 16px;
 		padding: 28px;
 		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+		margin: 24px 0;
 	}
 
 	.comparison-header {
@@ -517,50 +516,6 @@
 		margin-bottom: 28px;
 		flex-wrap: wrap;
 		gap: 16px;
-	}
-
-	.controls {
-		display: flex;
-		gap: 16px;
-		align-items: center;
-	}
-
-	.unit-selector {
-		display: flex;
-		gap: 8px;
-		background: #f5f5f5;
-		padding: 4px;
-		border-radius: 10px;
-	}
-
-	.unit-btn {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 8px 16px;
-		background: transparent;
-		border: none;
-		border-radius: 8px;
-		cursor: pointer;
-		font-size: 14px;
-		font-weight: 500;
-		color: #666;
-		transition: all 0.2s ease;
-	}
-
-	.unit-btn:hover {
-		background: rgba(33, 150, 243, 0.1);
-		color: #2196f3;
-	}
-
-	.unit-btn.active {
-		background: white;
-		color: #2196f3;
-		box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
-	}
-
-	.unit-icon {
-		font-size: 16px;
 	}
 
 	.refresh-btn {

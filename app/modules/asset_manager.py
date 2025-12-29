@@ -1287,51 +1287,54 @@ def calculate_budget_for_month(cursor, category_id: int, year: int, month: int) 
         return dict(existing)
 
     # 2. 카테고리 기본 정보 조회
-    cursor.execute("SELECT default_budget FROM asset_categories WHERE id = ?", (category_id,))
+    cursor.execute("SELECT default_budget, class_id FROM asset_categories WHERE id = ?", (category_id,))
     category = cursor.fetchone()
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     
     default_budget = category['default_budget'] or 0
+    class_id = category['class_id']
 
     # 3. 이전 달 정보 조회 (이월 계산용)
-    prev_year = year
-    prev_month = month - 1
-    if prev_month == 0:
-        prev_year -= 1
-        prev_month = 12
-    
+    # 지출(class_id=1)인 경우에만 이월 계산
     rollover_amount = 0
     
-    # 이전 달 예산 조회
-    cursor.execute("""
-        SELECT budget_amount
-        FROM asset_budgets
-        WHERE category_id = ? AND year = ? AND month = ?
-    """, (category_id, prev_year, prev_month))
-    prev_budget_row = cursor.fetchone()
-    
-    if prev_budget_row:
-        prev_budget = prev_budget_row['budget_amount']
+    if class_id == 1:
+        prev_year = year
+        prev_month = month - 1
+        if prev_month == 0:
+            prev_year -= 1
+            prev_month = 12
         
-        # 이전 달 지출 조회
-        start_date = f"{prev_year}-{prev_month:02d}-01"
-        if prev_month == 12:
-            end_date = f"{prev_year+1}-01-01"
-        else:
-            end_date = f"{prev_year}-{prev_month+1:02d}-01"
-            
+        # 이전 달 예산 조회
         cursor.execute("""
-            SELECT SUM(cost) 
-            FROM assets 
-            WHERE category_id = ? AND date >= ? AND date < ?
-        """, (category_id, start_date, end_date))
-        prev_spent_row = cursor.fetchone()
-        prev_spent = prev_spent_row[0] if prev_spent_row and prev_spent_row[0] else 0
+            SELECT budget_amount
+            FROM asset_budgets
+            WHERE category_id = ? AND year = ? AND month = ?
+        """, (category_id, prev_year, prev_month))
+        prev_budget_row = cursor.fetchone()
         
-        remaining = prev_budget - prev_spent
-        if remaining > 0:
-            rollover_amount = remaining * 0.5
+        if prev_budget_row:
+            prev_budget = prev_budget_row['budget_amount']
+            
+            # 이전 달 지출 조회
+            start_date = f"{prev_year}-{prev_month:02d}-01"
+            if prev_month == 12:
+                end_date = f"{prev_year+1}-01-01"
+            else:
+                end_date = f"{prev_year}-{prev_month+1:02d}-01"
+                
+            cursor.execute("""
+                SELECT SUM(cost) 
+                FROM assets 
+                WHERE category_id = ? AND date >= ? AND date < ?
+            """, (category_id, start_date, end_date))
+            prev_spent_row = cursor.fetchone()
+            prev_spent = prev_spent_row[0] if prev_spent_row and prev_spent_row[0] else 0
+            
+            remaining = prev_budget - prev_spent
+            if remaining > 0:
+                rollover_amount = remaining * 0.5
     
     # 4. 새 예산 계산
     new_budget = default_budget + rollover_amount

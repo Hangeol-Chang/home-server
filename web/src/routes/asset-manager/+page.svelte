@@ -8,6 +8,9 @@
 	import { getTransactions } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
+	import BudgetManager from '$lib/components/asset-manager/BudgetManager.svelte';
+	import BudgetComparisonChart from '$lib/components/asset-manager/BudgetComparisonChart.svelte';
+	import BudgetEditor from '$lib/components/asset-manager/BudgetEditor.svelte';
 
 	// 상태 관리
 	let isFormOpen = $state(false);
@@ -19,6 +22,23 @@
 	let selectedClass = $state(null); // null=전체, 1=지출, 2=수익, 3=저축
 	let currentYear = $state(new Date().getFullYear());
 	let currentMonth = $state(new Date().getMonth() + 1);
+
+	// 예산 관리용 날짜 상태
+	let budgetYear = $state(new Date().getFullYear());
+	let budgetMonth = $state(new Date().getMonth() + 1);
+
+	function changeBudgetMonth(delta) {
+		const newMonth = budgetMonth + delta;
+		if (newMonth > 12) {
+			budgetMonth = 1;
+			budgetYear += 1;
+		} else if (newMonth < 1) {
+			budgetMonth = 12;
+			budgetYear -= 1;
+		} else {
+			budgetMonth = newMonth;
+		}
+	}
 
 	// 날짜 범위 계산
 	const startDate = $derived(`${currentYear}-${String(currentMonth).padStart(2, '0')}-01`);
@@ -102,7 +122,7 @@
 	<TransactionForm bind:isOpen={isFormOpen} onSuccess={handleTransactionSuccess} />
 
 	<!-- 월간 리포트 -->
-	<MonthlyReport />
+	<MonthlyReport style="border: 1px solid var(--border-color); margin-bottom: 32px; padding: 24px;" />
 
 	<hr>
 	<button class="part-btn">
@@ -112,6 +132,34 @@
 
 	<!-- 월간 캘린더 뷰 -->
 	<CalendarView />
+
+	<hr>
+	<div class="part-header">
+		<button class="part-btn">
+			💰 예산 관리
+		</button>
+	</div>
+	<hr>
+
+	
+	<div class="month-nav">
+		<button class="nav-btn" onclick={() => changeBudgetMonth(-1)} aria-label="이전 달">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<polyline points="15 18 9 12 15 6"></polyline>
+			</svg>
+		</button>
+		<h3>📅 {budgetYear}-{String(budgetMonth).padStart(2, '0')}</h3>
+		<button class="nav-btn" onclick={() => changeBudgetMonth(1)} aria-label="다음 달">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<polyline points="9 18 15 12 9 6"></polyline>
+			</svg>
+		</button>
+	</div>
+
+	<!-- 예산 대비 지출 차트 -->
+	<BudgetComparisonChart year={budgetYear} month={budgetMonth} />
+
+	<BudgetEditor year={budgetYear} month={budgetMonth} />
 
 	<hr>
 	<button class="part-btn">
@@ -128,10 +176,10 @@
 	</button>
 	<hr>
 	<!-- 거래 분류 필터 -->
-	<div class="class-filter">
+	<div class="unit-selector" style="margin: 12px;">
 		{#each classTypes as classType}
 			<button
-				class="class-btn"
+				class="unit-btn"
 				class:active={selectedClass === classType.id}
 				style="--class-color: {classType.color}"
 				onclick={() => (selectedClass = classType.id)}
@@ -204,22 +252,9 @@
 		transform: translateY(-2px);
 	}
 
-	.class-btn:hover {
-		background: rgba(var(--class-color-rgb, 33, 150, 243), 0.1);
-		color: var(--class-color, #2196f3);
-	}
-
-	.class-btn.active {
-		background: white;
-		color: var(--class-color, #2196f3);
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-	}
-
 	.class-icon {
 		font-size: 16px;
 	}
-
-
 
 	.part-btn {
 		text-decoration: none;
@@ -272,20 +307,6 @@
 				font-size: 0.9rem;
 			}
 
-			.class-filter {
-				flex-wrap: wrap;
-				padding: 6px;
-				gap: 6px;
-				margin-bottom: 20px;
-			}
-
-			.class-btn {
-				flex: 1 1 calc(50% - 4px);
-				min-width: 80px;
-				padding: 8px 12px;
-				font-size: 0.85rem;
-			}
-
 			.header-actions {
 				flex-direction: row;
 				width: 100%;
@@ -319,18 +340,6 @@
 					width: 16px;
 					height: 16px;
 				}
-			}
-
-			.class-filter {
-				flex-direction: column;
-				padding: 4px;
-				gap: 4px;
-			}
-
-			.class-btn {
-				width: 100%;
-				padding: 10px;
-				font-size: 0.9rem;
 			}
 
 			.part-btn {

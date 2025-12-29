@@ -1,85 +1,107 @@
 <script>
-    import { getBudgets, updateBudget, updateCategoryDefaultBudget, getCategories, getSubCategories } from '$lib/api/asset-manager.js';
+    import { getBudgets, getCategories, getSubCategories, getTransactions } from '$lib/api/asset-manager.js';
+    import TransactionDropdown from './TransactionDropdown.svelte';
+    import BudgetEditor from './BudgetEditor.svelte';
     import { onMount } from 'svelte';
 
-    let { year, month, transactions = [] } = $props();
+    let { year, month, transactions = $bindable([]) } = $props();
 
     let categories = $state([]);
     let budgets = $state([]);
-    let selectedCategoryId = $state('');
-    let subCategories = $state([]);
     let loading = $state(false);
-    let subCatLoading = $state(false);
 
-    // 카테고리 그룹화를 위한 파생 상태
-    let groupedCategories = $derived.by(() => {
-        const groups = {
-            'spend': { name: '지출', items: [] },
-            'earn': { name: '수익', items: [] },
-            'save': { name: '저축', items: [] }
-        };
+    let allSubCategories = $state([]); // 모든 하위 카테고리 (툴팁용)
+
+    // Transaction Dropdown State
+    let showTransactionDropdown = $state(false);
+    let transactionDropdownTitle = $state('');
+    let transactionDropdownList = $state([]);
+
+    function openTransactionDropdown(categoryName, categoryId) {
+        transactionDropdownTitle = `${categoryName} 지출 내역`;
+        transactionDropdownList = transactions.filter(t => t.category_id === categoryId);
+        showTransactionDropdown = true;
+    }
+
+    // 지출 예산 분포 계산
+    let budgetDistribution = $derived.by(() => {
+        // 지출 카테고리 ID 목록
+        const spendCategoryIds = new Set(categories.filter(c => c.class_id === 1).map(c => c.id));
         
-        categories.forEach(cat => {
-            // class_id 1: spend, 2: earn, 3: save (DB 초기 데이터 기준)
-            // 하지만 class_id가 다를 수 있으므로 API에서 class 정보를 같이 주면 좋겠지만
-            // 현재 getCategories는 class_id만 줌.
-            // 편의상 1,2,3으로 가정하거나, 그냥 평면 리스트로 보여주되 이름순 정렬
-            // 여기서는 단순하게 평면 리스트로 하되 class_id로 정렬된 상태를 이용
+        // 지출 예산만 필터링 (0원 초과)
+        const spendBudgets = budgets.filter(b => spendCategoryIds.has(b.category_id) && b.budget_amount > 0);
+        
+        const totalSpend = spendBudgets.reduce((sum, b) => sum + b.budget_amount, 0);
+        
+        if (totalSpend === 0) return { total: 0, items: [] };
+
+        const items = spendBudgets.map((b, index) => {
+            const cat = categories.find(c => c.id === b.category_id);
+            // 해당 카테고리의 하위 카테고리 찾기
+            const subs = allSubCategories.filter(s => s.category_id === b.category_id).map(s => s.name);
             
-            // 더 정확하게 하려면 classes 정보도 가져와야 하지만, 
-            // 일단은 단순 리스트로 구현하고 이름 옆에 (지출) 등을 붙여주는게 나을수도 있음.
-            // 하지만 DB 스키마상 class_id 1=spend, 2=earn, 3=save가 고정적이므로 이를 활용
-            if (cat.class_id === 1) groups.spend.items.push(cat);
-            else if (cat.class_id === 2) groups.earn.items.push(cat);
-            else if (cat.class_id === 3) groups.save.items.push(cat);
-        });
-        return groups;
+            // 실제 지출액 계산
+            const actualSpend = (transactions || [])
+                .filter(t => t.category_id === b.category_id)
+                .reduce((sum, t) => sum + t.cost, 0);
+
+            return {
+                categoryId: b.category_id,
+                name: cat ? (cat.display_name || cat.name) : 'Unknown',
+                amount: b.budget_amount,
+                actualSpend: actualSpend,
+                percentage: (b.budget_amount / totalSpend) * 100,
+                color: getCategoryColor(index),
+                subCategories: subs
+            };
+        }).sort((a, b) => b.amount - a.amount); // 금액 큰 순서대로 정렬
+
+        return { 
+            total: totalSpend, 
+            items 
+        };
     });
 
-    let selectedCategory = $derived(categories.find(c => c.id === selectedCategoryId));
-    let selectedBudget = $derived(budgets.find(b => b.category_id === selectedCategoryId));
-    
-    let currentSpent = $derived.by(() => {
-        if (!selectedCategoryId || !transactions) return 0;
-        return transactions
-            .filter(t => t.category_id === selectedCategoryId)
-            .reduce((sum, t) => sum + t.cost, 0);
-    });
-
-    let remainingBudget = $derived.by(() => {
-        if (!selectedBudget) return 0;
-        return selectedBudget.budget_amount - currentSpent;
-    });
+    function getCategoryColor(index) {
+        const colors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD',
+            '#D4A5A5', '#9B59B6', '#3498DB', '#E67E22', '#2ECC71',
+            '#F1C40F', '#E74C3C', '#1ABC9C', '#9B59B6', '#34495E'
+        ];
+        return colors[index % colors.length];
+    }
 
     onMount(async () => {
         await loadData();
     });
 
-    // year, month가 바뀌면 예산 데이터 다시 로드
+    // year, month가 바뀌면 거래 데이터 다시 로드 (필요한 경우)
     $effect(() => {
         if (year && month) {
             loadBudgets();
-        }
-    });
-
-    // 카테고리 선택 시 하위 카테고리 로드
-    $effect(() => {
-        if (selectedCategoryId) {
-            loadSubCategories(selectedCategoryId);
-        } else {
-            subCategories = [];
+            if (!transactions || transactions.length === 0) {
+                loadTransactions();
+            }
         }
     });
 
     async function loadData() {
         loading = true;
         try {
-            const [catData, budgetData] = await Promise.all([
+            const [catData, budgetData, subCatData] = await Promise.all([
                 getCategories(),
-                getBudgets(year, month)
+                getBudgets(year, month),
+                getSubCategories()
             ]);
+            
             categories = catData;
             budgets = budgetData;
+            allSubCategories = subCatData;
+
+            // transactions가 비어있으면 직접 로드
+            if (year && month && (!transactions || transactions.length === 0)) {
+                await loadTransactions();
+            }
         } catch (err) {
             console.error('Failed to load budget data:', err);
         } finally {
@@ -95,45 +117,25 @@
         }
     }
 
-    async function loadSubCategories(categoryId) {
-        subCatLoading = true;
+    async function loadTransactions() {
         try {
-            subCategories = await getSubCategories(categoryId);
+            const startDate = new Date(year, month - 1, 1);
+            const endDate = new Date(year, month, 0);
+            
+            const formatDate = (date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+
+            transactions = await getTransactions({
+                start_date: formatDate(startDate),
+                end_date: formatDate(endDate),
+                limit: 10000
+            });
         } catch (err) {
-            console.error('Failed to load sub categories:', err);
-            subCategories = [];
-        } finally {
-            subCatLoading = false;
-        }
-    }
-
-    async function handleBudgetChange(e) {
-        const newAmount = parseFloat(e.target.value);
-        if (!selectedBudget) return;
-
-        try {
-            const updated = await updateBudget(selectedCategoryId, year, month, { budget_amount: newAmount });
-            const index = budgets.findIndex(b => b.category_id === selectedCategoryId);
-            if (index !== -1) {
-                budgets[index] = updated;
-            }
-        } catch (err) {
-            alert('예산 수정 실패: ' + err.message);
-        }
-    }
-
-    async function handleDefaultBudgetChange(e) {
-        const newAmount = parseFloat(e.target.value);
-        if (!selectedCategory) return;
-
-        try {
-            await updateCategoryDefaultBudget(selectedCategoryId, newAmount);
-            const index = categories.findIndex(c => c.id === selectedCategoryId);
-            if (index !== -1) {
-                categories[index].default_budget = newAmount;
-            }
-        } catch (err) {
-            alert('기본 예산 수정 실패: ' + err.message);
+            console.error('Failed to load transactions:', err);
         }
     }
 
@@ -143,221 +145,257 @@
 </script>
 
 <div class="budget-manager">
-    <div class="header">
-        <h3>예산 관리</h3>
-        <div class="select-wrapper">
-            <select bind:value={selectedCategoryId} class="category-select">
-                <option value="">카테고리 선택</option>
-                <optgroup label="지출">
-                    {#each groupedCategories.spend.items as cat}
-                        <option value={cat.id}>{cat.display_name}</option>
-                    {/each}
-                </optgroup>
-                <optgroup label="수익">
-                    {#each groupedCategories.earn.items as cat}
-                        <option value={cat.id}>{cat.display_name}</option>
-                    {/each}
-                </optgroup>
-                <optgroup label="저축">
-                    {#each groupedCategories.save.items as cat}
-                        <option value={cat.id}>{cat.display_name}</option>
-                    {/each}
-                </optgroup>
-            </select>
-        </div>
-    </div>
-
-    {#if selectedCategoryId && selectedCategory && selectedBudget}
-        <div class="budget-detail-card">
-            <div class="info-section">
-                <div class="sub-categories">
-                    <span class="label">포함 항목:</span>
-                    {#if subCatLoading}
-                        <span class="loading-text">로딩중...</span>
-                    {:else if subCategories.length > 0}
-                        <div class="tags">
-                            {#each subCategories as sub}
-                                <span class="tag">{sub.name}</span>
-                            {/each}
-                        </div>
-                    {:else}
-                        <span class="empty-text">하위 카테고리 없음</span>
-                    {/if}
+    <!-- 예산 분포 바 -->
+    {#if budgetDistribution.total > 0}
+        <div class="budget-distribution">
+            <div class="distribution-header">
+                <span class="label">예산별 분석</span>
+                <div class="amount-info">
+                    <span class="total-amount">{formatCurrency(budgetDistribution.total)}</span>
                 </div>
             </div>
+            <div class="progress-bar">
+                {#each budgetDistribution.items as item}
+                    <div 
+                        class="progress-segment" 
+                        style="width: {item.percentage}%; background-color: color-mix(in srgb, {item.color}, #e0e0e0 60%);"
+                    >
+                        {#if item.percentage > 5}
+                            <span class="segment-label">{item.name} {item.percentage.toFixed(0)}%</span>
+                        {/if}
+                        
+                        <!-- Custom Tooltip -->
+                        <div class="custom-tooltip">
+                            <div class="tooltip-header">
+                                <span class="tooltip-name">{item.name}</span>
+                                <span class="tooltip-amount">{formatCurrency(item.amount)}</span>
+                            </div>
+                            <div class="tooltip-percent">
+                                전체의 {item.percentage.toFixed(1)}%
+                            </div>
+                            {#if item.subCategories && item.subCategories.length > 0}
+                                <div class="tooltip-subs">
+                                    <div class="subs-label">하위 항목:</div>
+                                    <div class="subs-list">
+                                        {item.subCategories.join(', ')}
+                                    </div>
+                                </div>
+                            {/if}
+                        </div>
+                    </div>
+                {/each}
+            </div>
 
-            <div class="budget-grid">
-                <div class="budget-item">
-                    <label>이번달 예산</label>
-                    <div class="input-wrapper">
-                        <input 
-                            type="number" 
-                            value={selectedBudget.budget_amount} 
-                            onchange={handleBudgetChange}
-                        />
-                        {#if selectedBudget.rollover_amount > 0}
-                            <span class="rollover-badge" title="지난달에서 이월됨">
-                                +{formatCurrency(selectedBudget.rollover_amount)} 이월됨
+            <!-- 실제 지출 분포 바 -->
+            <div class="progress-bar" style="margin-top: 8px;">
+                {#each budgetDistribution.items as item}
+                    <div 
+                        class="progress-segment" 
+                        style="width: {item.percentage}%; background-color: transparent; overflow: hidden; justify-content: flex-start;"
+                        onclick={() => openTransactionDropdown(item.name, item.categoryId)}
+                        role="button"
+                        tabindex="0"
+                        onkeydown={(e) => e.key === 'Enter' && openTransactionDropdown(item.name, item.categoryId)}
+                    >
+                        <div 
+                            style="
+                                width: {Math.min((item.actualSpend / item.amount) * 100, 100)}%; 
+                                height: 100%; 
+                                background-color: {item.color};
+                            "
+                        ></div>
+
+                        {#if item.percentage > 5}
+                            <span class="segment-label" style="position: absolute; left: 50%; transform: translateX(-50%); z-index: 1;">
+                                {(item.actualSpend / budgetDistribution.total * 100).toFixed(1)}%
                             </span>
                         {/if}
+
+                        <!-- Custom Tooltip -->
+                        <div class="custom-tooltip">
+                            <div class="tooltip-header">
+                                <span class="tooltip-name">{item.name} (실제 지출)</span>
+                                <span class="tooltip-amount">{formatCurrency(item.actualSpend)}</span>
+                            </div>
+                            <div class="tooltip-percent">
+                                예산 대비 {(item.actualSpend / item.amount * 100).toFixed(1)}%
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-                <div class="budget-item">
-                    <label>기본 예산 (매월)</label>
-                    <div class="input-wrapper">
-                        <input 
-                            type="number" 
-                            value={selectedCategory.default_budget || 0} 
-                            onchange={handleDefaultBudgetChange}
-                        />
-                    </div>
-                </div>
-
-                <div class="stat-item">
-                    <label>현재 지출</label>
-                    <span class="value">{formatCurrency(currentSpent)}</span>
-                </div>
-
-                <div class="stat-item">
-                    <label>잔액</label>
-                    <span class="value {remainingBudget < 0 ? 'negative' : 'positive'}">
-                        {formatCurrency(remainingBudget)}
-                    </span>
-                </div>
+                {/each}
             </div>
-        </div>
-    {:else if !selectedCategoryId}
-        <div class="placeholder">
-            <p>카테고리를 선택하여 예산을 설정하세요.</p>
         </div>
     {/if}
 </div>
 
+<TransactionDropdown 
+    bind:visible={showTransactionDropdown}
+    mode="list"
+    title={transactionDropdownTitle}
+    transactions={transactionDropdownList}
+/>
+
 <style>
     .budget-manager {
-        margin-top: 32px;
+        margin-top: 12px;
         border-top: 1px solid var(--border-color);
-        padding-top: 24px;
+        padding-top: 4px;
     }
 
-    .header {
+    /* Budget Distribution Bar */
+    .budget-distribution {
+        margin-bottom: 4px;
+        padding: 12px;
+    }
+
+    .distribution-header {
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        margin-bottom: 20px;
+        align-items: center;
+        margin-bottom: 12px;
     }
 
-    h3 {
-        margin: 0;
-        font-size: 1.1rem;
-        color: var(--text-primary);
-    }
-
-    .category-select {
-        padding: 8px 12px;
-        border-radius: 6px;
-        border: 1px solid var(--border-color);
-        background: var(--bg-secondary);
-        color: var(--text-primary);
+    .distribution-header .label {
         font-size: 0.95rem;
-        min-width: 200px;
-    }
-
-    .budget-detail-card {
-        background: var(--bg-secondary);
-        border-radius: 12px;
-        padding: 20px;
-        border: 1px solid var(--border-color);
-    }
-
-    .info-section {
-        margin-bottom: 20px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .sub-categories {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-    }
-
-    .sub-categories .label {
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-        margin-top: 4px;
-        white-space: nowrap;
-    }
-
-    .tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .tag {
-        font-size: 0.85rem;
-        padding: 4px 10px;
-        background: var(--bg-tertiary);
-        border-radius: 12px;
-        color: var(--text-primary);
-    }
-
-    .empty-text, .loading-text {
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-        font-style: italic;
-    }
-
-    .budget-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 24px;
-    }
-
-    .budget-item label, .stat-item label {
-        display: block;
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-        margin-bottom: 8px;
-    }
-
-    .input-wrapper {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    input[type="number"] {
-        width: 100%;
-        padding: 8px 12px;
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
-        background: var(--bg-primary);
-        color: var(--text-primary);
-        font-size: 1rem;
-    }
-
-    .rollover-badge {
-        font-size: 0.8rem;
-        color: var(--text-success);
-    }
-
-    .stat-item .value {
-        font-size: 1.2rem;
         font-weight: 600;
         color: var(--text-primary);
     }
 
-    .stat-item .value.positive { color: var(--text-success); }
-    .stat-item .value.negative { color: var(--text-danger); }
-
-    .placeholder {
-        text-align: center;
-        padding: 40px;
-        background: var(--bg-secondary);
-        border-radius: 12px;
-        color: var(--text-secondary);
+    .distribution-header .total-amount {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
     }
+
+    .progress-bar {
+        display: flex;
+        height: 24px;
+        background: #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-segment {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+
+    .progress-segment:first-child {
+        border-top-left-radius: 4px;
+        border-bottom-left-radius: 4px;
+    }
+
+    .progress-segment:last-child {
+        border-top-right-radius: 4px;
+        border-bottom-right-radius: 4px;
+    }
+
+    /* Progress Bar & Tooltip Styles */
+    .progress-bar {
+        overflow: visible; /* 툴팁이 밖으로 나올 수 있게 */
+        position: relative;
+    }
+
+    .progress-segment {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    .segment-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: rgba(0, 0, 0, 0.6);
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    /* Custom Tooltip */
+    .custom-tooltip {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%) translateY(-8px);
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        width: max-content;
+        max-width: 250px;
+        z-index: 100;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.2s ease;
+        pointer-events: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Tooltip Arrow */
+    .custom-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 6px;
+        border-style: solid;
+        border-color: rgba(0, 0, 0, 0.85) transparent transparent transparent;
+    }
+
+    .progress-segment:hover .custom-tooltip {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(-12px);
+    }
+
+    .tooltip-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 4px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 4px;
+    }
+
+    .tooltip-name {
+        font-weight: 600;
+        color: #fff;
+    }
+
+    .tooltip-amount {
+        font-weight: 500;
+        color: #4ECDC4;
+    }
+
+    .tooltip-percent {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 8px;
+    }
+
+    .tooltip-subs {
+        font-size: 0.8rem;
+    }
+
+    .subs-label {
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 2px;
+    }
+
+    .subs-list {
+        color: rgba(255, 255, 255, 0.9);
+        line-height: 1.4;
+        word-break: keep-all;
+    }
+
+    .amount-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
 </style>

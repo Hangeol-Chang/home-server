@@ -766,7 +766,6 @@ select {
    ======================================== */
 
 /* 공통 헤더 스타일 */
-.report-header,
 .chart-header {
 	display: flex;
 	justify-content: space-between;
@@ -774,7 +773,6 @@ select {
 	margin-bottom: 24px;
 }
 
-.report-header h2,
 .chart-header h3 {
 	margin: 0;
 	font-size: 1.5rem;
@@ -964,6 +962,14 @@ select {
 	white-space: nowrap;
 }
 
+.month-nav {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex: 1;
+	margin: 12px 0;
+}
+
 .nav-btn {
 	background: var(--bg-secondary);
 	border: 1px solid var(--border-color);
@@ -986,7 +992,6 @@ select {
 /* 모바일 대응 - 확장 공통 스타일 */
 /* Tablet/Mobile (< 768px) */
 @media (max-width: 768px) {
-	.report-header,
 	.chart-header {
 		flex-direction: column;
 		align-items: flex-start;
@@ -994,7 +999,6 @@ select {
 		margin-bottom: 20px;
 	}
 
-	.report-header h2,
 	.chart-header h3 {
 		font-size: 1.2rem;
 	}
@@ -1117,3 +1121,43 @@ select {
 }
 
 
+
+/* Unit Selector (Global) */
+.unit-selector {
+	display: flex;
+	gap: 8px;
+	background: #f5f5f5;
+	padding: 4px;
+	border-radius: 10px;
+	width: fit-content;
+}
+
+.unit-btn {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 16px;
+	background: transparent;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 500;
+	color: #666;
+	transition: all 0.2s ease;
+}
+
+.unit-btn:hover {
+	background: rgba(33, 150, 243, 0.1);
+	color: #2196f3;
+}
+
+.unit-btn.active {
+	background: white;
+	color: #2196f3;
+	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+}
+
+.unit-icon {
+	font-size: 16px;
+}

@@ -1,17 +1,12 @@
 <script>
 	import TransactionForm from '$lib/components/asset-manager/TransactionForm.svelte';
-	import { getMonthlyStatistics, getTransactions, getPeriodStatistics } from '$lib/api/asset-manager.js';
+	import { getMonthlyStatistics } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
 	import MonthlyReport from '$lib/components/asset-manager/MonthlyReport.svelte';
 
-	// Dashboard props
-	let { compact = false } = $props();
-
 	// 상태 관리
 	let stats = $state(null);
-	let recentTransactions = $state([]);
-	let categoryStats = $state([]);
 	let loading = $state(true);
 	let error = $state('');
 	let isFormOpen = $state(false);
@@ -21,10 +16,6 @@
 	const currentYear = now.getFullYear();
 	const currentMonth = now.getMonth() + 1;
 
-	// 이번 달의 시작일과 종료일
-	const startDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-	const endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]; // 이번 달 마지막 날
-
 	onMount(async () => {
 		await loadData();
 	});
@@ -33,47 +24,14 @@
 		loading = true;
 		error = '';
 		try {
-			// 월별 통계와 최근 거래 내역, 지출 카테고리별 통계 가져오기
-			const [monthlyStats, transactions, spendStats] = await Promise.all([
-				getMonthlyStatistics(currentYear, currentMonth),
-				getTransactions({
-					start_date: startDate,
-					end_date: endDate,
-					limit: compact ? 5 : 10
-				}),
-				getPeriodStatistics(1, startDate, endDate) // class_id=1은 지출(spend)
-			]);
-
-			stats = monthlyStats;
-			recentTransactions = transactions;
-			// 지출 카테고리 통계 추출
-			categoryStats = spendStats?.by_category || [];
+			// 월별 통계 가져오기
+			stats = await getMonthlyStatistics(currentYear, currentMonth);
 		} catch (err) {
 			console.error('대시보드 데이터 로드 실패:', err);
 			error = '데이터를 불러오는데 실패했습니다.';
 		} finally {
 			loading = false;
 		}
-	}
-
-	function formatCurrency(value) {
-		return new Intl.NumberFormat('ko-KR', {
-			style: 'currency',
-			currency: 'KRW'
-		}).format(value);
-	}
-
-	function formatDate(dateStr) {
-		const date = new Date(dateStr);
-		const diff = now - date;
-		const hours = Math.floor(diff / (1000 * 60 * 60));
-		const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-		if (hours < 1) return '방금 전';
-		if (hours < 24) return `${hours}시간 전`;
-		if (days === 1) return '1일 전';
-		if (days < 7) return `${days}일 전`;
-		return date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 	}
 
 	function openForm() {
@@ -85,7 +43,7 @@
 	}
 </script>
 
-<div class="dashboard" class:compact class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
+<div class="dashboard" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	{#if loading}
 		<div class="loading">데이터 로딩 중...</div>
 	{:else if error}
@@ -98,63 +56,11 @@
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
 						<path d="M12 5v14m-7-7h14" stroke-width="2" stroke-linecap="round" />
 					</svg>
-					{#if !compact}
-						<span>거래 등록</span>
-					{/if}
+					<span>거래 등록</span>
 				</button>
-				{#if compact}
-					<a href="/asset-manager" class="view-more">전체보기 →</a>
-				{/if}
 			</div>
 		</div>
-
 		<MonthlyReport {currentYear} {currentMonth} />
-
-		<div class="category-section">
-			<h3>카테고리별 지출</h3>
-			{#if categoryStats && categoryStats.length > 0}
-				<div class="category-list">
-					{#each categoryStats.slice(0, compact ? 3 : 5) as category}
-						<div class="category-item">
-							<div class="category-info">
-								<span class="category-name">
-									💸 {category.category_display_name}
-								</span>
-								<span class="category-count">{category.count}건</span>
-							</div>
-							<div class="category-value">
-								{formatCurrency(category.total_cost)}
-							</div>
-						</div>
-					{/each}
-				</div>
-			{:else}
-				<p class="no-data">카테고리 데이터가 없습니다.</p>
-			{/if}
-		</div>
-
-		{#if !compact}
-			<div class="recent-section">
-				<h3>최근 거래</h3>
-				{#if recentTransactions.length > 0}
-					<div class="recent-list">
-						{#each recentTransactions as transaction}
-							<div class="recent-item">
-								<span class="recent-name">
-									{transaction.class_name === 'earn' ? '💰' : '💸'} {transaction.name || transaction.category_display_name}
-								</span>
-								<span class="recent-amount" class:income={transaction.class_name === 'earn'} class:expense={transaction.class_name === 'spend'}>
-									{transaction.class_name === 'earn' ? '+' : '-'}{formatCurrency(transaction.cost)}
-								</span>
-								<span class="recent-date">{formatDate(transaction.date)}</span>
-							</div>
-						{/each}
-					</div>
-				{:else}
-					<p class="no-data">최근 거래가 없습니다.</p>
-				{/if}
-			</div>
-		{/if}
 	{/if}
 </div>
 
@@ -171,15 +77,13 @@
 		box-shadow: var(--shadow-md);
 	}
 
-	.dashboard.compact {
-		padding: 20px;
-	}
-
 	.dashboard-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 20px;
+		padding: 0 0 12px 0;
+		margin-bottom: 12px;
+		border-bottom: 1px solid var(--border-color);
 	}
 
 	.dashboard-header h2 {
@@ -217,150 +121,6 @@
 
 	.add-transaction-btn svg {
 		flex-shrink: 0;
-	}
-
-	.dashboard.compact .add-transaction-btn {
-		padding: 8px;
-	}
-
-	.dashboard.compact .add-transaction-btn span {
-		display: none;
-	}
-
-	.view-more {
-		color: var(--accent);
-		text-decoration: none;
-		font-size: 0.9rem;
-		font-weight: 500;
-		transition: color 0.2s;
-	}
-
-	.view-more:hover {
-		color: var(--accent-hover);
-		text-decoration: underline;
-	}
-
-	.category-section,
-	.recent-section {
-		margin-top: 12px;
-	}
-
-	.category-section h3,
-	.recent-section h3 {
-		font-size: 1.1rem;
-		margin-bottom: 12px;
-		color: var(--text-primary);
-	}
-
-	.category-list {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		max-height: 300px;
-		overflow-y: auto;
-		padding-right: 4px;
-	}
-
-	.category-list::-webkit-scrollbar {
-		width: 6px;
-	}
-
-	.category-list::-webkit-scrollbar-track {
-		background: var(--bg-secondary);
-		border-radius: 3px;
-	}
-
-	.category-list::-webkit-scrollbar-thumb {
-		background: var(--border-color);
-		border-radius: 3px;
-	}
-
-	.category-list::-webkit-scrollbar-thumb:hover {
-		background: var(--text-tertiary);
-	}
-
-	.recent-list {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-	}
-
-	.category-item {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 6px 16px;
-		background: var(--bg-secondary);
-		border-radius: 8px;
-		border: 1px solid var(--border-color);
-	}
-
-	.category-item:hover {
-		background: var(--bg-tertiary);
-	}
-
-	.category-info {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-	}
-
-	.category-name {
-		font-weight: 600;
-		color: var(--text-primary);
-	}
-
-	.category-count {
-		font-size: 0.85rem;
-		color: var(--text-tertiary);
-	}
-
-	.category-value {
-		font-weight: 600;
-		color: #f44336;
-	}
-
-	.recent-item {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 10px 12px;
-		background: var(--bg-secondary);
-		border-radius: 6px;
-		font-size: 0.9rem;
-		gap: 12px;
-	}
-
-	.recent-name {
-		color: var(--text-primary);
-		flex: 1;
-	}
-
-	.recent-amount {
-		font-weight: 600;
-		font-size: 0.95rem;
-	}
-
-	.recent-amount.income {
-		color: #4caf50;
-	}
-
-	.recent-amount.expense {
-		color: #f44336;
-	}
-
-	.recent-date {
-		color: var(--text-tertiary);
-		font-size: 0.85rem;
-		min-width: 60px;
-		text-align: right;
-	}
-
-	.no-data {
-		text-align: center;
-		color: var(--text-tertiary);
-		padding: 20px;
-		font-size: 0.9rem;
 	}
 
 	/* Tablet/Mobile (< 768px) */

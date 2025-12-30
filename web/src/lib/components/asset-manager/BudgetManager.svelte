@@ -205,6 +205,19 @@
                             "
                         ></div>
 
+                        {#if item.actualSpend > item.amount}
+                            <div 
+                                style="
+                                    position: absolute;
+                                    bottom: 0;
+                                    left: 0;
+                                    width: 100%;
+                                    height: 4px;
+                                    background-color: #FF5252;
+                                "
+                            ></div>
+                        {/if}
+
                         {#if item.percentage > 5}
                             <span class="segment-label" style="position: absolute; left: 50%; transform: translateX(-50%); z-index: 1;">
                                 {(item.actualSpend / budgetDistribution.total * 100).toFixed(1)}%

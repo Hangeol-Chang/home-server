@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException, status, Query
 from typing import List, Optional
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from models.schedule import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleStatus, SchedulePriority
+import os
+import requests
+from icalendar import Calendar
 
 # 라우터 생성
 router = APIRouter(
@@ -239,3 +242,79 @@ async def get_schedule_stats():
         "today_count": today_count,
         "upcoming_count": upcoming_count
     }
+
+@router.get("/google-events")
+async def get_google_events(
+    year: int,
+    month: int
+):
+    """구글 캘린더(iCal)에서 일정을 가져옵니다."""
+    ical_url = os.getenv("GOOGLE_CALENDAR_ICAL_URL")
+    if not ical_url:
+        raise HTTPException(status_code=500, detail="GOOGLE_CALENDAR_ICAL_URL not configured in server")
+
+    try:
+        response = requests.get(ical_url)
+        response.raise_for_status()
+        
+        cal = Calendar.from_ical(response.content)
+        
+        formatted_events = []
+        
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year + 1, 1, 1)
+        else:
+            end_date = date(year, month + 1, 1)
+
+        for component in cal.walk():
+            if component.name == "VEVENT":
+                summary = component.get('summary')
+                dtstart = component.get('dtstart')
+                dtend = component.get('dtend')
+                description = component.get('description', '')
+                location = component.get('location', '')
+                
+                if dtstart:
+                    start_dt = dtstart.dt
+                    # datetime인 경우 date로 변환
+                    if isinstance(start_dt, datetime):
+                        start_dt = start_dt.date()
+                    
+                    end_dt = start_dt
+                    if dtend:
+                        end_dt_val = dtend.dt
+                        if isinstance(end_dt_val, datetime):
+                            end_dt_val = end_dt_val.date()
+                        # dtend는 exclusive하므로 하루 빼줌 (하루 종일 일정의 경우)
+                        # 하지만 날짜 계산 편의를 위해 그대로 두고 프론트에서 처리하거나,
+                        # 여기서 inclusive end date로 변환할 수 있음.
+                        # 보통 캘린더 표시는 inclusive하게 하므로 하루를 빼는게 맞음.
+                        # 단, start == end 인 경우는 당일 일정
+                        if end_dt_val > start_dt:
+                            end_dt = end_dt_val - timedelta(days=1)
+                        else:
+                            end_dt = end_dt_val
+
+                    # 해당 월에 조금이라도 걸치면 포함
+                    # 일정 시작이 월말보다 전이고, 일정 끝이 월초보다 후여야 함
+                    if start_dt < end_date and end_dt >= start_date:
+                        formatted_events.append({
+                            "id": str(component.get('uid')),
+                            "title": str(summary),
+                            "start_date": start_dt.isoformat(),
+                            "end_date": end_dt.isoformat(),
+                            "description": str(description) if description else "",
+                            "location": str(location) if location else "",
+                            "type": "google",
+                            "color": "#4285F4"
+                        })
+        
+        # 날짜순 정렬
+        formatted_events.sort(key=lambda x: x['start_date'])
+            
+        return formatted_events
+
+    except Exception as e:
+        print(f"Error fetching Google Calendar events: {e}")
+        raise HTTPException(status_code=500, detail=f"iCal Error: {str(e)}")

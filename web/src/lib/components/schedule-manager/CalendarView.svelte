@@ -1,12 +1,19 @@
 <script>
 	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
+    import { getGoogleEvents } from '$lib/api/schedule-manager.js';
+    import ScheduleDetailModal from './ScheduleDetailModal.svelte';
+    import '$lib/styles/module.css';
 
 	let { year = new Date().getFullYear(), month = new Date().getMonth() + 1 } = $props();
 
 	let schedules = $state([]);
 	let loading = $state(false);
 	let error = $state(null);
+    
+    // Modal State
+    let showModal = $state(false);
+    let selectedSchedule = $state(null);
 
 	const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -20,48 +27,157 @@
 
 	async function loadData() {
 		loading = true;
-		// TODO: Load actual schedule data
-		// Mock data for now
-		schedules = []; 
+        try {
+            schedules = await getGoogleEvents(year, month);
+        } catch (err) {
+            console.error("Failed to load schedules:", err);
+            schedules = [];
+        }
 		loading = false;
 	}
 
-	function getCalendarDays() {
+    function openModal(schedule) {
+        selectedSchedule = schedule;
+        showModal = true;
+    }
+	let weeks = $derived(getCalendarWeeks());
+	function getCalendarWeeks() {
 		const firstDay = new Date(year, month - 1, 1);
 		const lastDay = new Date(year, month, 0).getDate();
 		const startWeekday = firstDay.getDay();
 
-		const days = [];
 		const weeks = [];
-		let currentWeek = [];
+		let currentWeekDays = [];
 
+		// 1. 날짜 그리드 생성
 		// Empty slots for previous month
 		for (let i = 0; i < startWeekday; i++) {
-			currentWeek.push(null);
+			currentWeekDays.push(null);
 		}
 
 		// Days of current month
 		for (let day = 1; day <= lastDay; day++) {
 			const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-			currentWeek.push({
+			currentWeekDays.push({
 				day,
 				date: dateStr,
-				schedules: schedules.filter(s => s.date === dateStr)
+                slots: [] // 일정이 들어갈 슬롯들
 			});
 
-			if (currentWeek.length === 7) {
-				weeks.push(currentWeek);
-				currentWeek = [];
+			if (currentWeekDays.length === 7) {
+				weeks.push({ days: currentWeekDays, slots: [] });
+				currentWeekDays = [];
 			}
 		}
 
 		// Empty slots for next month
-		if (currentWeek.length > 0) {
-			while (currentWeek.length < 7) {
-				currentWeek.push(null);
+		if (currentWeekDays.length > 0) {
+			while (currentWeekDays.length < 7) {
+				currentWeekDays.push(null);
 			}
-			weeks.push(currentWeek);
+			weeks.push({ days: currentWeekDays, slots: [] });
 		}
+
+        // 2. 일정 배치 로직
+        weeks.forEach(week => {
+            // 이번 주에 해당하는 날짜 범위 구하기
+            const weekStart = week.days.find(d => d !== null)?.date;
+            const weekEnd = week.days.slice().reverse().find(d => d !== null)?.date;
+            
+            if (!weekStart) return;
+
+            // 이번 주에 표시해야 할 일정 필터링
+            const weekSchedules = schedules.filter(s => {
+                return s.end_date >= weekStart && s.start_date <= weekEnd;
+            });
+
+            // 일정 정렬 (시작일 빠르고, 기간 긴 순서)
+            weekSchedules.sort((a, b) => {
+                if (a.start_date !== b.start_date) return a.start_date.localeCompare(b.start_date);
+                const durationA = new Date(a.end_date) - new Date(a.start_date);
+                const durationB = new Date(b.end_date) - new Date(b.start_date);
+                return durationB - durationA;
+            });
+
+            // 슬롯 할당 상태 (각 날짜별로 사용 중인 슬롯 인덱스 추적)
+            // week.days는 7개 요소. null인 날짜도 인덱스는 차지함.
+            const slotUsage = Array(7).fill().map(() => []); // 각 요일별 사용된 슬롯 인덱스들
+
+            weekSchedules.forEach(schedule => {
+                // 이 일정이 이번 주에서 차지하는 요일 인덱스 범위(0~6) 구하기
+                let startIndex = 0;
+                let endIndex = 6;
+
+                // 시작일이 이번 주보다 늦으면 그 요일부터 시작
+                if (schedule.start_date > weekStart) {
+                    const startDay = new Date(schedule.start_date).getDate();
+                    // 이번 달의 날짜와 매칭되는 인덱스 찾기
+                    const idx = week.days.findIndex(d => d && d.date === schedule.start_date);
+                    if (idx !== -1) startIndex = idx;
+                } else {
+                    // 지난 주부터 이어지는 경우, 첫 번째 유효한 날짜부터 시작
+                    startIndex = week.days.findIndex(d => d !== null);
+                }
+
+                // 종료일이 이번 주보다 빠르면 그 요일까지
+                if (schedule.end_date < weekEnd) {
+                    const idx = week.days.findIndex(d => d && d.date === schedule.end_date);
+                    if (idx !== -1) endIndex = idx;
+                } else {
+                    // 다음 주까지 이어지는 경우, 마지막 유효한 날짜까지
+                    // (null인 날짜 전까지)
+                    for (let i = 6; i >= 0; i--) {
+                        if (week.days[i] !== null) {
+                            endIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                // 유효하지 않은 범위면 패스
+                if (startIndex > endIndex) return;
+
+                // 해당 범위(startIndex ~ endIndex)에서 비어있는 가장 낮은 슬롯 인덱스 찾기
+                let slotIndex = 0;
+                while (true) {
+                    let isAvailable = true;
+                    for (let i = startIndex; i <= endIndex; i++) {
+                        if (week.days[i] === null) continue; // 빈 날짜는 체크 안함
+                        if (slotUsage[i].includes(slotIndex)) {
+                            isAvailable = false;
+                            break;
+                        }
+                    }
+                    if (isAvailable) break;
+                    slotIndex++;
+                }
+
+                // 슬롯 점유 표시
+                for (let i = startIndex; i <= endIndex; i++) {
+                    if (week.days[i] !== null) {
+                        slotUsage[i].push(slotIndex);
+                    }
+                }
+
+                // 일정 객체에 배치 정보 추가하여 날짜별 슬롯에 저장
+                for (let i = startIndex; i <= endIndex; i++) {
+                    if (week.days[i] === null) continue;
+                    
+                    // 해당 날짜의 slots 배열 확장
+                    while (week.days[i].slots.length <= slotIndex) {
+                        week.days[i].slots.push(null);
+                    }
+                    
+                    week.days[i].slots[slotIndex] = {
+                        ...schedule,
+                        isStart: i === startIndex || schedule.start_date === week.days[i].date,
+                        isEnd: i === endIndex || schedule.end_date === week.days[i].date,
+                        isContinuedFromPrev: i > startIndex,
+                        isContinuedToNext: i < endIndex
+                    };
+                }
+            });
+        });
 
 		return weeks;
 	}
@@ -113,8 +229,8 @@
 			{/each}
 
 			<!-- Calendar Days -->
-			{#each getCalendarDays() as week}
-				{#each week as dayInfo}
+			{#each weeks as week}
+				{#each week.days as dayInfo}
 					{#if dayInfo === null}
 						<div class="calendar-day empty"></div>
 					{:else}
@@ -124,7 +240,30 @@
 						>
 							<div class="day-number">{dayInfo.day}</div>
 							<div class="day-content">
-								<!-- Schedule items will go here -->
+								{#each dayInfo.slots as slot}
+                                    {#if slot}
+                                        <div 
+                                            class="schedule-item" 
+                                            class:start={slot.isStart}
+                                            class:end={slot.isEnd}
+                                            class:continued={slot.isContinuedFromPrev}
+                                            style="background-color: {slot.color || '#4285F4'};"
+                                            title={slot.title}
+                                            onclick={() => openModal(slot)}
+                                            role="button"
+                                            tabindex="0"
+                                            onkeydown={(e) => e.key === 'Enter' && openModal(slot)}
+                                        >
+                                            {#if slot.isStart || !slot.isContinuedFromPrev}
+                                                {slot.title}
+                                            {:else}
+                                                &nbsp;
+                                            {/if}
+                                        </div>
+                                    {:else}
+                                        <div class="schedule-placeholder"></div>
+                                    {/if}
+                                {/each}
 							</div>
 						</div>
 					{/if}
@@ -133,6 +272,8 @@
 		</div>
 	</div>
 </div>
+
+<ScheduleDetailModal bind:visible={showModal} schedule={selectedSchedule} />
 
 <style>
 	.calendar-view {
@@ -145,41 +286,124 @@
     
 	.calendar-grid {
 		display: grid;
-		grid-template-columns: repeat(7, 1fr);
-		gap: 8px;
+		grid-template-columns: repeat(7, minmax(0, 1fr));
+		gap: 0; /* gap을 없애서 연결되게 함 */
+        border: 1px solid #eee;
+        border-radius: 8px;
+        overflow: hidden;
 	}
 
 	.calendar-weekday {
 		text-align: center;
 		font-weight: 600;
-		padding: 8px;
+		padding: 12px 8px;
 		color: var(--text-secondary);
+        background: #f8f9fa;
+        border-bottom: 1px solid #eee;
+        border-right: 1px solid #eee;
 	}
+    
+    .calendar-weekday:last-child {
+        border-right: none;
+    }
 
 	.calendar-weekday.sunday { color: #f44336; }
 	.calendar-weekday.saturday { color: #2196f3; }
 
 	.calendar-day {
-		min-height: 100px;
-		padding: 8px;
-		border-radius: 8px;
+		min-height: 120px;
+		padding: 4px 0; /* 좌우 패딩 제거 */
 		background: var(--bg-primary);
-		border: 1px solid transparent;
+		border-right: 1px solid #eee;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        flex-direction: column;
 	}
+    
+    .calendar-day:nth-child(7n) {
+        border-right: none;
+    }
 
 	.calendar-day.today {
-		border-color: var(--accent);
-		background: var(--bg-secondary);
+		background: #f8faff;
 	}
+    
+    .calendar-day.today .day-number {
+        color: var(--accent);
+        font-weight: 700;
+    }
 
 	.calendar-day.empty {
-		background: transparent;
+		background: #fcfcfc;
+        border-right: 1px solid #eee;
+        border-bottom: 1px solid #eee;
 	}
+    
+    .calendar-day.empty:nth-child(7n) {
+        border-right: none;
+    }
 
 	.day-number {
 		font-weight: 600;
 		margin-bottom: 4px;
+        padding: 4px 8px;
+        font-size: 0.9rem;
 	}
+
+    .day-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .schedule-item {
+		font-size: 0.75rem;
+		padding: 2px 4px;
+		color: white;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+        cursor: pointer;
+        height: 20px;
+        line-height: 16px;
+        margin: 0; /* 마진 제거 */
+        position: relative;
+        z-index: 1;
+	}
+    
+    .schedule-item:hover {
+        filter: brightness(0.9);
+        z-index: 2;
+    }
+    
+    /* 시작 부분 둥글게, 왼쪽 마진 */
+    .schedule-item.start {
+        border-top-left-radius: 4px;
+        border-bottom-left-radius: 4px;
+        margin-left: 4px;
+    }
+    
+    /* 끝 부분 둥글게, 오른쪽 마진 */
+    .schedule-item.end {
+        border-top-right-radius: 4px;
+        border-bottom-right-radius: 4px;
+        margin-right: 4px;
+    }
+    
+    /* 중간 부분은 마진 없이 꽉 채움 */
+    .schedule-item:not(.start) {
+        margin-left: -1px; /* 겹치게 해서 선 없앰 */
+        padding-left: 0; /* 텍스트가 있으면 안보이게 */
+    }
+    
+    .schedule-item:not(.end) {
+        margin-right: -1px;
+    }
+
+    .schedule-placeholder {
+        height: 20px;
+    }
 
 	/* Mobile styles */
 	.calendar-view.mobile {
@@ -187,8 +411,17 @@
 	}
 
 	.calendar-view.mobile .calendar-day {
-		min-height: 60px;
-		padding: 4px;
+		min-height: 80px;
 		font-size: 0.9rem;
 	}
+    
+    .calendar-view.mobile .schedule-item {
+        font-size: 0.7rem;
+        height: 16px;
+        line-height: 12px;
+    }
+    
+    .calendar-view.mobile .schedule-placeholder {
+        height: 16px;
+    }
 </style>

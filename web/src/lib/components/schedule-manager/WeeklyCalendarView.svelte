@@ -61,7 +61,7 @@
 	}
 </script>
 
-<div class="section" class:mobile={$device.isMobile}>
+<div class="section" class:tablet={$device.isTablet}>
 	<div class="chart-header">
 		<div class="month-nav">
 			<button class="nav-btn" onclick={() => changeYear(-1)} aria-label="이전 해">
@@ -78,54 +78,67 @@
 		</div>
 	</div>
 
-	<div class="timeline-container">
-		<!-- Month Header -->
-		<div class="months-row">
-			{#each months as month}
-				<div class="month-label">{month}</div>
-			{/each}
-		</div>
-
-		<!-- Grid & Bars -->
-		<div class="grid-area">
-			<!-- Vertical Grid Lines (52 weeks) -->
-			<div class="grid-lines">
-				{#each Array(52) as _, i}
-					<div class="grid-line" class:active={i + 1 === currentWeek}></div>
+	<div class="calendar-scroll-area">
+		<div class="timeline-container">
+			<!-- Month Header -->
+			<div class="months-row">
+				{#each months as month}
+					<div class="month-label">{month}</div>
 				{/each}
 			</div>
 
-			<!-- Schedule Bars -->
-			<div class="tracks">
-				{#each schedules as schedule}
-					<div class="track-row">
-						<div 
-							class="schedule-bar" 
-							style={getBarStyle(schedule)}
-							title="{schedule.title} (W{schedule.startWeek}~W{schedule.endWeek})"
-						>
-							<span class="bar-label">{schedule.title}</span>
+			<!-- Grid & Bars -->
+			<div class="grid-area">
+				<!-- Vertical Grid Lines (52 weeks) -->
+				<div class="grid-lines">
+					{#each Array(52) as _, i}
+						<div class="grid-line" class:active={i + 1 === currentWeek}></div>
+					{/each}
+				</div>
+
+				<!-- Schedule Bars -->
+				<div class="tracks">
+					{#each schedules as schedule}
+						<div class="track-row">
+							<div 
+								class="schedule-bar" 
+								style={getBarStyle(schedule)}
+								title="{schedule.title} (W{schedule.startWeek}~W{schedule.endWeek})"
+							>
+								<span class="bar-label">{schedule.title}</span>
+							</div>
 						</div>
-					</div>
-				{/each}
+					{/each}
+				</div>
+				
+				<!-- Current Week Indicator -->
+				{#if currentWeek > 0 && currentWeek <= 52}
+					<div 
+						class="current-week-line" 
+						style="left: {((currentWeek - 1) / 52) * 100}%"
+						title="이번 주"
+					></div>
+				{/if}
 			</div>
-			
-			<!-- Current Week Indicator -->
-			{#if currentWeek > 0 && currentWeek <= 52}
-				<div 
-					class="current-week-line" 
-					style="left: {((currentWeek - 1) / 52) * 100}%"
-					title="이번 주"
-				></div>
-			{/if}
 		</div>
 	</div>
 </div>
 
 <style>
+	.calendar-scroll-area {
+		width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
 	.timeline-container {
-		min-width: 800px; /* Ensure readable width on mobile */
+		width: 100%;
 		position: relative;
+	}
+
+	/* Tablet & Mobile: Show 6 months (200% width) */
+	.tablet .timeline-container {
+		width: 200%;
 	}
 
 	.months-row {
@@ -232,10 +245,5 @@
 		height: 8px;
 		background-color: var(--accent);
 		border-radius: 50%;
-	}
-
-	/* Mobile adjustments */
-	.mobile .timeline-container {
-		min-width: 600px;
 	}
 </style>

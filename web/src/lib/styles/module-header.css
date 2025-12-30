@@ -36,27 +36,6 @@
     transform: translateY(-2px);
 }
 
-.add-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.add-btn:hover {
-    background: var(--accent-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-}
-
 /* Tablet Responsive */
 .tablet .page-header {
     flex-direction: column;
@@ -68,13 +47,7 @@
     font-size: 1.7rem;
 }
 
-.tablet .header-actions {
-    flex-direction: row;
-    width: 100%;
-}
-
-.tablet .admin-link,
-.tablet .add-btn {
+.tablet .admin-link {
     justify-content: center;
     flex: 1;
     padding: 8px 12px;
@@ -96,8 +69,7 @@
     gap: 8px;
 }
 
-.mobile .admin-link,
-.mobile .add-btn {
+.mobile .admin-link {
     justify-content: center;
     flex: 1;
     padding: 8px 10px;
@@ -105,8 +77,7 @@
     gap: 4px;
 }
 
-.mobile .admin-link svg,
-.mobile .add-btn svg {
+.mobile .admin-link svg {
     width: 16px;
     height: 16px;
 }

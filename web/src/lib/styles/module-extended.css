@@ -222,8 +222,6 @@
 /* Tablet/Mobile (< 768px) */
 @media (max-width: 768px) {
 	.chart-header {
-		flex-direction: column;
-		align-items: flex-start;
 		gap: 12px;
 		margin-bottom: 20px;
 	}

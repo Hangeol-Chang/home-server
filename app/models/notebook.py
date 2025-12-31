@@ -40,3 +40,14 @@ TreeNode.model_rebuild()
 class SearchResult(BaseModel):
     files: List[NoteInfo] = Field(default_factory=list, description="검색된 파일 목록")
     total: int = Field(0, description="총 검색 결과 수")
+
+# ===== Save Request =====
+class SaveNoteRequest(BaseModel):
+    path: str = Field(..., description="파일 경로 (확장자 포함)")
+    content: str = Field(..., description="저장할 내용")
+    commit_message: Optional[str] = Field(None, description="커밋 메시지 (생략 시 자동 생성)")
+
+# ===== Create Folder Request =====
+class CreateFolderRequest(BaseModel):
+    path: str = Field(..., description="폴더 경로")
+    commit_message: Optional[str] = Field(None, description="커밋 메시지")

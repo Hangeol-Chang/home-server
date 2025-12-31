@@ -31,6 +31,23 @@ export async function searchNotes(query, path = '', inContent = false) {
 	return apiGet(`${API_BASE}/search`, params);
 }
 
+// ===== Save Note =====
+export async function saveNote(path, content, commitMessage = '') {
+	return apiPost(`${API_BASE}/save`, {
+		path,
+		content,
+		commit_message: commitMessage
+	});
+}
+
+// ===== Create Folder =====
+export async function createFolder(path, commitMessage = '') {
+	return apiPost(`${API_BASE}/folder`, {
+		path,
+		commit_message: commitMessage
+	});
+}
+
 // ===== Stats =====
 export async function getVaultStats() {
 	return apiGet(`${API_BASE}/stats`);

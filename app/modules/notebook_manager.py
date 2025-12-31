@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, status, Query
+from fastapi import APIRouter, HTTPException, status, Query, BackgroundTasks
 from typing import List, Optional
 from pathlib import Path
 import os
+import subprocess
 from datetime import datetime
 from models.notebook import (
-    FolderInfo, NoteInfo, NoteContent, TreeNode, SearchResult
+    FolderInfo, NoteInfo, NoteContent, TreeNode, SearchResult, SaveNoteRequest, CreateFolderRequest
 )
 
 # 라우터 생성
@@ -295,3 +296,108 @@ async def get_vault_stats():
         "total_size": total_size,
         "vault_path": str(VAULT_PATH)
     }
+
+# ===== Git Integration =====
+
+def run_git_command(commands: List[str]):
+    """Git 명령어 실행"""
+    try:
+        subprocess.run(
+            commands,
+            cwd=VAULT_PATH,
+            check=True,
+            capture_output=True,
+            text=True
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"Git command failed: {e.stderr}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Git error: {e.stderr}"
+        )
+
+def sync_vault_to_git(commit_message: str):
+    """Vault 변경사항을 Git에 커밋하고 푸시"""
+    # 1. 변경사항 확인
+    status_result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=VAULT_PATH,
+        capture_output=True,
+        text=True
+    )
+    
+    # 변경사항이 없으면 리턴
+    if not status_result.stdout.strip():
+        return
+
+    # 2. Add all changes
+    run_git_command(["git", "add", "."])
+    
+    # 3. Commit
+    run_git_command(["git", "commit", "-m", commit_message])
+    
+    # 4. Push
+    run_git_command(["git", "push"])
+
+@router.post("/save")
+async def save_note(request: SaveNoteRequest):
+    """노트 저장 및 Git 자동 동기화"""
+    target_path = get_safe_path(request.path)
+    
+    # 마크다운 파일인지 확인 (새 파일인 경우 확장자 체크)
+    if not request.path.lower().endswith(('.md', '.markdown')):
+        target_path = target_path.with_suffix('.md')
+    
+    try:
+        # 상위 디렉토리 생성
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # 파일 쓰기
+        target_path.write_text(request.content, encoding='utf-8')
+        
+        # Git 커밋 메시지 설정
+        msg = request.commit_message or f"Update {request.path} via Web"
+        
+        # Git 동기화
+        sync_vault_to_git(msg)
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+    
+    return {"status": "success", "path": request.path}
+
+@router.post("/folder")
+async def create_folder(request: CreateFolderRequest):
+    """폴더 생성 및 Git 자동 동기화"""
+    target_path = get_safe_path(request.path)
+    
+    if target_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Folder already exists"
+        )
+    
+    try:
+        # 폴더 생성
+        target_path.mkdir(parents=True, exist_ok=True)
+        
+        # Git은 빈 폴더를 추적하지 않으므로 .gitkeep 파일 생성
+        gitkeep_path = target_path / ".gitkeep"
+        gitkeep_path.touch()
+        
+        # Git 커밋 메시지 설정
+        msg = request.commit_message or f"Create folder {request.path}"
+        
+        # Git 동기화
+        sync_vault_to_git(msg)
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+    
+    return {"status": "success", "path": request.path}

@@ -20,16 +20,28 @@
 		isProfileDropdownOpen = false;
 	}
 
-	// 외부 클릭 시 드롭다운 닫기
-	function handleClickOutside(event) {
-		if (!event.target.closest('.profile-menu') && !event.target.closest('.menu-dropdown-container')) {
+	function handleMouseEnter(type) {
+		if ($device.isMobile) return;
+		
+		if (type === 'menu') {
+			isMenuDropdownOpen = true;
 			isProfileDropdownOpen = false;
+		} else if (type === 'profile') {
+			isProfileDropdownOpen = true;
 			isMenuDropdownOpen = false;
 		}
 	}
-</script>
 
-<svelte:window onclick={handleClickOutside} />
+	function handleMouseLeave(type) {
+		if ($device.isMobile) return;
+
+		if (type === 'menu') {
+			isMenuDropdownOpen = false;
+		} else if (type === 'profile') {
+			isProfileDropdownOpen = false;
+		}
+	}
+</script>
 
 {#if session?.user}
 	<header class="app-header" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
@@ -41,15 +53,20 @@
 			</div>
 
 			<div class="header-right">
-				<div class="menu-dropdown-container">
-					<button class="menu-button" onclick={toggleMenuDropdown} aria-label="메뉴">
+				<div 
+					class="menu-dropdown-container"
+					onmouseenter={() => handleMouseEnter('menu')}
+					onmouseleave={() => handleMouseLeave('menu')}
+					role="group"
+				>
+					<div class="menu-button" aria-label="메뉴">
 						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<line x1="3" y1="12" x2="21" y2="12"></line>
 							<line x1="3" y1="6" x2="21" y2="6"></line>
 							<line x1="3" y1="18" x2="21" y2="18"></line>
 						</svg>
 						<span>메뉴</span>
-					</button>
+					</div>
 
 					{#if isMenuDropdownOpen}
 						<div class="menu-dropdown">
@@ -69,7 +86,12 @@
 					{/if}
 				</div>
 
-				<div class="profile-menu">
+				<div 
+					class="profile-menu"
+					onmouseenter={() => handleMouseEnter('profile')}
+					onmouseleave={() => handleMouseLeave('profile')}
+					role="group"
+				>
 					<button class="profile-button" onclick={toggleProfileDropdown} aria-label="프로필 메뉴">
 						{#if session.user.image}
 							<img src={session.user.image} alt="Profile" class="user-avatar" />
@@ -148,34 +170,28 @@
 	.menu-dropdown-container {
 		position: relative;
 	}
-
+	
 	.menu-button {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 8px 16px;
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: 8px;
-		color: var(--text-primary);
-		font-weight: 600;
+		gap: 6px;
+		padding: 8px 12px;
+		background: none;
+		border: none;
 		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.menu-button:hover {
-		background: var(--bg-tertiary);
-		transform: translateY(-1px);
+		color: var(--text-primary);
+		font-size: 1rem;
+		transition: background-color 0.2s;
+		border-radius: 4px;
 	}
 
 	.menu-dropdown {
 		position: absolute;
-		top: calc(100% + 8px);
 		right: 0;
 		min-width: 200px;
 		background: var(--bg-primary);
 		border: 1px solid var(--border-color);
-		border-radius: 8px;
+		border-radius: 4px;
 		box-shadow: var(--shadow-lg);
 		overflow: hidden;
 		z-index: 1000;
@@ -199,7 +215,8 @@
 	}
 
 	.menu-dropdown-item:hover {
-		background: var(--bg-secondary);
+		background: var(--bg-primary-dark);
+		color: white;
 	}
 
 	/* Profile Menu */
@@ -332,15 +349,6 @@
 				gap: 12px;
 			}
 
-			.menu-button {
-				padding: 6px 10px;
-				font-size: 0.85rem;
-
-				span {
-					display: none;
-				}
-			}
-
 			.menu-dropdown {
 				min-width: 180px;
 			}
@@ -380,10 +388,6 @@
 
 			.header-right {
 				gap: 8px;
-			}
-
-			.menu-button {
-				padding: 6px 8px;
 			}
 
 			.menu-dropdown {

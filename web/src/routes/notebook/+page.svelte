@@ -2,7 +2,7 @@
 	import { getFolders, getFiles, getFileContent, searchNotes, getVaultStats, saveNote, createFolder } from '$lib/api/notebook.js';
 	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
-	import FileTreeNode from './FileTreeNode.svelte';
+	import FileTreeNode from '$lib/components/notebook/FileTreeNode.svelte';
 
 	let currentPath = $state('');
 	let rootItems = $state([]); // Root level items
@@ -274,11 +274,11 @@
 				placeholder="파일명 검색..."
 				onkeydown={handleSearchKeydown}
 			/>
-			<button class="search-btn" onclick={handleSearch} disabled={isSearching || !searchQuery.trim()}>
+			<button class="btn-primary" onclick={handleSearch} disabled={isSearching || !searchQuery.trim()}>
 				{isSearching ? '검색중...' : '🔍 검색'}
 			</button>
 			{#if viewMode === 'search'}
-				<button class="clear-btn" onclick={clearSearch}>×</button>
+				<button class="icon-btn" onclick={clearSearch}>×</button>
 			{/if}
 		</div>
 	</header>
@@ -289,10 +289,10 @@
 			<!-- 네비게이션 -->
 			<div class="navigation">
 				<div class="nav-actions">
-					<button class="nav-btn primary" onclick={handleNewFile}>
+					<button class="btn-primary" onclick={handleNewFile}>
 						➕ 새 파일
 					</button>
-					<button class="nav-btn secondary" onclick={handleNewFolder}>
+					<button class="refresh-btn" onclick={handleNewFolder}>
 						📁 새 폴더
 					</button>
 				</div>
@@ -369,8 +369,8 @@
 							<h2>{selectedFile.name} (편집)</h2>
 						{/if}
 						<div class="editor-actions">
-							<button class="cancel-btn" onclick={handleCancel} disabled={isSaving}>취소</button>
-							<button class="save-btn" onclick={handleSave} disabled={isSaving}>
+							<button class="icon-btn" onclick={handleCancel} disabled={isSaving}>취소</button>
+							<button class="btn-primary" onclick={handleSave} disabled={isSaving}>
 								{isSaving ? '저장 중...' : '💾 저장'}
 							</button>
 						</div>
@@ -386,7 +386,7 @@
 					<div class="file-header">
 						<h2>{selectedFile.name}</h2>
 						<div class="file-actions">
-							<button class="edit-btn" onclick={handleEdit}>✏️ 편집</button>
+							<button class="refresh-btn" onclick={handleEdit}>✏️ 편집</button>
 						</div>
 					</div>
 					<div class="file-details">
@@ -401,15 +401,6 @@
 			{:else}
 				<div class="welcome-message">
 					<h2>📓 Obsidian Vault</h2>
-					<p>왼쪽에서 파일을 선택하여 내용을 확인하세요</p>
-					<div class="quick-tips">
-						<h3>💡 Quick Tips</h3>
-						<ul>
-							<li>폴더를 클릭하여 탐색하세요</li>
-							<li>파일을 클릭하여 내용을 확인하세요</li>
-							<li>검색 기능으로 빠르게 파일을 찾으세요</li>
-						</ul>
-					</div>
 				</div>
 			{/if}
 		</main>
@@ -417,6 +408,8 @@
 </div>
 
 <style>
+	@import '$lib/styles/module.css';
+
 	.notebook-page {
 		min-height: 100vh;
 		background: var(--bg-primary);
@@ -426,6 +419,7 @@
 	.page-header {
 		max-width: 1400px;
 		margin: 0 auto 24px;
+		/* module.css의 .page-header 스타일과 중복되지만 레이아웃 유지를 위해 일부 유지 */
 	}
 
 	.header-content {
@@ -435,10 +429,7 @@
 		margin-bottom: 16px;
 	}
 
-	.header-content h1 {
-		margin: 0;
-		color: var(--text-primary);
-	}
+	/* .header-content h1 제거 (module.css 사용) */
 
 	.stats-chips {
 		display: flex;
@@ -470,33 +461,7 @@
 		font-size: 1rem;
 	}
 
-	.search-btn, .clear-btn {
-		padding: 10px 20px;
-		border: none;
-		border-radius: 8px;
-		cursor: pointer;
-		font-weight: 600;
-		transition: all 0.2s;
-	}
-
-	.search-btn {
-		background: var(--primary-color);
-		color: white;
-	}
-
-	.search-btn:hover:not(:disabled) {
-		background: var(--primary-dark);
-	}
-
-	.search-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.clear-btn {
-		background: var(--bg-tertiary);
-		color: var(--text-secondary);
-	}
+	/* .search-btn, .clear-btn 제거 (module.css의 .btn-primary, .icon-btn 등 사용) */
 
 	.notebook-container {
 		max-width: 1400px;
@@ -520,39 +485,6 @@
 		margin-bottom: 20px;
 		padding-bottom: 16px;
 		border-bottom: 1px solid var(--border-color);
-	}
-
-	.breadcrumbs {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 4px;
-		margin-bottom: 12px;
-		font-size: 0.9rem;
-	}
-
-	.breadcrumb {
-		background: none;
-		border: none;
-		padding: 4px 8px;
-		cursor: pointer;
-		color: var(--text-secondary);
-		border-radius: 4px;
-		transition: all 0.2s;
-	}
-
-	.breadcrumb:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-	}
-
-	.breadcrumb.active {
-		color: var(--primary-color);
-		font-weight: 600;
-	}
-
-	.separator {
-		color: var(--text-tertiary);
 	}
 
 	.explorer-list {
@@ -811,68 +743,7 @@
 		margin-top: 8px;
 	}
 
-	.nav-btn.primary {
-		background: var(--primary-color);
-		color: white;
-		border: none;
-	}
-
-	.nav-btn.primary:hover {
-		background: var(--primary-dark);
-	}
-
-	.nav-btn.secondary {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-		border: 1px solid var(--border-color);
-	}
-
-	.nav-btn.secondary:hover {
-		background: var(--bg-secondary);
-	}
-
-	.edit-btn, .save-btn, .cancel-btn {
-		padding: 8px 16px;
-		border-radius: 6px;
-		font-weight: 600;
-		cursor: pointer;
-		transition: all 0.2s;
-		border: 1px solid transparent;
-	}
-
-	.edit-btn {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-		border-color: var(--border-color);
-	}
-
-	.edit-btn:hover {
-		background: var(--bg-secondary);
-	}
-
-	.save-btn {
-		background: var(--primary-color);
-		color: white;
-	}
-
-	.save-btn:hover:not(:disabled) {
-		background: var(--primary-dark);
-	}
-
-	.save-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.cancel-btn {
-		background: transparent;
-		color: var(--text-secondary);
-	}
-
-	.cancel-btn:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-	}
+	/* .nav-btn, .edit-btn, .save-btn, .cancel-btn 제거 (module.css 사용) */
 
 	/* Tablet/Mobile (< 768px) */
 	.notebook-page {

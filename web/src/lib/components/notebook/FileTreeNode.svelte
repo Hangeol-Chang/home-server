@@ -86,6 +86,8 @@
 </div>
 
 <style>
+	@import '$lib/styles/module.css';
+
 	.node-wrapper {
 		display: flex;
 		flex-direction: column;

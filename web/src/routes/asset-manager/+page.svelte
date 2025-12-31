@@ -12,7 +12,7 @@
 	import BudgetComparisonChart from '$lib/components/asset-manager/BudgetComparisonChart.svelte';
 	import BudgetEditor from '$lib/components/asset-manager/BudgetEditor.svelte';
 	import '$lib/styles/module.css';
-	import '$lib/styles/module-header.css';
+	import '$lib/styles/module-common.css';
 
 	// 상태 관리
 	let isFormOpen = $state(false);

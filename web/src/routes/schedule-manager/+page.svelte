@@ -4,7 +4,7 @@
 	import CalendarView from '$lib/components/schedule-manager/CalendarView.svelte';
 	import WeeklyCalendarView from '$lib/components/schedule-manager/WeeklyCalendarView.svelte';
 	import '$lib/styles/module.css';
-	import '$lib/styles/module-header.css';
+	import '$lib/styles/module-common.css';
 
 	// 상태 관리
 	let loading = $state(true);

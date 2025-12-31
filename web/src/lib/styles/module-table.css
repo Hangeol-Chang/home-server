@@ -130,83 +130,6 @@
 /* 반응형 유틸리티 */
 /* Tablet/Mobile (< 768px) */
 @media (max-width: 768px) {
-	.form-row {
-		grid-template-columns: 1fr;
-	}
-
-	.data-table {
-		font-size: 0.9rem;
-	}
-
-	.data-table th,
-	.data-table td {
-		padding: 10px 12px;
-	}
-
-	/* 전역 폰트 크기 조정 */
-	body {
-		font-size: 14px;
-	}
-
-	/* 버튼 */
-	.btn-primary,
-	.add-btn,
-	.btn-secondary {
-		padding: 8px 16px;
-		font-size: 0.9rem;
-	}
-
-	/* 폼 */
-	.form-container {
-		padding: 16px;
-	}
-
-	.form-group {
-		flex-direction: column;
-		align-items: stretch;
-		gap: 6px;
-	}
-
-	.form-group label {
-		min-width: auto;
-		font-size: 0.85rem;
-	}
-
-	.form-actions {
-		width: 100%;
-		flex-direction: column;
-	}
-
-	.form-actions button {
-		width: 100%;
-	}
-
-	/* 필터/탭 버튼 */
-	.filter-buttons,
-	.tab-buttons {
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.filter-btn,
-	.tab-btn {
-		width: 100%;
-		justify-content: center;
-		padding: 8px 16px;
-	}
-
-	/* 카드 */
-	.card,
-	.stat-card {
-		padding: 16px;
-	}
-
-	/* 섹션 */
-	.section {
-		padding: 16px;
-		margin-bottom: 16px;
-	}
-
 	/* 테이블 */
 	.data-table {
 		font-size: 0.85rem;
@@ -224,46 +147,10 @@
 	.cell-amount {
 		font-size: 1rem;
 	}
-
-	/* 빈 상태 */
-	.empty-state {
-		padding: 40px 16px;
-	}
-
-	.empty-state svg {
-		width: 48px;
-		height: 48px;
-	}
-
-	.empty-state p {
-		font-size: 1rem;
-	}
 }
 
 /* Mobile (< 320px) */
 @media (max-width: 320px) {
-	/* 모바일 소형 화면 추가 조정 */
-	body {
-		font-size: 13px;
-	}
-	
-	.card,
-	.stat-card,
-	.section {
-		padding: 12px;
-	}
-
-	.form-container {
-		padding: 12px;
-	}
-
-	.btn-primary,
-	.add-btn,
-	.btn-secondary {
-		padding: 6px 12px;
-		font-size: 0.8rem;
-	}
-
 	.data-table th,
 	.data-table td {
 		padding: 6px 4px;

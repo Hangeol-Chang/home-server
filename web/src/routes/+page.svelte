@@ -3,7 +3,7 @@
 	import ScheduleManager_Dashboard from './schedule-manager/dashboard.svelte';
 	import { device } from '$lib/stores/device';
 	import '$lib/styles/module.css';
-	import '$lib/styles/module-header.css';
+	import '$lib/styles/module-common.css';
 </script>
 
 <svelte:head>

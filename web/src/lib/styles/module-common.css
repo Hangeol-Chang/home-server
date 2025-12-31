@@ -360,3 +360,179 @@
 .item-card:hover {
 	box-shadow: var(--shadow-md);
 }
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.admin-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.admin-link:hover {
+    background: var(--bg-tertiary);
+    transform: translateY(-2px);
+}
+
+/* ========================================
+   반응형 스타일 (Tablet/Mobile)
+   ======================================== */
+
+/* Tablet (< 768px) */
+@media (max-width: 768px) {
+    /* Global Font Size */
+    body {
+        font-size: 14px;
+    }
+
+    /* Header Responsive */
+    .page-header {
+        gap: 12px;
+    }
+
+    .page-header h1 {
+        font-size: 1.7rem;
+    }
+
+    .admin-link {
+        justify-content: center;
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+
+    /* Form Responsive */
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .form-container {
+        padding: 16px;
+    }
+
+    .form-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    .form-group label {
+        min-width: auto;
+        font-size: 0.85rem;
+    }
+
+    .form-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .form-actions button {
+        width: 100%;
+    }
+
+    /* Button Responsive */
+    .btn-primary,
+    .add-btn,
+    .btn-secondary {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+
+    /* Filter/Tab Responsive */
+    .filter-buttons,
+    .tab-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .filter-btn,
+    .tab-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 8px 16px;
+    }
+
+    /* Card Responsive */
+    .card,
+    .stat-card {
+        padding: 16px;
+    }
+
+    /* Section Responsive */
+    .section {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    /* Empty State Responsive */
+    .empty-state {
+        padding: 40px 16px;
+    }
+
+    .empty-state svg {
+        width: 48px;
+        height: 48px;
+    }
+
+    .empty-state p {
+        font-size: 1rem;
+    }
+}
+
+/* Mobile (< 480px) */
+@media (max-width: 480px) {
+    .page-header h1 {
+        font-size: 1.3rem;
+    }
+
+    .header-actions {
+        gap: 8px;
+    }
+
+    .admin-link {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+        gap: 4px;
+    }
+
+    .admin-link svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+/* Mobile Small (< 320px) */
+@media (max-width: 320px) {
+    /* Global Font Size */
+    body {
+        font-size: 13px;
+    }
+
+    .card,
+    .stat-card,
+    .section {
+        padding: 12px;
+    }
+
+    .form-container {
+        padding: 12px;
+    }
+
+    .btn-primary,
+    .add-btn,
+    .btn-secondary {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+}

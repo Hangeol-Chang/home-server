@@ -337,7 +337,7 @@
 	}
 </script>
 
-<div class="section" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
+<div class="module-container" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="chart-header">
 		<div class="tab-buttons">
 			{#each units as unitOption}
@@ -522,7 +522,7 @@
 
 
 	/* Tablet/Mobile (< 768px) */
-	.section {
+	.module-container {
 		&.tablet {
 			padding: 16px;
 

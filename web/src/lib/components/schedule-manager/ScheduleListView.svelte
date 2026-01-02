@@ -187,7 +187,7 @@
     }
 </script>
 
-<div class="schedule-list-container">
+<div class="module-container">
     <div class="header">
         <h3>✅ 반복 스케줄</h3>
         <button class="add-btn" onclick={() => showAddModal = true}>+ 일정 추가</button>
@@ -234,52 +234,63 @@
     </div>
 
     {#if showAddModal}
-        <div class="modal-backdrop" transition:fade onclick={() => showAddModal = false}>
-            <div class="modal" onclick={(e) => e.stopPropagation()}>
-                <h4>새 반복 일정</h4>
+        <div role="none" class="modal-overlay" class:mobile={$device.isMobile} class:tablet={$device.isTablet} onclick={() => showAddModal = false}>
+            <div role="none" class="modal-container" onclick={(e) => e.stopPropagation()}>
+				<div class="chart-header">
+                    <h3>🎞️ 새 반복 스케줄</h3>
+                </div>
+
                 <div class="form-group">
-                    <label>제목</label>
-                    <input type="text" bind:value={newSchedule.title} placeholder="예: 독서모임" />
+                    <label for="title">제목</label>
+                    <input id="title" type="text" bind:value={newSchedule.title} placeholder="예: 독서모임" />
                 </div>
                 <div class="form-group">
-                    <label>주기 (주)</label>
-                    <input type="number" bind:value={newSchedule.cycle_weeks} min="1" />
+                    <label for="cycle_weeks">주기 (주)</label>
+                    <input id="cycle_weeks" type="number" bind:value={newSchedule.cycle_weeks} min="1" />
                 </div>
                 <!-- start_date is automatically set to nearest past Sunday -->
                 <div class="form-group">
-                    <label>설명</label>
-                    <input type="text" bind:value={newSchedule.description} />
+                    <label for="description">설명</label>
+                    <textarea 
+                        id="description"
+                        bind:value={newSchedule.description} 
+                        placeholder="일정에 대한 설명을 입력하세요..."
+                        rows="4"
+                    ></textarea>
                 </div>
-                <div class="actions">
-                    <button class="cancel-btn" onclick={() => showAddModal = false}>취소</button>
-                    <button class="save-btn" onclick={addSchedule}>저장</button>
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick={() => showAddModal = false}>취소</button>
+                    <button class="btn-submit" onclick={addSchedule}>저장</button>
                 </div>
             </div>
         </div>
     {/if}
 
     {#if showLogModal && selectedLog}
-        <div class="modal-backdrop" transition:fade onclick={() => showLogModal = false}>
-            <div class="modal" onclick={(e) => e.stopPropagation()}>
-                <h4>{selectedLog.scheduleTitle}</h4>
+        <div role="none" class="modal-overlay" class:mobile={$device.isMobile} class:tablet={$device.isTablet} onclick={() => showLogModal = false}>
+            <div role="none" class="modal-container" onclick={(e) => e.stopPropagation()}>
+                <div class="chart-header">
+                    <h3>{selectedLog.scheduleTitle}</h3>
+                </div>
                 <div class="form-group">
-                    <label>상태</label>
+                    <label for="is_completed">상태</label>
                     <div class="checkbox-label">
-                        <input type="checkbox" bind:checked={selectedLog.is_completed} />
+                        <input id="is_completed" type="checkbox" bind:checked={selectedLog.is_completed} />
                         <span>완료됨</span>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>이번 주기 메모</label>
+                    <label for="notes">이번 주기 메모</label>
                     <textarea 
+                        id="notes"
                         bind:value={selectedLog.notes} 
                         placeholder="이번 주기에 대한 메모를 입력하세요..."
                         rows="4"
                     ></textarea>
                 </div>
-                <div class="actions">
-                    <button class="cancel-btn" onclick={() => showLogModal = false}>취소</button>
-                    <button class="save-btn" onclick={saveLog}>저장</button>
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick={() => showLogModal = false}>취소</button>
+                    <button class="btn-submit" onclick={saveLog}>저장</button>
                 </div>
             </div>
         </div>
@@ -287,14 +298,6 @@
 </div>
 
 <style>
-    .schedule-list-container {
-        background: var(--bg-secondary);
-        border-radius: 12px;
-        padding: 1.5rem;
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
-    }
-
     .header {
         display: flex;
         justify-content: space-between;
@@ -319,67 +322,6 @@
         font-weight: 500;
         color: var(--text-primary);
     }
-
-    .description {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        margin-top: 2px;
-    }
-
-    .modal-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-
-    .modal {
-        background: var(--bg-primary);
-        padding: 2rem;
-        border-radius: 12px;
-        width: 90%;
-        max-width: 400px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        border: 1px solid var(--border-color);
-    }
-    
-    .modal h4 {
-        margin-top: 0;
-        margin-bottom: 1.5rem;
-        color: var(--text-primary);
-    }
-
-    .form-group {
-        margin-bottom: 1rem;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-    }
-
-    .form-group input, .form-group textarea {
-        width: 100%;
-        padding: 0.5rem;
-        border-radius: 6px;
-        border: 1px solid var(--border-color);
-        background: var(--bg-secondary);
-        color: var(--text-primary);
-        font-family: inherit;
-    }
-    
-    .form-group input:focus, .form-group textarea:focus {
-        outline: none;
-        border-color: var(--accent);
-    }
     
     .checkbox-label {
         display: flex;
@@ -389,38 +331,5 @@
     
     .checkbox-label input {
         width: auto;
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.5rem;
-        margin-top: 1.5rem;
-    }
-
-    .actions button {
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-        font-weight: 500;
-    }
-
-    .save-btn {
-        background: var(--accent);
-        color: var(--text-primary);
-    }
-    
-    .save-btn:hover {
-        background: var(--accent-hover);
-    }
-
-    .cancel-btn {
-        background: var(--bg-tertiary);
-        color: var(--text-secondary);
-    }
-    
-    .cancel-btn:hover {
-        background: var(--bg-secondary);
     }
 </style>

@@ -16,10 +16,10 @@
 {#if visible && schedule}
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-    <div class="modal-backdrop" onclick={close} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && close()}>
+    <div class="modal-overlay" onclick={close} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && close()}>
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
         <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-        <div class="modal-content" onclick={(e) => e.stopPropagation()} role="document" tabindex="0" onkeydown={(e) => e.key === 'Enter' && e.stopPropagation()}>
+        <div class="modal-container" onclick={(e) => e.stopPropagation()} role="document" tabindex="0" onkeydown={(e) => e.key === 'Enter' && e.stopPropagation()}>
             <div class="modal-header">
                 <h3 class="modal-title">{schedule.title}</h3>
                 <button class="icon-btn" onclick={close} aria-label="닫기">
@@ -63,32 +63,10 @@
 {/if}
 
 <style>
-    .modal-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        backdrop-filter: blur(2px);
-    }
-
-    .modal-content {
-        background: var(--bg-primary);
-        border-radius: 12px;
-        width: 90%;
+    .modal-container {
         max-width: 500px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        animation: slideIn 0.2s ease-out;
-    }
-
-    @keyframes slideIn {
-        from { transform: translateY(20px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
+        padding: 0; /* Reset padding for this specific modal layout if needed, or adjust header/body */
+        overflow: hidden; /* For rounded corners with header */
     }
 
     .modal-header {

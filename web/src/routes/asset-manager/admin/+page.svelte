@@ -1095,33 +1095,6 @@
 		margin-bottom: 20px;
 	}
 
-	.class-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-		padding: 8px 16px;
-		background: transparent;
-		border: none;
-		border-radius: 8px;
-		cursor: pointer;
-		font-size: 14px;
-		font-weight: 500;
-		color: #666;
-		transition: all 0.2s ease;
-		flex: 1;
-	}
-
-	.class-btn:hover {
-		background: rgba(33, 150, 243, 0.1);
-	}
-
-	.class-btn.active {
-		background: white;
-		color: var(--class-color);
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-	}
-
 	.admin-form {
 		display: flex;
 		flex-direction: column;
@@ -1402,11 +1375,6 @@
 				gap: 4px;
 			}
 
-			.class-btn {
-				padding: 10px 12px;
-				font-size: 0.85rem;
-			}
-
 			.form-group {
 				flex-direction: column;
 				align-items: stretch;
@@ -1446,10 +1414,6 @@
 			.class-grid {
 				grid-template-columns: 1fr 1fr;
 				gap: 6px;
-			}
-
-			.class-btn {
-				width: 100%;
 			}
 
 			.badge {

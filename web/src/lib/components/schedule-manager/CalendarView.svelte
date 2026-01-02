@@ -202,7 +202,7 @@
 	}
 </script>
 
-<div class="calendar-view" class:mobile={$device.isMobile}>
+<div class="module-container" class:mobile={$device.isMobile}>
 	<div class="chart-header">
 		<div class="month-nav">
 			<button class="nav-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
@@ -276,15 +276,6 @@
 <ScheduleDetailModal bind:visible={showModal} schedule={selectedSchedule} />
 
 <style>
-	.calendar-view {
-		background: var(--bg-secondary);
-		border-radius: 16px;
-		padding: 24px;
-		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-		margin-bottom: 24px;
-        color: var(--text-primary);
-	}
-    
 	.calendar-grid {
 		display: grid;
 		grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -330,7 +321,7 @@
 	}
     
     .calendar-day.today .day-number {
-        color: var(--accent);
+        color: var(--text-info);
         font-weight: 700;
     }
 
@@ -404,25 +395,5 @@
 
     .schedule-placeholder {
         height: 20px;
-    }
-
-	/* Mobile styles */
-	.calendar-view.mobile {
-		padding: 12px;
-	}
-
-	.calendar-view.mobile .calendar-day {
-		min-height: 80px;
-		font-size: 0.9rem;
-	}
-    
-    .calendar-view.mobile .schedule-item {
-        font-size: 0.7rem;
-        height: 16px;
-        line-height: 12px;
-    }
-    
-    .calendar-view.mobile .schedule-placeholder {
-        height: 16px;
     }
 </style>

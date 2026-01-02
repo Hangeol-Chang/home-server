@@ -242,7 +242,7 @@
 	}
 </script>
 
-<div class="calendar-view" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
+<div class="module-container" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="chart-header">
 		<div class="month-nav">
 			<button class="nav-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
@@ -394,9 +394,7 @@
 {/if}
 
 <style>
-	.calendar-view {
-		background: white;
-		border-radius: 16px;
+	.module-container {
 		padding: 28px;
 		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 		margin-bottom: 24px;

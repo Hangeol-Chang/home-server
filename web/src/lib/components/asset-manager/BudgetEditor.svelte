@@ -132,7 +132,7 @@
     }
 </script>
 
-<div class="budget-editor">
+<div class="module-container">
     <div class="header">
         <h3>예산 관리</h3>
         <div class="select-wrapper">
@@ -225,11 +225,8 @@
 </div>
 
 <style>
-    .budget-editor {
-        background: white;
-		border-radius: 16px;
+    .module-container {
 		padding: 28px;
-		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 		margin: 24px 0;
 		container-type: inline-size;
     }

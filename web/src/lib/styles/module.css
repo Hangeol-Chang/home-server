@@ -5,3 +5,11 @@
 @import './module-common.css';
 @import './module-table.css';
 @import './module-extended.css';
+
+.module-container {
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+}

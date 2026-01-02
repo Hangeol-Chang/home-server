@@ -219,7 +219,7 @@
 	}
 </script>
 
-<div class="budget-comparison-chart" class:mobile={$device.isMobile}>
+<div class="module-container" class:mobile={$device.isMobile}>
 	<h3>📊 예산 대비 지출 현황</h3>
 	
 	<div class="content-wrapper">
@@ -238,11 +238,8 @@
 </div>
 
 <style>
-	.budget-comparison-chart {
-		background: white;
-		border-radius: 16px;
+	.module-container {
 		padding: 24px;
-		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 		margin-top: 24px;
 	}
 
@@ -285,14 +282,5 @@
 		justify-content: center;
 		color: var(--text-danger);
 		font-size: 0.9rem;
-	}
-
-	.budget-comparison-chart.mobile {
-		padding: 16px;
-		
-		.content-wrapper, .chart-container {
-			min-height: 250px;
-			height: 250px;
-		}
 	}
 </style>

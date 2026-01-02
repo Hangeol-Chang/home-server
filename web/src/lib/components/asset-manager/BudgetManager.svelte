@@ -5,7 +5,11 @@
     import { onMount } from 'svelte';
     import { getChartColor } from '$lib/constants.js';
 
-    let { year, month, transactions = $bindable([]) } = $props();
+    
+    let { 
+        year, month, transactions = $bindable([]),
+        class: className = '', style = ''
+    } = $props();
 
     let categories = $state([]);
     let budgets = $state([]);
@@ -136,7 +140,7 @@
     }
 </script>
 
-<div class="budget-manager">
+<div class="module-container {className}" style={style}>
     <!-- 예산 분포 바 -->
     {#if budgetDistribution.total > 0}
         <div class="budget-distribution">
@@ -241,9 +245,8 @@
 />
 
 <style>
-    .budget-manager {
+    .module-container {
         margin-top: 12px;
-        border-top: 1px solid var(--border-color);
         padding-top: 4px;
     }
 

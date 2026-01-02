@@ -32,6 +32,6 @@
 	</div>
 	
 	<div class="content">
-		<WeeklyCalendarView year={currentYear} />
+		<WeeklyCalendarView year={currentYear} style="border: transparent; padding: 0px;" />
 	</div>
 </div>

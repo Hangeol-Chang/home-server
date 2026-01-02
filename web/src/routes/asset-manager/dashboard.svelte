@@ -60,7 +60,7 @@
 				</button>
 			</div>
 		</div>
-		<MonthlyReport {currentYear} {currentMonth} />
+		<MonthlyReport {currentYear} {currentMonth} style="border: transparent; padding: 0px;" />
 	{/if}
 </div>
 

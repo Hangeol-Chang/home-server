@@ -55,7 +55,7 @@
 	});
 </script>
 
-<div class="section">
+<div class="module-container">
 	<div class="chart-header">
 		<h3>
 			{stats?.class_display_name || '거래'} 통계

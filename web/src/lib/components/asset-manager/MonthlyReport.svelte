@@ -194,7 +194,7 @@
 	});
 </script>
 
-<div class="section {className}" {style}>
+<div class="module-container {className}" {style}>
 	<div class="chart-header">
 		<div class="month-nav">
 			<button class="nav-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
@@ -313,6 +313,7 @@
 		bind:transactions 
 		bind:loading 
 		bind:error 
+		style="border: transparent; padding: 0px;" 
 	/>
 
 	<TransactionDropdown 

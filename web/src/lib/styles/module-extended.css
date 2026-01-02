@@ -218,6 +218,43 @@
 	background: var(--bg-secondary);
 }
 
+.class-selector {
+	display: flex;
+	max-width: 400px;
+	gap: 6px;
+	background: var(--bg-tertiary);
+	padding: 4px;
+	border-radius: 10px;
+	margin-bottom: 24px;
+}
+
+.class-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	padding: 8px 16px;
+	background: transparent;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 500;
+	color: #666;
+	transition: all 0.2s ease;
+	flex: 1;
+}
+
+.class-btn:hover {
+	background: rgba(33, 150, 243, 0.1);
+}
+
+.class-btn.active {
+	background: white;
+	color: var(--class-color);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
 /* 모바일 대응 - 확장 공통 스타일 */
 /* Tablet/Mobile (< 768px) */
 @media (max-width: 768px) {
@@ -297,6 +334,11 @@
 		padding: 30px 20px;
 		font-size: 0.9rem;
 	}
+
+	.class-btn {
+		padding: 4px 8px;
+		font-size: 0.85rem;
+	}
 }
 
 /* Mobile (< 320px) */
@@ -344,6 +386,10 @@
 
 	.bar-count {
 		font-size: 0.8rem;
+	}
+
+	.class-btn {
+		width: 100%;
 	}
 }
 

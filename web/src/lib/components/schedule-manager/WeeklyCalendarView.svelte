@@ -1,19 +1,39 @@
 <script>
 	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
-    import { fade } from 'svelte/transition';
+    import { CHART_COLORS } from '$lib/constants';
 
-	let { year = $bindable(new Date().getFullYear()) } = $props();
+	let { year = $bindable(new Date().getFullYear()) ,
+		style = ''
+	} = $props();
+
+    function getRandomColor() {
+        return CHART_COLORS[Math.floor(Math.random() * CHART_COLORS.length)];
+    }
 
 	let schedules = $state([]);
     let showAddModal = $state(false);
+    let showDetailModal = $state(false);
+    let editingSchedule = $state(null);
     let newPlan = $state({
         title: '',
         description: '',
         start_date: new Date().toISOString().split('T')[0],
         end_date: new Date().toISOString().split('T')[0],
-        color: '#3BBA9C'
+        color: getRandomColor()
     });
+
+    function adjustColor(color, amount) {
+        return '#' + color.replace(/^#/, '').replace(/../g, color => ('0'+Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
+    }
+
+    const colorPalette = CHART_COLORS.map(color => [
+        adjustColor(color, 40), // Light 2
+        adjustColor(color, 20), // Light 1
+        color,                  // Original
+        adjustColor(color, -20), // Dark 1
+        adjustColor(color, -40)  // Dark 2
+    ]);
 
 	const months = [
 		'1월', '2월', '3월', '4월', '5월', '6월', 
@@ -66,8 +86,45 @@
                     description: '',
                     start_date: new Date().toISOString().split('T')[0],
                     end_date: new Date().toISOString().split('T')[0],
-                    color: '#3BBA9C'
+                    color: getRandomColor()
                 };
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function openDetailModal(schedule) {
+        editingSchedule = { ...schedule };
+        showDetailModal = true;
+    }
+
+    async function updatePlan() {
+        if (!editingSchedule) return;
+        try {
+            const res = await fetch(`/api/schedule-manager/long-term-plans/${editingSchedule.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editingSchedule)
+            });
+            if (res.ok) {
+                showDetailModal = false;
+                await fetchPlans();
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function deletePlan() {
+        if (!editingSchedule || !confirm('정말 삭제하시겠습니까?')) return;
+        try {
+            const res = await fetch(`/api/schedule-manager/long-term-plans/${editingSchedule.id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                showDetailModal = false;
+                await fetchPlans();
             }
         } catch (e) {
             console.error(e);
@@ -113,7 +170,7 @@
 	}
 </script>
 
-<div class="section" class:tablet={$device.isTablet}>
+<div class="section" class:tablet={$device.isTablet} style={style}>
 	<div class="chart-header">
 		<div class="month-nav">
 			<button class="nav-btn" onclick={() => changeYear(-1)} aria-label="이전 해">
@@ -132,32 +189,129 @@
 	</div>
 
     {#if showAddModal}
-        <div class="modal-backdrop" transition:fade onclick={() => showAddModal = false}>
-            <div class="modal" onclick={(e) => e.stopPropagation()}>
-                <h4>새 장기 일정</h4>
+        <div role="none" class="modal-overlay" onclick={() => showAddModal = false}>
+            <div role="none" class="modal-container" onclick={(e) => e.stopPropagation()}>
+				<div class="chart-header">
+					<h3>🗓️ 새 장기 일정</h3>
+				</div>
+					
                 <div class="form-group">
-                    <label>제목</label>
-                    <input type="text" bind:value={newPlan.title} placeholder="예: 1분기 프로젝트" />
+                    <label for="title">제목</label>
+                    <input id="title" type="text" bind:value={newPlan.title} placeholder="예: 1분기 프로젝트" />
+                </div>
+                <div class="form-row">
+					<div class="form-group">
+						<label for="start_date">시작 날짜</label>
+						<input 
+							id="start_date" type="date" 
+							onclick={(e) => e.currentTarget.showPicker()}
+							bind:value={newPlan.start_date} 
+						/>
+					</div>
+					<div class="form-group">
+						<label for="end_date">종료 날짜</label>
+						<input 
+							id="end_date" type="date" 
+							onclick={(e) => e.currentTarget.showPicker()}
+							bind:value={newPlan.end_date} 
+						/>
+					</div>
                 </div>
                 <div class="form-group">
-                    <label>기간</label>
-                    <div class="date-range">
-                        <input type="date" bind:value={newPlan.start_date} />
-                        <span>~</span>
-                        <input type="date" bind:value={newPlan.end_date} />
+                    <label for="color">색상</label>
+                    <div class="color-palette-container">
+                        <div class="color-palette">
+                            {#each colorPalette as shades}
+                                <div class="color-column">
+                                    {#each shades as shade}
+                                        <button 
+                                            class="color-chip" 
+                                            class:selected={newPlan.color === shade}
+                                            style="background-color: {shade}"
+                                            onclick={() => newPlan.color = shade}
+                                            aria-label="Select color {shade}"
+                                        ></button>
+                                    {/each}
+                                </div>
+                            {/each}
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>색상</label>
-                    <input type="color" bind:value={newPlan.color} />
+                    <label for="description">설명</label>
+					<textarea 
+						id="description" 
+						bind:value={newPlan.description} 
+						placeholder="일정에 대한 설명을 입력하세요..."
+						rows="4"
+					></textarea>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick={() => showAddModal = false}>취소</button>
+                    <button class="btn-submit" onclick={addPlan}>저장</button>
+                </div>
+            </div>
+        </div>
+    {/if}
+
+    {#if showDetailModal && editingSchedule}
+        <div role="none" class="modal-overlay" onclick={() => showDetailModal = false}>
+            <div role="none" class="modal-container" onclick={(e) => e.stopPropagation()}>
+				<div class="chart-header">
+					<h3>✏️ 일정 상세 / 수정</h3>
+                    <button class="delete-btn" onclick={deletePlan} aria-label="삭제">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+				</div>
+					
+                <div class="form-group">
+                    <label for="edit-title">제목</label>
+                    <input id="edit-title" type="text" bind:value={editingSchedule.title} />
+                </div>
+                <div class="form-row">
+					<div class="form-group">
+						<label for="edit-start_date">시작 날짜</label>
+						<input id="edit-start_date" type="date" bind:value={editingSchedule.start_date} />
+					</div>
+					<div class="form-group">
+						<label for="edit-end_date">종료 날짜</label>
+						<input id="edit-end_date" type="date" bind:value={editingSchedule.end_date} />
+					</div>
                 </div>
                 <div class="form-group">
-                    <label>설명</label>
-                    <input type="text" bind:value={newPlan.description} />
+                    <label for="edit-color">색상</label>
+                    <div class="color-palette-container">
+                        <div class="color-palette">
+                            {#each colorPalette as shades}
+                                <div class="color-column">
+                                    {#each shades as shade}
+                                        <button 
+                                            class="color-chip" 
+                                            class:selected={editingSchedule.color === shade}
+                                            style="background-color: {shade}"
+                                            onclick={() => editingSchedule.color = shade}
+                                            aria-label="Select color {shade}"
+                                        ></button>
+                                    {/each}
+                                </div>
+                            {/each}
+                        </div>
+                    </div>
                 </div>
-                <div class="actions">
-                    <button class="cancel-btn" onclick={() => showAddModal = false}>취소</button>
-                    <button class="save-btn" onclick={addPlan}>저장</button>
+                <div class="form-group">
+                    <label for="edit-description">설명</label>
+					<textarea 
+						id="edit-description" 
+						bind:value={editingSchedule.description} 
+						rows="4"
+					></textarea>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick={() => showDetailModal = false}>취소</button>
+                    <button class="btn-submit" onclick={updatePlan}>수정 저장</button>
                 </div>
             </div>
         </div>
@@ -186,9 +340,13 @@
 					{#each schedules as schedule}
 						<div class="track-row">
 							<div 
+                                role="button"
+                                tabindex="0"
 								class="schedule-bar" 
 								style={getBarStyle(schedule)}
 								title="{schedule.title} (W{schedule.startWeek}~W{schedule.endWeek})"
+                                onclick={() => openDetailModal(schedule)}
+                                onkeydown={(e) => e.key === 'Enter' && openDetailModal(schedule)}
 							>
 								<span class="bar-label">{schedule.title}</span>
 							</div>
@@ -270,106 +428,6 @@
 		border-right: none;
 	}
 
-    /* .add-btn is defined in module-common.css */
-
-    .modal-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-
-    .modal {
-        background: var(--bg-primary);
-        padding: 2rem;
-        border-radius: 12px;
-        width: 90%;
-        max-width: 400px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        border: 1px solid var(--border-color);
-    }
-    
-    .modal h4 {
-        margin-top: 0;
-        margin-bottom: 1.5rem;
-        color: var(--text-primary);
-    }
-
-    .form-group {
-        margin-bottom: 1rem;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-    }
-
-    .form-group input {
-        width: 100%;
-        padding: 0.5rem;
-        border-radius: 6px;
-        border: 1px solid var(--border-color);
-        background: var(--bg-secondary);
-        color: var(--text-primary);
-    }
-    
-    .form-group input:focus {
-        outline: none;
-        border-color: var(--accent);
-    }
-
-    .date-range {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    .date-range span {
-        color: var(--text-secondary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.5rem;
-        margin-top: 1.5rem;
-    }
-
-    .actions button {
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-        font-weight: 500;
-    }
-
-    .save-btn {
-        background: var(--accent);
-        color: var(--text-primary);
-    }
-    
-    .save-btn:hover {
-        background: var(--accent-hover);
-    }
-
-    .cancel-btn {
-        background: var(--bg-tertiary);
-        color: var(--text-secondary);
-    }
-    
-    .cancel-btn:hover {
-        background: var(--bg-secondary);
-    }
-
-
 	.grid-line.active {
 		background-color: var(--bg-tertiary);
 	}
@@ -431,4 +489,59 @@
 		background-color: var(--accent);
 		border-radius: 50%;
 	}
+
+    .color-palette-container {
+        overflow-x: auto;
+        padding-bottom: 8px;
+    }
+
+    .color-palette {
+        display: flex;
+        gap: 4px;
+        min-width: max-content;
+		padding: 8px 0;
+    }
+
+    .color-column {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .color-chip {
+        width: 20px;
+        height: 20px;
+        border-radius: 2px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: transform 0.1s;
+        padding: 0;
+    }
+
+    .color-chip:hover {
+        transform: scale(1.1);
+        z-index: 1;
+    }
+
+    .color-chip.selected {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 1px var(--bg-primary), 0 0 0 3px var(--text-primary);
+        z-index: 2;
+    }
+
+    .delete-btn {
+        background: none;
+        border: none;
+        color: var(--text-danger);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .delete-btn:hover {
+        background: rgba(244, 67, 54, 0.1);
+    }
 </style>

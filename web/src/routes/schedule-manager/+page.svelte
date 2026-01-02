@@ -3,6 +3,7 @@
 	import { device } from '$lib/stores/device';
 	import CalendarView from '$lib/components/schedule-manager/CalendarView.svelte';
 	import WeeklyCalendarView from '$lib/components/schedule-manager/WeeklyCalendarView.svelte';
+    import ScheduleListView from '$lib/components/schedule-manager/ScheduleListView.svelte';
 	import '$lib/styles/module.css';
 	import '$lib/styles/module-common.css';
 
@@ -33,18 +34,12 @@
 				</svg>
 				관리
 			</a>
-			<button class="add-btn">
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<line x1="12" y1="5" x2="12" y2="19" />
-					<line x1="5" y1="12" x2="19" y2="12" />
-				</svg>
-				일정 등록
-			</button>
 		</div>
 	</header>
 
-    <WeeklyCalendarView />
-    <CalendarView />
+	<ScheduleListView />
+	<WeeklyCalendarView />
+	<CalendarView />
 </div>
 
 <style>
@@ -54,15 +49,22 @@
 		padding: 20px;
 	}
 
-	/* Tablet/Mobile (< 768px) */
-	.schedule-manager-page {
-		&.tablet {
-			padding: 16px;
-		}
-
-		/* Mobile (< 320px) */
-		&.mobile {
-			padding: 8px;
-		}
-	}
+    .admin-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: var(--bg-secondary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+    
+    .admin-link:hover {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+    }
 </style>

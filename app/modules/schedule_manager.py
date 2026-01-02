@@ -1,320 +1,282 @@
 from fastapi import APIRouter, HTTPException, status, Query
 from typing import List, Optional
 from datetime import datetime, date, timedelta
-from models.schedule import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleStatus, SchedulePriority
 import os
 import requests
 from icalendar import Calendar
+from models.schedule import (
+    RecurringSchedule, RecurringScheduleCreate, RecurringScheduleUpdate,
+    ScheduleLog, ScheduleLogCreate, ScheduleLogUpdate,
+    LongTermPlan, LongTermPlanCreate, LongTermPlanUpdate
+)
+from utils.database import get_db_connection
+import sqlite3
 
-# 라우터 생성
 router = APIRouter(
     prefix="/schedule-manager",
     tags=["Schedule Manager"],
     responses={404: {"description": "Not found"}}
 )
 
-# 메모리 기반 임시 데이터베이스
-schedules_db = []
-next_schedule_id = 1
+# --- Recurring Schedules ---
 
-@router.get("/", response_model=List[Schedule])
-async def get_all_schedules():
-    """모든 일정 조회"""
-    return schedules_db
+@router.get("/recurring-schedules", response_model=List[RecurringSchedule])
+async def get_recurring_schedules(active_only: bool = True):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        query = "SELECT * FROM recurring_schedules"
+        if active_only:
+            query += " WHERE is_active = 1"
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
-@router.get("/schedules", response_model=List[Schedule])
-async def get_schedules(
-    status: Optional[ScheduleStatus] = None,
-    priority: Optional[SchedulePriority] = None,
-    start_date: Optional[date] = Query(None, description="조회 시작 날짜 (YYYY-MM-DD)"),
-    end_date: Optional[date] = Query(None, description="조회 종료 날짜 (YYYY-MM-DD)")
+@router.post("/recurring-schedules", response_model=RecurringSchedule, status_code=status.HTTP_201_CREATED)
+async def create_recurring_schedule(schedule: RecurringScheduleCreate):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO recurring_schedules (title, description, cycle_weeks, day_of_week, start_date, is_active)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (schedule.title, schedule.description, schedule.cycle_weeks, schedule.day_of_week, schedule.start_date, schedule.is_active))
+        schedule_id = cursor.lastrowid
+        
+        cursor.execute("SELECT * FROM recurring_schedules WHERE id = ?", (schedule_id,))
+        row = cursor.fetchone()
+        return dict(row)
+
+@router.put("/recurring-schedules/{schedule_id}", response_model=RecurringSchedule)
+async def update_recurring_schedule(schedule_id: int, schedule: RecurringScheduleUpdate):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # Check if exists
+        cursor.execute("SELECT * FROM recurring_schedules WHERE id = ?", (schedule_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Schedule not found")
+            
+        update_data = schedule.dict(exclude_unset=True)
+        if not update_data:
+            cursor.execute("SELECT * FROM recurring_schedules WHERE id = ?", (schedule_id,))
+            return dict(cursor.fetchone())
+
+        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
+        values = list(update_data.values())
+        values.append(schedule_id)
+        
+        cursor.execute(f"UPDATE recurring_schedules SET {set_clause} WHERE id = ?", values)
+        
+        cursor.execute("SELECT * FROM recurring_schedules WHERE id = ?", (schedule_id,))
+        return dict(cursor.fetchone())
+
+@router.delete("/recurring-schedules/{schedule_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_recurring_schedule(schedule_id: int):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM recurring_schedules WHERE id = ?", (schedule_id,))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Schedule not found")
+
+# --- Schedule Logs ---
+
+@router.get("/schedule-logs", response_model=List[ScheduleLog])
+async def get_schedule_logs(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    schedule_id: Optional[int] = None
 ):
-    """일정 조회 (필터링 옵션 포함)"""
-    filtered_schedules = schedules_db.copy()
-    
-    # 상태 필터
-    if status:
-        filtered_schedules = [s for s in filtered_schedules if s["status"] == status]
-    
-    # 우선순위 필터
-    if priority:
-        filtered_schedules = [s for s in filtered_schedules if s["priority"] == priority]
-    
-    # 날짜 범위 필터
-    if start_date:
-        filtered_schedules = [s for s in filtered_schedules 
-                            if s["start_time"].date() >= start_date]
-    
-    if end_date:
-        filtered_schedules = [s for s in filtered_schedules 
-                            if s["start_time"].date() <= end_date]
-    
-    return filtered_schedules
-
-@router.get("/schedules/{schedule_id}", response_model=Schedule)
-async def get_schedule(schedule_id: int):
-    """특정 일정 조회"""
-    for schedule in schedules_db:
-        if schedule["id"] == schedule_id:
-            return schedule
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Schedule with id {schedule_id} not found"
-    )
-
-@router.post("/schedules", response_model=Schedule, status_code=status.HTTP_201_CREATED)
-async def create_schedule(schedule: ScheduleCreate):
-    """새 일정 생성"""
-    global next_schedule_id
-    
-    # 시간 유효성 검사
-    if schedule.end_time and schedule.end_time <= schedule.start_time:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="End time must be after start time"
-        )
-    
-    now = datetime.now()
-    schedule_dict = schedule.dict()
-    schedule_dict.update({
-        "id": next_schedule_id,
-        "created_at": now,
-        "updated_at": now
-    })
-    
-    next_schedule_id += 1
-    schedules_db.append(schedule_dict)
-    
-    return schedule_dict
-
-@router.put("/schedules/{schedule_id}", response_model=Schedule)
-async def update_schedule(schedule_id: int, schedule_update: ScheduleUpdate):
-    """일정 정보 수정"""
-    for i, schedule in enumerate(schedules_db):
-        if schedule["id"] == schedule_id:
-            # 업데이트할 필드만 적용
-            update_data = schedule_update.dict(exclude_unset=True)
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        query = "SELECT * FROM schedule_logs WHERE 1=1"
+        params = []
+        
+        if start_date:
+            query += " AND cycle_start_date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND cycle_start_date <= ?"
+            params.append(end_date)
+        if schedule_id:
+            query += " AND schedule_id = ?"
+            params.append(schedule_id)
             
-            # 시간 유효성 검사
-            if update_data:
-                start_time = update_data.get("start_time", schedule["start_time"])
-                end_time = update_data.get("end_time", schedule.get("end_time"))
-                
-                if end_time and end_time <= start_time:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="End time must be after start time"
-                    )
-                
-                update_data["updated_at"] = datetime.now()
-                schedules_db[i].update(update_data)
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+@router.post("/schedule-logs", response_model=ScheduleLog)
+async def create_or_update_log(log: ScheduleLogCreate):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # Check if log already exists for this schedule and cycle
+        cursor.execute("""
+            SELECT id FROM schedule_logs 
+            WHERE schedule_id = ? AND cycle_start_date = ?
+        """, (log.schedule_id, log.cycle_start_date))
+        existing = cursor.fetchone()
+        
+        now = datetime.now()
+        
+        if existing:
+            # Update
+            log_id = existing[0]
+            completed_at = now if log.is_completed else None
+            cursor.execute("""
+                UPDATE schedule_logs 
+                SET is_completed = ?, notes = ?, completed_at = ?, updated_at = ?
+                WHERE id = ?
+            """, (log.is_completed, log.notes, completed_at, now, log_id))
+        else:
+            # Create
+            completed_at = now if log.is_completed else None
+            cursor.execute("""
+                INSERT INTO schedule_logs (schedule_id, cycle_start_date, is_completed, notes, completed_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (log.schedule_id, log.cycle_start_date, log.is_completed, log.notes, completed_at))
+            log_id = cursor.lastrowid
             
-            return schedules_db[i]
-    
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Schedule with id {schedule_id} not found"
-    )
+        cursor.execute("SELECT * FROM schedule_logs WHERE id = ?", (log_id,))
+        return dict(cursor.fetchone())
 
-@router.delete("/schedules/{schedule_id}")
-async def delete_schedule(schedule_id: int):
-    """일정 삭제"""
-    for i, schedule in enumerate(schedules_db):
-        if schedule["id"] == schedule_id:
-            deleted_schedule = schedules_db.pop(i)
-            return {
-                "message": f"Schedule {schedule_id} deleted successfully",
-                "deleted_schedule": deleted_schedule
-            }
-    
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Schedule with id {schedule_id} not found"
-    )
+# --- Long Term Plans ---
 
-@router.get("/schedules/today", response_model=List[Schedule])
-async def get_today_schedules():
-    """오늘 일정 조회"""
-    today = date.today()
-    today_schedules = [
-        schedule for schedule in schedules_db 
-        if schedule["start_time"].date() == today
-    ]
-    return sorted(today_schedules, key=lambda x: x["start_time"])
-
-@router.get("/schedules/upcoming", response_model=List[Schedule])
-async def get_upcoming_schedules(days: int = Query(7, description="앞으로 며칠간의 일정을 조회할지")):
-    """다가오는 일정 조회"""
-    now = datetime.now()
-    upcoming_schedules = [
-        schedule for schedule in schedules_db 
-        if schedule["start_time"] >= now and 
-           schedule["start_time"] <= now.replace(hour=23, minute=59, second=59).replace(day=now.day + days)
-    ]
-    return sorted(upcoming_schedules, key=lambda x: x["start_time"])
-
-@router.patch("/schedules/{schedule_id}/status")
-async def update_schedule_status(schedule_id: int, new_status: ScheduleStatus):
-    """일정 상태 변경"""
-    for i, schedule in enumerate(schedules_db):
-        if schedule["id"] == schedule_id:
-            schedules_db[i]["status"] = new_status
-            schedules_db[i]["updated_at"] = datetime.now()
-            return {
-                "message": f"Schedule {schedule_id} status updated to {new_status}",
-                "schedule": schedules_db[i]
-            }
-    
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Schedule with id {schedule_id} not found"
-    )
-
-@router.get("/schedules/search/{query}")
-async def search_schedules(query: str):
-    """일정 제목이나 설명으로 검색"""
-    results = []
-    query_lower = query.lower()
-    
-    for schedule in schedules_db:
-        if (query_lower in schedule["title"].lower() or 
-            (schedule.get("description") and query_lower in schedule["description"].lower()) or
-            (schedule.get("location") and query_lower in schedule["location"].lower())):
-            results.append(schedule)
-    
-    return {
-        "query": query,
-        "total_results": len(results),
-        "results": sorted(results, key=lambda x: x["start_time"])
-    }
-
-@router.get("/stats")
-async def get_schedule_stats():
-    """일정 통계 정보"""
-    total_schedules = len(schedules_db)
-    
-    if total_schedules == 0:
-        return {
-            "total_schedules": 0,
-            "by_status": {},
-            "by_priority": {},
-            "by_type": {},
-            "today_count": 0,
-            "upcoming_count": 0
-        }
-    
-    # 각종 통계 계산
-    status_stats = {}
-    priority_stats = {}
-    type_stats = {}
-    today = date.today()
-    now = datetime.now()
-    
-    today_count = 0
-    upcoming_count = 0
-    
-    for schedule in schedules_db:
-        # 상태별 통계
-        status = schedule["status"]
-        status_stats[status] = status_stats.get(status, 0) + 1
+@router.get("/long-term-plans", response_model=List[LongTermPlan])
+async def get_long_term_plans(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None
+):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        query = "SELECT * FROM long_term_plans WHERE 1=1"
+        params = []
         
-        # 우선순위별 통계
-        priority = schedule["priority"]
-        priority_stats[priority] = priority_stats.get(priority, 0) + 1
+        # Overlap check: (StartA <= EndB) and (EndA >= StartB)
+        if start_date and end_date:
+            query += " AND start_date <= ? AND end_date >= ?"
+            params.extend([end_date, start_date])
+            
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+@router.post("/long-term-plans", response_model=LongTermPlan, status_code=status.HTTP_201_CREATED)
+async def create_long_term_plan(plan: LongTermPlanCreate):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO long_term_plans (title, description, start_date, end_date, color)
+            VALUES (?, ?, ?, ?, ?)
+        """, (plan.title, plan.description, plan.start_date, plan.end_date, plan.color))
+        plan_id = cursor.lastrowid
         
-        # 타입별 통계
-        schedule_type = schedule["schedule_type"]
-        type_stats[schedule_type] = type_stats.get(schedule_type, 0) + 1
+        cursor.execute("SELECT * FROM long_term_plans WHERE id = ?", (plan_id,))
+        return dict(cursor.fetchone())
+
+@router.put("/long-term-plans/{plan_id}", response_model=LongTermPlan)
+async def update_long_term_plan(plan_id: int, plan: LongTermPlanUpdate):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         
-        # 오늘 일정 카운트
-        if schedule["start_time"].date() == today:
-            today_count += 1
+        cursor.execute("SELECT * FROM long_term_plans WHERE id = ?", (plan_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Plan not found")
+            
+        update_data = plan.dict(exclude_unset=True)
+        if not update_data:
+            cursor.execute("SELECT * FROM long_term_plans WHERE id = ?", (plan_id,))
+            return dict(cursor.fetchone())
+
+        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
+        values = list(update_data.values())
+        values.append(plan_id)
         
-        # 다가오는 일정 카운트 (앞으로 7일)
-        if schedule["start_time"] >= now and schedule["start_time"] <= now.replace(day=now.day + 7):
-            upcoming_count += 1
-    
-    return {
-        "total_schedules": total_schedules,
-        "by_status": status_stats,
-        "by_priority": priority_stats,
-        "by_type": type_stats,
-        "today_count": today_count,
-        "upcoming_count": upcoming_count
-    }
+        cursor.execute(f"UPDATE long_term_plans SET {set_clause} WHERE id = ?", values)
+        
+        cursor.execute("SELECT * FROM long_term_plans WHERE id = ?", (plan_id,))
+        return dict(cursor.fetchone())
+
+@router.delete("/long-term-plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_long_term_plan(plan_id: int):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM long_term_plans WHERE id = ?", (plan_id,))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Plan not found")
+
+# --- Google Calendar Events ---
 
 @router.get("/google-events")
-async def get_google_events(
-    year: int,
-    month: int
-):
-    """구글 캘린더(iCal)에서 일정을 가져옵니다."""
-    ical_url = os.getenv("GOOGLE_CALENDAR_ICAL_URL")
-    if not ical_url:
-        raise HTTPException(status_code=500, detail="GOOGLE_CALENDAR_ICAL_URL not configured in server")
+async def get_google_events(year: int, month: int):
+    """
+    Fetch events from Google Calendar via iCal URL.
+    Requires GOOGLE_CALENDAR_ICS_URL environment variable.
+    """
+    ics_url = os.getenv("GOOGLE_CALENDAR_ICS_URL")
+    if not ics_url:
+        print("GOOGLE_CALENDAR_ICS_URL not set")
+        return []
 
     try:
-        response = requests.get(ical_url)
+        response = requests.get(ics_url)
         response.raise_for_status()
-        
         cal = Calendar.from_ical(response.content)
         
-        formatted_events = []
+        events = []
         
-        start_date = date(year, month, 1)
+        # Calculate month range
+        # We want to include events that overlap with this month
+        month_start = date(year, month, 1)
         if month == 12:
-            end_date = date(year + 1, 1, 1)
+            month_end = date(year + 1, 1, 1) - timedelta(days=1)
         else:
-            end_date = date(year, month + 1, 1)
-
+            month_end = date(year, month + 1, 1) - timedelta(days=1)
+            
         for component in cal.walk():
             if component.name == "VEVENT":
-                summary = component.get('summary')
-                dtstart = component.get('dtstart')
-                dtend = component.get('dtend')
-                description = component.get('description', '')
-                location = component.get('location', '')
+                summary = str(component.get('summary'))
+                dtstart_prop = component.get('dtstart')
+                dtend_prop = component.get('dtend')
                 
-                if dtstart:
-                    start_dt = dtstart.dt
-                    # datetime인 경우 date로 변환
-                    if isinstance(start_dt, datetime):
-                        start_dt = start_dt.date()
+                if not dtstart_prop:
+                    continue
                     
-                    end_dt = start_dt
-                    if dtend:
-                        end_dt_val = dtend.dt
-                        if isinstance(end_dt_val, datetime):
-                            end_dt_val = end_dt_val.date()
-                        # dtend는 exclusive하므로 하루 빼줌 (하루 종일 일정의 경우)
-                        # 하지만 날짜 계산 편의를 위해 그대로 두고 프론트에서 처리하거나,
-                        # 여기서 inclusive end date로 변환할 수 있음.
-                        # 보통 캘린더 표시는 inclusive하게 하므로 하루를 빼는게 맞음.
-                        # 단, start == end 인 경우는 당일 일정
-                        if end_dt_val > start_dt:
-                            end_dt = end_dt_val - timedelta(days=1)
-                        else:
-                            end_dt = end_dt_val
+                dtstart = dtstart_prop.dt
+                
+                if dtend_prop:
+                    dtend = dtend_prop.dt
+                else:
+                    # If no end date, assume 1 day (or same time)
+                    dtend = dtstart
 
-                    # 해당 월에 조금이라도 걸치면 포함
-                    # 일정 시작이 월말보다 전이고, 일정 끝이 월초보다 후여야 함
-                    if start_dt < end_date and end_dt >= start_date:
-                        formatted_events.append({
-                            "id": str(component.get('uid')),
-                            "title": str(summary),
-                            "start_date": start_dt.isoformat(),
-                            "end_date": end_dt.isoformat(),
-                            "description": str(description) if description else "",
-                            "location": str(location) if location else "",
-                            "type": "google",
-                            "color": "#4285F4"
-                        })
-        
-        # 날짜순 정렬
-        formatted_events.sort(key=lambda x: x['start_date'])
-            
-        return formatted_events
+                # Normalize to date objects
+                if isinstance(dtstart, datetime):
+                    start_d = dtstart.date()
+                else:
+                    start_d = dtstart
+                
+                if isinstance(dtend, datetime):
+                    end_d = dtend.date()
+                else:
+                    end_d = dtend
+                    # For all-day events (date type), dtend is exclusive in iCal
+                    # We want inclusive for our frontend logic
+                    end_d = end_d - timedelta(days=1)
+                
+                # Check overlap with the requested month
+                # (Start <= MonthEnd) and (End >= MonthStart)
+                if start_d <= month_end and end_d >= month_start:
+                    events.append({
+                        "title": summary,
+                        "start_date": start_d.isoformat(),
+                        "end_date": end_d.isoformat(),
+                        "color": "#4285F4", # Google Blue
+                        "source": "google"
+                    })
+                    
+        return events
 
     except Exception as e:
-        print(f"Error fetching Google Calendar events: {e}")
-        raise HTTPException(status_code=500, detail=f"iCal Error: {str(e)}")
+        print(f"Error fetching Google Calendar: {e}")
+        return []
+

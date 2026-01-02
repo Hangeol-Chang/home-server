@@ -78,7 +78,7 @@
     }
 
     .modal-content {
-        background: white;
+        background: var(--bg-primary);
         border-radius: 12px;
         width: 90%;
         max-width: 500px;
@@ -93,7 +93,7 @@
 
     .modal-header {
         padding: 20px;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--border-color);
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
@@ -103,7 +103,7 @@
         margin: 0;
         font-size: 1.25rem;
         font-weight: 600;
-        color: #333;
+        color: var(--text-primary);
         line-height: 1.4;
     }
 
@@ -122,21 +122,21 @@
     .label {
         display: block;
         font-size: 0.85rem;
-        color: #666;
+        color: var(--text-secondary);
         margin-bottom: 4px;
         font-weight: 500;
     }
 
     .value {
         font-size: 1rem;
-        color: #333;
+        color: var(--text-primary);
     }
 
     .description {
         font-size: 0.95rem;
         line-height: 1.5;
-        color: #444;
-        background: #f8f9fa;
+        color: var(--text-primary);
+        background: var(--bg-secondary);
         padding: 12px;
         border-radius: 8px;
     }

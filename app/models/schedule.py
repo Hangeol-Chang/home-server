@@ -1,55 +1,79 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
-from enum import Enum
+from datetime import date, datetime
 
-class ScheduleType(str, Enum):
-    MEETING = "meeting"
-    TASK = "task"
-    REMINDER = "reminder"
-    EVENT = "event"
-
-class SchedulePriority(str, Enum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    URGENT = "urgent"
-
-class ScheduleStatus(str, Enum):
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-
-class ScheduleBase(BaseModel):
+# --- Recurring Schedules ---
+class RecurringScheduleBase(BaseModel):
     title: str
     description: Optional[str] = None
-    schedule_type: ScheduleType
-    start_time: datetime
-    end_time: Optional[datetime] = None
-    priority: SchedulePriority = SchedulePriority.MEDIUM
-    location: Optional[str] = None
-    attendees: Optional[List[str]] = []
-    status: ScheduleStatus = ScheduleStatus.PENDING
+    cycle_weeks: int = 1
+    day_of_week: Optional[int] = None # 0: Mon, 6: Sun
+    start_date: date
+    is_active: bool = True
 
-class ScheduleCreate(ScheduleBase):
+class RecurringScheduleCreate(RecurringScheduleBase):
     pass
 
-class ScheduleUpdate(BaseModel):
+class RecurringScheduleUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    schedule_type: Optional[ScheduleType] = None
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
-    priority: Optional[SchedulePriority] = None
-    location: Optional[str] = None
-    attendees: Optional[List[str]] = None
-    status: Optional[ScheduleStatus] = None
+    cycle_weeks: Optional[int] = None
+    day_of_week: Optional[int] = None
+    start_date: Optional[date] = None
+    is_active: Optional[bool] = None
 
-class Schedule(ScheduleBase):
+class RecurringSchedule(RecurringScheduleBase):
     id: int
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# --- Schedule Logs ---
+class ScheduleLogBase(BaseModel):
+    schedule_id: int
+    cycle_start_date: date
+    is_completed: bool = False
+    notes: Optional[str] = None
+
+class ScheduleLogCreate(ScheduleLogBase):
+    pass
+
+class ScheduleLogUpdate(BaseModel):
+    is_completed: Optional[bool] = None
+    notes: Optional[str] = None
+    completed_at: Optional[datetime] = None
+
+class ScheduleLog(ScheduleLogBase):
+    id: int
+    completed_at: Optional[datetime] = None
+    created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# --- Long Term Plans ---
+class LongTermPlanBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    start_date: date
+    end_date: date
+    color: Optional[str] = None
+
+class LongTermPlanCreate(LongTermPlanBase):
+    pass
+
+class LongTermPlanUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    color: Optional[str] = None
+
+class LongTermPlan(LongTermPlanBase):
+    id: int
+    created_at: datetime
 
     class Config:
         from_attributes = True

@@ -7,7 +7,11 @@ from .asset import (
     AssetTransactionDetail, CategoryStatistics, TierStatistics,
     PeriodSummary, MonthlyStatistics
 )
-from .schedule import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleType, SchedulePriority, ScheduleStatus
+from .schedule import (
+    RecurringSchedule, RecurringScheduleCreate, RecurringScheduleUpdate,
+    ScheduleLog, ScheduleLogCreate, ScheduleLogUpdate,
+    LongTermPlan, LongTermPlanCreate, LongTermPlanUpdate
+)
 
 __all__ = [
     # Asset models
@@ -18,5 +22,7 @@ __all__ = [
     "AssetTransactionDetail", "CategoryStatistics", "TierStatistics",
     "PeriodSummary", "MonthlyStatistics",
     # Schedule models
-    "Schedule", "ScheduleCreate", "ScheduleUpdate", "ScheduleType", "SchedulePriority", "ScheduleStatus"
+    "RecurringSchedule", "RecurringScheduleCreate", "RecurringScheduleUpdate",
+    "ScheduleLog", "ScheduleLogCreate", "ScheduleLogUpdate",
+    "LongTermPlan", "LongTermPlanCreate", "LongTermPlanUpdate"
 ]

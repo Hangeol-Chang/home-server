@@ -158,6 +158,48 @@ def init_database():
             )
         """)
 
+        # 9. recurring_schedules 테이블 (n주 단위 스케줄)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS recurring_schedules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                cycle_weeks INTEGER NOT NULL DEFAULT 1,
+                day_of_week INTEGER, -- 0: Mon, 6: Sun
+                start_date DATE NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # 10. schedule_logs 테이블 (스케줄 수행 기록)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS schedule_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                schedule_id INTEGER NOT NULL,
+                cycle_start_date DATE NOT NULL,
+                is_completed BOOLEAN DEFAULT FALSE,
+                completed_at TIMESTAMP,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (schedule_id) REFERENCES recurring_schedules(id)
+            )
+        """)
+
+        # 11. long_term_plans 테이블 (기간 일정)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS long_term_plans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                start_date DATE NOT NULL,
+                end_date DATE NOT NULL,
+                color TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         # 마이그레이션: asset_categories 테이블에 default_budget 컬럼 추가
         try:
             cursor.execute("ALTER TABLE asset_categories ADD COLUMN default_budget REAL DEFAULT 0")

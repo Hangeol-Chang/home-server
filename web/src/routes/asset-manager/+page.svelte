@@ -91,13 +91,13 @@
 </script>
 
 <svelte:head>
-	<title>가계부 - Home Server</title>
+	<title>[HS] Asset Manager</title>
 </svelte:head>
 
 <div class="asset-manager-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<!-- 헤더 -->
 	<header class="page-header">
-		<h1>💰 가계부</h1>
+		<h1>💰 Asset Manager</h1>
 		<div class="header-actions">
 			<a href="/asset-manager/admin" class="admin-link">
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

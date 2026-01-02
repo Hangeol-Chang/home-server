@@ -15,11 +15,11 @@
 }
 
 .error p {
-	color: #f44336;
+	color: var(--text-danger);
 }
 
 .error-message {
-	color: #f44336;
+	color: var(--text-danger);
 	font-size: 0.9rem;
 	margin-top: 8px;
 	display: flex;
@@ -46,7 +46,7 @@
 .retry-btn {
 	padding: 10px 20px;
 	background: var(--accent);
-	color: white;
+	color: var(--text-primary);
 	border: none;
 	border-radius: 6px;
 	cursor: pointer;
@@ -88,7 +88,7 @@
 	gap: 8px;
 	padding: 10px 20px;
 	background: var(--accent);
-	color: white;
+	color: var(--text-primary);
 	border: none;
 	border-radius: 8px;
 	font-weight: 600;
@@ -142,7 +142,7 @@
 .btn-submit {
 	padding: 10px 20px;
 	background: var(--accent);
-	color: white;
+	color: var(--text-primary);
 	border: none;
 	border-radius: 6px;
 	font-weight: 600;
@@ -165,9 +165,9 @@
 }
 
 .btn-danger:hover {
-	background: #fee;
-	border-color: #fcc;
-	color: #c33;
+	background: var(--bg-danger);
+	border-color: var(--text-danger);
+	color: var(--text-danger);
 }
 
 /* 폼 스타일 */
@@ -217,7 +217,7 @@
 .form-group select:focus {
 	outline: none;
 	border-color: var(--accent);
-	box-shadow: 0 0 0 3px rgba(69, 173, 168, 0.1);
+	box-shadow: 0 0 0 3px rgba(59, 186, 156, 0.2);
 }
 
 .form-group input:disabled,
@@ -266,12 +266,12 @@
 }
 
 .badge.active {
-	background: #4caf50;
+	background: var(--text-success);
 	color: white;
 }
 
 .badge.inactive {
-	background: #9e9e9e;
+	background: var(--text-tertiary);
 	color: white;
 }
 
@@ -335,7 +335,7 @@
 .filter-btn.active,
 .tab-btn.active {
 	background: var(--accent);
-	color: white;
+	color: var(--text-primary);
 	border-color: var(--accent);
 }
 
@@ -490,29 +490,7 @@
     }
 }
 
-/* Mobile (< 480px) */
-@media (max-width: 480px) {
-    .page-header h1 {
-        font-size: 1.3rem;
-    }
-
-    .header-actions {
-        gap: 8px;
-    }
-
-    .admin-link {
-        padding: 8px 10px;
-        font-size: 0.85rem;
-        gap: 4px;
-    }
-
-    .admin-link svg {
-        width: 16px;
-        height: 16px;
-    }
-}
-
-/* Mobile Small (< 320px) */
+/* Mobile (< 320px) */
 @media (max-width: 320px) {
     /* Global Font Size */
     body {
@@ -522,17 +500,17 @@
     .card,
     .stat-card,
     .section {
-        padding: 12px;
+        padding: 4px;
     }
 
     .form-container {
-        padding: 12px;
+        padding: 4px;
     }
 
     .btn-primary,
     .add-btn,
     .btn-secondary {
-        padding: 6px 12px;
+        padding: 3px 6px;
         font-size: 0.8rem;
     }
 }

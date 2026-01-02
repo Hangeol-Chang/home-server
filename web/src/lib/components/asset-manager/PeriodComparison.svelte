@@ -3,6 +3,7 @@
 	import { Chart, registerables } from 'chart.js';
 	import { getPeriodComparison } from '$lib/api/asset-manager.js';
 	import { device } from '$lib/stores/device';
+	import { getChartColor } from '$lib/constants.js';
 
 	Chart.register(...registerables);
 
@@ -108,7 +109,7 @@
 				})
 				.reverse();
 
-			const bgColor = getCategoryColor(colorIndex);
+			const bgColor = getChartColor(colorIndex);
 			datasets.push({
 				label: categoryDisplayName,
 				data: categoryData,
@@ -141,23 +142,6 @@
 				}
 			]
 		};
-	}
-
-	function getCategoryColor(index) {
-		// CSS 변수 기반 색상 팔레트
-		const colors = [
-			'#c89f9c', // --color-medium
-			'#c97c5d', // --color-dark
-			'#b36a5e', // --color-darkest
-			'#eed7c5', // --color-light
-			'#eee2df', // --color-lightest
-			'rgba(200, 159, 156, 0.7)', // --color-medium 70%
-			'rgba(201, 124, 93, 0.7)', // --color-dark 70%
-			'rgba(179, 106, 94, 0.7)', // --color-darkest 70%
-			'rgba(238, 215, 197, 0.7)', // --color-light 70%
-			'rgba(238, 226, 223, 0.7)' // --color-lightest 70%
-		];
-		return colors[index % colors.length];
 	}
 
 	function updateSpendChart() {

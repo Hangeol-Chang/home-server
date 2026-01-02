@@ -42,17 +42,17 @@
 		width: 100%;
 		margin: 0 auto;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-		padding: 20px;
+		padding: 8px;
 	}
 
 	/* Tablet/Mobile (< 768px) */
 	.app-container.tablet .app-main {
-		padding: 12px;
+		padding: 0px;
 		box-shadow: none;
 	}
 
 	/* Mobile (< 320px) */
 	.app-container.mobile .app-main {
-		padding: 8px;
+		padding: 0px;
 	}
 </style>

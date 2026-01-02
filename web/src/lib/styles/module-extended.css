@@ -53,16 +53,16 @@
 }
 
 .icon-btn.danger:hover {
-	background: #fee;
-	border-color: #fcc;
-	color: #c33;
+	background: var(--bg-danger);
+	border-color: var(--text-danger);
+	color: var(--text-danger);
 }
 
 /* 토글 버튼 그룹 */
 .view-toggle {
 	display: flex;
 	gap: 8px;
-	background: #f5f5f5;
+	background: var(--bg-tertiary);
 	padding: 4px;
 	border-radius: 8px;
 }
@@ -80,13 +80,13 @@
 }
 
 .toggle-btn:hover {
-	background: rgba(99, 102, 241, 0.1);
+	background: var(--bg-primary);
 }
 
 .toggle-btn.active {
 	background: white;
 	color: var(--accent);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	box-shadow: var(--shadow-sm);
 }
 
 /* 스피닝 애니메이션 */
@@ -353,7 +353,7 @@
 .unit-selector {
 	display: flex;
 	gap: 8px;
-	background: #f5f5f5;
+	background: var(--bg-tertiary);
 	padding: 4px;
 	border-radius: 10px;
 	width: fit-content;
@@ -370,19 +370,19 @@
 	cursor: pointer;
 	font-size: 14px;
 	font-weight: 500;
-	color: #666;
+	color: var(--text-secondary);
 	transition: all 0.2s ease;
 }
 
 .unit-btn:hover {
-	background: rgba(33, 150, 243, 0.1);
-	color: #2196f3;
+	background: var(--bg-info);
+	color: var(--text-info);
 }
 
 .unit-btn.active {
 	background: white;
-	color: #2196f3;
-	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+	color: var(--text-info);
+	box-shadow: var(--shadow-sm);
 }
 
 .unit-icon {

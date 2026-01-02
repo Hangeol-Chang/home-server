@@ -1,7 +1,12 @@
 // Notebook API 호출 함수들
-import { buildUrl, ENDPOINTS, apiGet } from './config.js';
+import { buildUrl, ENDPOINTS, apiGet, apiPost } from './config.js';
 
 const API_BASE = buildUrl(ENDPOINTS.notebook);
+
+// ===== Git =====
+export async function pullRepository() {
+	return apiPost(`${API_BASE}/git-pull`);
+}
 
 // ===== Directory Tree =====
 export async function getDirectoryTree(path = '') {

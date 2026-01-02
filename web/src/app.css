@@ -1,69 +1,68 @@
 /* Color Theme Variables */
-/* https://digitalsynopsis.com/design/minimal-web-color-palettes-combination-hex-code/ */
 :root {
-/* Breakpoints */
---mobile: 320px;
---tablet: 768px;
---desktop: 1024px;
+    /* Breakpoints */
+    --mobile: 320px;
+    --tablet: 768px;
+    --desktop: 1024px;
 
-/* Primary Colors - 밝은 순서 */
---color-lightest: #eee2df; 
---color-light: #eed7c5; 
---color-medium: #c89f9c;
---color-dark: #c97c5d; 
---color-darkest: #b36a5e;
+    /* Palette - Main (Achromatic/Muted) */
+    --color-main-1: #363538; /* Darkest */
+    --color-main-2: #43455C; /* Dark Blue-Gray */
+    --color-main-3: #8D8C8A; /* Medium Gray */
+    --color-main-4: #CFCFCF; /* Light Gray */
+    --color-main-5: #F6F6F6; /* Lightest Gray */
 
---color-lightest-darker: color-mix(in srgb, var(--color-lightest) 50%, rgb(78, 23, 2));
---color-light-darker: color-mix(in srgb, var(--color-light) 50%, rgb(78, 23, 2));
---color-medium-darker: color-mix(in srgb, var(--color-medium) 50%, rgb(78, 23, 2));
---color-dark-darker: color-mix(in srgb, var(--color-dark) 50%, black);
---color-darkest-darker: color-mix(in srgb, var(--color-darkest) 50%, black);
+    /* Palette - Impact */
+    --color-impact-2: #BADFE7; /* Light Blue */
+    --color-impact-1: #C2EDCE; /* Light Green */
+    --color-impact-3: #3BBA9C; /* Teal */
 
---color-lightest-lighter: color-mix(in srgb, var(--color-lightest) 20%, white);
---color-light-lighter: color-mix(in srgb, var(--color-light) 20%, white);
---color-medium-lighter: color-mix(in srgb, var(--color-medium) 20%, white);
---color-dark-lighter: color-mix(in srgb, var(--color-dark) 20%, white);
+    /* Semantic Colors */
+    --bg-white: #ffffff;
+    --bg-primary: var(--color-main-5); /* Main Background */
+    --bg-secondary: var(--color-main-4); /* Card/Container Background */
+    --bg-tertiary: #e8e8e8; /* Hover/Active Background */
 
-/* Semantic Colors - 용도별 */
---bg-white: #ffffff; /* 기본 흰색 배경 */
---bg-primary: var(--color-lightest-lighter); /* 기본 배경 */
---bg-secondary: var(--color-light-lighter); /* 보조 배경 */
---bg-tertiary: var(--color-lightest); /* 3차 배경 */
+    --bg-primary-dark: #e0e0e0;
+    --bg-secondary-dark: #f5f5f5;
+    --bg-tertiary-dark: #d4d4d4;
 
---bg-primary-dark: var(--color-lightest-darker); /* 진한 기본 배경 */
---bg-secondary-dark: var(--color-light-darker); /* 진한 보조 배경 */
---bg-tertiary-dark: var(--color-light); /* 진한 3차 배경 */
+    /* Colored Backgrounds */
+    --bg-danger: #ffebee;
+    --bg-success: var(--color-impact-2);
+    --bg-info: var(--color-impact-3);
+    --bg-warning: #fff3e0;
 
-/* colored background */
---bg-danger: #ffebee; /* 위험 배경 */
---bg-success: #e8f5e9; /* 성공 배경 */
---bg-info: #e3f2fd; /* 정보 배경 */
---bg-warning: #fff3e0; /* 경고 배경 */
+    /* Text Colors */
+    --text-primary: var(--color-main-1);
+    --text-secondary: var(--color-main-2);
+    --text-tertiary: var(--color-main-3);
 
---text-primary: var(--color-darkest-darker); /* 주요 텍스트 */
---text-secondary: var(--color-dark); /* 보조 텍스트 */
---text-tertiary: var(--color-medium); /* 3차 텍스트 */
+    /* Colored Text */
+    --text-danger: #d32f2f;
+    --text-success: #2e7d32;
+    --text-info: #0277bd;
+    --text-warning: #ef6c00;
 
-/* colored text */
---text-danger: #f44336; /* 위험 텍스트 */
---text-success: #4caf50; /* 성공 텍스트 */
---text-info: #2196f3; /* 정보 텍스트 */
---text-warning: #ff9800; /* 경고 텍스트 */
+    /* Borders */
+    --border-color: #e0e0e0;
+    --border-color-dark: var(--color-main-3);
 
---border-color: var(--color-light); /* 테두리 */
---border-color-dark: var(--color-medium); /* 진한 테두리 */
+    /* Buttons & Interactive */
+    --button-bg: var(--color-impact-1);
+    --button-hover: color-mix(in srgb, var(--button-bg), black 10%);
+    --button-text: var(--text-primary);
 
---button-bg: var(--color-medium); /* 버튼 배경 */
---button-hover: var(--color-medium-darker); /* 버튼 hover */
---button-text: #ffffff; /* 버튼 텍스트 */
+    --accent: var(--color-impact-1);
+    --accent-hover: color-mix(in srgb, var(--accent), black 10%);
 
---accent: var(--color-medium); /* 강조색 */
---accent-hover: var(--color-dark); /* 강조색 hover */
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.05);
 
-/* Shadow */
---shadow-sm: 0 1px 2px rgba(64, 35, 19, 0.05);
---shadow-md: 0 4px 6px rgba(64, 35, 19, 0.1);
---shadow-lg: 0 10px 15px rgba(64, 35, 19, 0.15);
+    /* Compatibility / Aliases */
+    --primary-color: var(--color-impact-1);
 }
 
 /* 전역 스타일 */

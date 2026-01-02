@@ -2,6 +2,7 @@
 	import { getTransactions } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
+	import { CHART_COLORS } from '$lib/constants.js';
 	import PieChart from './module/PieChart.svelte';
 	import TransactionDropdown from './TransactionDropdown.svelte';
     import BudgetManager from './BudgetManager.svelte';
@@ -22,16 +23,6 @@
 	let dropdownTitle = $state('');
 
 	const circleRadius = 80; // 외부 원의 반지름
-    const TIER_COLORS = [
-        '#FF6B6B', // Red
-        '#4ECDC4', // Teal
-        '#45B7D1', // Blue
-        '#FFA07A', // Light Salmon
-        '#98D8C8', // Mint
-        '#F7DC6F', // Yellow
-        '#BB8FCE', // Purple
-        '#F1948A', // Light Red
-    ];
 
 	onMount(async () => {
 		await loadStatistics();
@@ -177,7 +168,7 @@
                 percent: percent.toFixed(1),
                 dash,
                 rotation,
-                color: TIER_COLORS[index % TIER_COLORS.length],
+                color: CHART_COLORS[index % CHART_COLORS.length],
                 labelX,
                 labelY,
                 categoryList
@@ -259,7 +250,7 @@
 								<span class="cell-icon">💰</span>
 								<span>수익</span>
 								{#if chartData().usingDefault}
-									<span class="cell-badge">기본값</span>
+									<span class="cell-badge">d</span>
 								{/if}
 							</td>
 							<td class="cell-amount text-right">

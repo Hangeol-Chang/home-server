@@ -1,8 +1,9 @@
 <script>
-	import { getFolders, getFiles, getFileContent, searchNotes, getVaultStats, saveNote, createFolder } from '$lib/api/notebook.js';
+	import { getFolders, getFiles, getFileContent, searchNotes, getVaultStats, saveNote, createFolder, pullRepository } from '$lib/api/notebook.js';
 	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
 	import FileTreeNode from '$lib/components/notebook/FileTreeNode.svelte';
+	import TuiEditor from '$lib/components/notebook/TuiEditor.svelte';
 
 	let currentPath = $state('');
 	let rootItems = $state([]); // Root level items
@@ -18,7 +19,6 @@
 	let viewMode = $state('browse'); // 'browse' or 'search'
 
 	// Editor State
-	let isEditing = $state(false);
 	let isCreating = $state(false);
 	let editContent = $state('');
 	let newFileName = $state('');
@@ -28,6 +28,13 @@
 	let pathHistory = $state([]);
 
 	onMount(async () => {
+		// Git Pull 실행 (비동기로 실행하고 결과만 로그 출력)
+		pullRepository().then(result => {
+			console.log('Git pull result:', result);
+		}).catch(err => {
+			console.error('Git pull failed:', err);
+		});
+
 		await loadStats();
 		await loadRoot();
 	});
@@ -72,15 +79,13 @@
 	async function handleFileSelect(file) {
 		loading = true;
 		error = '';
-		isEditing = false;
 		isCreating = false;
 		
 		try {
 			const result = await getFileContent(file.path);
 			selectedFile = file;
 			fileContent = result.content;
-			// 파일 선택 시 currentPath는 해당 파일의 부모 폴더로 설정 (선택적)
-			// currentPath = file.folder_path; 
+			editContent = result.content; // 편집 내용 초기화
 		} catch (err) {
 			error = '파일을 불러오는데 실패했습니다: ' + err.message;
 		} finally {
@@ -107,22 +112,20 @@
 	}
 
 	function handleNewFile() {
-		selectedFile = null;
+		selectedFile = { name: 'New File', path: '' }; // 임시 파일 객체
 		fileContent = '';
 		editContent = '';
 		newFileName = '';
 		isCreating = true;
-		isEditing = true;
 	}
 
 	function handleCancel() {
 		if (isCreating) {
 			isCreating = false;
-			isEditing = false;
 			selectedFile = null;
 		} else {
-			isEditing = false;
-			editContent = '';
+			// 변경사항 취소 (원래 내용으로 복구)
+			editContent = fileContent;
 		}
 	}
 
@@ -174,11 +177,9 @@
 			} else {
 				// Update content
 				fileContent = editContent;
-				isEditing = false;
 			}
 			
 			isCreating = false;
-			isEditing = false;
 			await loadStats(); // 통계 업데이트
 
 		} catch (err) {
@@ -354,7 +355,7 @@
 				<div class="error-message">
 					<p>⚠️ {error}</p>
 				</div>
-			{:else if isEditing}
+			{:else if selectedFile}
 				<div class="editor-container">
 					<div class="editor-header">
 						{#if isCreating}
@@ -366,36 +367,28 @@
 							/>
 							<span class="extension">.md</span>
 						{:else}
-							<h2>{selectedFile.name} (편집)</h2>
+							<h2>{selectedFile.name}</h2>
 						{/if}
 						<div class="editor-actions">
-							<button class="icon-btn" onclick={handleCancel} disabled={isSaving}>취소</button>
+							{#if !isCreating}
+								<div class="file-info-small">
+									<span>{formatFileSize(selectedFile.size || 0)}</span>
+								</div>
+							{/if}
 							<button class="btn-primary" onclick={handleSave} disabled={isSaving}>
 								{isSaving ? '저장 중...' : '💾 저장'}
 							</button>
 						</div>
 					</div>
-					<textarea 
-						class="markdown-editor" 
-						bind:value={editContent}
-						placeholder="내용을 입력하세요..."
-					></textarea>
-				</div>
-			{:else if selectedFile}
-				<div class="file-viewer">
-					<div class="file-header">
-						<h2>{selectedFile.name}</h2>
-						<div class="file-actions">
-							<button class="refresh-btn" onclick={handleEdit}>✏️ 편집</button>
-						</div>
-					</div>
-					<div class="file-details">
-						<span>📁 {selectedFile.folder_path || 'root'}</span>
-						<span>💾 {formatFileSize(selectedFile.size)}</span>
-						<span>🕐 {formatDate(selectedFile.modified_at)}</span>
-					</div>
-					<div class="markdown-content">
-						<pre>{fileContent}</pre>
+					<div class="markdown-editor-wrapper">
+						{#key selectedFile?.path || 'new'}
+							<TuiEditor 
+								bind:value={editContent} 
+								height="calc(100vh - 200px)"
+								previewStyle="tab"
+								initialEditType="markdown"
+							/>
+						{/key}
 					</div>
 				</div>
 			{:else}
@@ -581,10 +574,10 @@
 
 	.error-message {
 		padding: 20px;
-		background: #fee;
-		border: 1px solid #fcc;
+		background: var(--bg-danger);
+		border: 1px solid var(--text-danger);
 		border-radius: 8px;
-		color: #c33;
+		color: var(--text-danger);
 	}
 
 	.empty-state {
@@ -717,23 +710,12 @@
 		gap: 8px;
 	}
 
-	.markdown-editor {
+	.markdown-editor-wrapper {
 		flex: 1;
 		width: 100%;
-		padding: 16px;
 		border: 1px solid var(--border-color);
 		border-radius: 8px;
-		background: var(--bg-primary);
-		color: var(--text-primary);
-		font-family: 'Consolas', 'Monaco', monospace;
-		font-size: 0.95rem;
-		line-height: 1.6;
-		resize: none;
-	}
-
-	.markdown-editor:focus {
-		outline: none;
-		border-color: var(--primary-color);
+		overflow: hidden;
 	}
 
 	/* Button Styles */

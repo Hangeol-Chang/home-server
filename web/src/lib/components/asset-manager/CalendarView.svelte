@@ -415,9 +415,9 @@
 		gap: 6px;
 		padding: 4px 12px;
 		border-radius: 20px;
-		border: 1px solid var(--border-color);
+		border: transparent 1px solid;
 		background: var(--bg-primary);
-		color: var(--text-secondary);
+		color: var(--text-primary);
 		font-size: 0.8rem;
 		font-weight: 500;
 		cursor: pointer;
@@ -426,14 +426,14 @@
 	}
 
 	.filter-chip:hover {
-		background: var(--bg-secondary);
+		background: var(--bg-primary);
 		transform: translateY(-1px);
 	}
 
 	.filter-chip.active {
-		background: var(--color-medium);
-		color: white;
-		border-color: var(--color-medium);
+		background: var(--bg-primary);
+		color: var(--text-primary);
+		border-color: var(--color-main-4);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 		padding-left: 12px; /* Icon space adjustment */
 	}

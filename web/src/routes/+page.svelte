@@ -36,7 +36,7 @@
 	/* Tablet/Mobile (< 768px) */
 	.home-page {
 		&.tablet {
-			padding: 16px;
+			padding: 8px;
 
 			.dashboard-container {
 				margin-bottom: 36px;
@@ -45,7 +45,7 @@
 
 		/* Mobile (< 320px) */
 		&.mobile {
-			padding: 8px;
+			padding: 4px;
 		}
 	}
 </style>

@@ -3,6 +3,7 @@
     import TransactionDropdown from './TransactionDropdown.svelte';
     import BudgetEditor from './BudgetEditor.svelte';
     import { onMount } from 'svelte';
+    import { getChartColor } from '$lib/constants.js';
 
     let { year, month, transactions = $bindable([]) } = $props();
 
@@ -51,7 +52,7 @@
                 amount: b.budget_amount,
                 actualSpend: actualSpend,
                 percentage: (b.budget_amount / totalSpend) * 100,
-                color: getCategoryColor(index),
+                color: getChartColor(index),
                 subCategories: subs
             };
         }).sort((a, b) => b.amount - a.amount); // 금액 큰 순서대로 정렬
@@ -61,15 +62,6 @@
             items 
         };
     });
-
-    function getCategoryColor(index) {
-        const colors = [
-            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD',
-            '#D4A5A5', '#9B59B6', '#3498DB', '#E67E22', '#2ECC71',
-            '#F1C40F', '#E74C3C', '#1ABC9C', '#9B59B6', '#34495E'
-        ];
-        return colors[index % colors.length];
-    }
 
     onMount(async () => {
         await loadData();

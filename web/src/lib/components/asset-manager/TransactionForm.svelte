@@ -550,7 +550,7 @@
 	.btn-add-tag {
 		padding: 12px 20px;
 		background: var(--primary-color, #2196f3);
-		color: white;
+		color: var(--text-primary);
 		border: none;
 		border-radius: 8px;
 		font-weight: 600;

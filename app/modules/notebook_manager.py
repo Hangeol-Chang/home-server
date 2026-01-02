@@ -339,6 +339,31 @@ def sync_vault_to_git(commit_message: str):
     # 4. Push
     run_git_command(["git", "push"])
 
+@router.post("/git-pull")
+async def git_pull():
+    """Git Pull 실행"""
+    try:
+        # 1. git pull 실행
+        result = subprocess.run(
+            ["git", "pull"],
+            cwd=VAULT_PATH,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        
+        return {
+            "success": True,
+            "message": result.stdout,
+            "timestamp": datetime.now().isoformat()
+        }
+    except subprocess.CalledProcessError as e:
+        print(f"Git pull failed: {e.stderr}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Git pull error: {e.stderr}"
+        )
+
 @router.post("/save")
 async def save_note(request: SaveNoteRequest):
     """노트 저장 및 Git 자동 동기화"""

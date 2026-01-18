@@ -1,5 +1,5 @@
 <script>
-    import { updateBudget, updateCategoryDefaultBudget, getSubCategories, getCategories, getBudgets } from '$lib/api/asset-manager.js';
+    import { updateBudget, updateCategory, getSubCategories, getCategories, getBudgets } from '$lib/api/asset-manager.js';
     import { onMount } from 'svelte';
 
     let { 
@@ -117,13 +117,30 @@
         if (!selectedCategory) return;
 
         try {
-            await updateCategoryDefaultBudget(selectedCategoryId, newAmount);
+            await updateCategory(selectedCategoryId, { default_budget: newAmount });
             const index = categories.findIndex(c => c.id === selectedCategoryId);
             if (index !== -1) {
                 categories[index].default_budget = newAmount;
             }
         } catch (err) {
             alert('기본 예산 수정 실패: ' + err.message);
+        }
+    }
+
+    async function handleRolloverChange(e) {
+        const checked = e.target.checked;
+        if (!selectedCategory) return;
+
+        try {
+            await updateCategory(selectedCategoryId, { rollover_enabled: checked });
+            const index = categories.findIndex(c => c.id === selectedCategoryId);
+            if (index !== -1) {
+                categories[index].rollover_enabled = checked;
+            }
+        } catch (err) {
+            alert('이월 설정 수정 실패: ' + err.message);
+            // Revert checkbox state if needed, but simplistic here
+            e.target.checked = !checked;
         }
     }
 
@@ -202,6 +219,17 @@
                             onchange={handleDefaultBudgetChange}
                         />
                     </div>
+                    {#if selectedCategory.class_id === 1}
+                        <div class="checkbox-wrapper">
+                            <input 
+                                type="checkbox" 
+                                id="rollover-check"
+                                checked={selectedCategory.rollover_enabled !== false}
+                                onchange={handleRolloverChange}
+                            />
+                            <label for="rollover-check">남은 예산 이월 허용</label>
+                        </div>
+                    {/if}
                 </div>
 
                 <div class="stat-item">
@@ -308,6 +336,26 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
+    }
+
+    .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .checkbox-wrapper input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .checkbox-wrapper label {
+        margin: 0;
+        font-size: 0.85rem;
+        cursor: pointer;
+        color: var(--text-secondary);
     }
 
     input[type="number"] {

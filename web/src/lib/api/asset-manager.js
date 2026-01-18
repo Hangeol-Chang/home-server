@@ -58,8 +58,8 @@ export async function updateBudget(categoryId, year, month, budgetData) {
     return apiPut(`${API_BASE}/budgets/${categoryId}/${year}/${month}`, budgetData);
 }
 
-export async function updateCategoryDefaultBudget(categoryId, defaultBudget) {
-    return apiPut(`${API_BASE}/categories/${categoryId}/default-budget?default_budget=${defaultBudget}`, {});
+export async function updateCategory(categoryId, categoryData) {
+    return apiPut(`${API_BASE}/categories/${categoryId}`, categoryData);
 }
 
 // ===== Transactions (거래) =====

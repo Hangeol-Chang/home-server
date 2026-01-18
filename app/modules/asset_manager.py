@@ -3,7 +3,7 @@ from typing import List, Optional
 from datetime import datetime, date as date_type
 from models.asset import (
     AssetClass, AssetClassCreate,
-    AssetCategory, AssetCategoryCreate,
+    AssetCategory, AssetCategoryCreate, AssetCategoryUpdate,
     AssetSubCategory, AssetSubCategoryCreate,
     AssetTier, AssetTierCreate,
     AssetTransaction, AssetTransactionCreate, AssetTransactionUpdate,
@@ -118,7 +118,7 @@ async def get_categories(
         if class_id:
             cursor.execute("""
                 SELECT id, class_id, name, display_name, tier_id, description, 
-                       is_active, sort_order, created_at, default_budget
+                       is_active, sort_order, created_at, default_budget, rollover_enabled
                 FROM asset_categories
                 WHERE class_id = ? AND is_active = TRUE
                 ORDER BY sort_order, id
@@ -126,7 +126,7 @@ async def get_categories(
         else:
             cursor.execute("""
                 SELECT id, class_id, name, display_name, tier_id, description, 
-                       is_active, sort_order, created_at, default_budget
+                       is_active, sort_order, created_at, default_budget, rollover_enabled
                 FROM asset_categories
                 WHERE is_active = TRUE
                 ORDER BY class_id, sort_order, id
@@ -159,22 +159,22 @@ async def create_category(category: AssetCategoryCreate):
             # 기존 카테고리 업데이트 및 활성화
             cursor.execute("""
                 UPDATE asset_categories 
-                SET display_name = ?, tier_id = ?, description = ?, is_active = TRUE, sort_order = ?, default_budget = ?
+                SET display_name = ?, tier_id = ?, description = ?, is_active = TRUE, sort_order = ?, default_budget = ?, rollover_enabled = ?
                 WHERE id = ?
-            """, (category.display_name, category.tier_id, category.description, category.sort_order, category.default_budget, category_id))
+            """, (category.display_name, category.tier_id, category.description, category.sort_order, category.default_budget, category.rollover_enabled, category_id))
         else:
             # 새 카테고리 생성
             cursor.execute("""
                 INSERT INTO asset_categories 
-                (class_id, name, display_name, tier_id, description, is_active, sort_order, default_budget)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (class_id, name, display_name, tier_id, description, is_active, sort_order, default_budget, rollover_enabled)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (category.class_id, category.name, category.display_name, category.tier_id,
-                  category.description, category.is_active, category.sort_order, category.default_budget))
+                  category.description, category.is_active, category.sort_order, category.default_budget, category.rollover_enabled))
             category_id = cursor.lastrowid
         
         cursor.execute("""
             SELECT id, class_id, name, display_name, tier_id, description, 
-                   is_active, sort_order, created_at, default_budget
+                   is_active, sort_order, created_at, default_budget, rollover_enabled
             FROM asset_categories WHERE id = ?
         """, (category_id,))
         return dict(cursor.fetchone())
@@ -1287,19 +1287,20 @@ def calculate_budget_for_month(cursor, category_id: int, year: int, month: int) 
         return dict(existing)
 
     # 2. 카테고리 기본 정보 조회
-    cursor.execute("SELECT default_budget, class_id FROM asset_categories WHERE id = ?", (category_id,))
+    cursor.execute("SELECT default_budget, class_id, rollover_enabled FROM asset_categories WHERE id = ?", (category_id,))
     category = cursor.fetchone()
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     
     default_budget = category['default_budget'] or 0
     class_id = category['class_id']
+    rollover_enabled = category['rollover_enabled']
 
     # 3. 이전 달 정보 조회 (이월 계산용)
-    # 지출(class_id=1)인 경우에만 이월 계산
+    # 지출(class_id=1)인 경우 + 이월이 활성화된 경우에만 이월 계산
     rollover_amount = 0
     
-    if class_id == 1:
+    if class_id == 1 and rollover_enabled:
         prev_year = year
         prev_month = month - 1
         if prev_month == 0:
@@ -1422,27 +1423,41 @@ async def update_budget(
         
         return dict(cursor.fetchone())
 
-@router.put("/categories/{category_id}/default-budget", response_model=AssetCategory)
-async def update_category_default_budget(
-    category_id: int,
-    default_budget: float = Query(..., description="기본 월 예산")
-):
-    """카테고리 기본 예산 수정"""
+@router.put("/categories/{category_id}", response_model=AssetCategory)
+async def update_category(category_id: int, category: AssetCategoryUpdate):
+    """카테고리 정보 수정"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
-        cursor.execute("""
-            UPDATE asset_categories
-            SET default_budget = ?
-            WHERE id = ?
-        """, (default_budget, category_id))
+        # 카테고리 존재 확인
+        cursor.execute("SELECT id FROM asset_categories WHERE id = ?", (category_id,))
+        if not cursor.fetchone():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Category with id {category_id} not found"
+            )
         
-        if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Category not found")
-            
+        update_data = category.dict(exclude_unset=True)
+        if not update_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No fields to update"
+            )
+        
+        # 업데이트 쿼리 생성
+        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
+        params = list(update_data.values()) + [category_id]
+        
+        cursor.execute(f"""
+            UPDATE asset_categories 
+            SET {set_clause}
+            WHERE id = ?
+        """, params)
+        
         cursor.execute("""
             SELECT id, class_id, name, display_name, tier_id, description, 
-                   is_active, sort_order, created_at, default_budget
+                   is_active, sort_order, created_at, default_budget, rollover_enabled
             FROM asset_categories WHERE id = ?
         """, (category_id,))
+        
         return dict(cursor.fetchone())

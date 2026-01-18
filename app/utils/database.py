@@ -50,6 +50,8 @@ def init_database():
                 description TEXT,
                 is_active BOOLEAN DEFAULT TRUE,
                 sort_order INTEGER DEFAULT 0,
+                default_budget REAL DEFAULT 0,
+                rollover_enabled BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (class_id) REFERENCES asset_classes(id),
                 FOREIGN KEY (tier_id) REFERENCES asset_tiers(id),
@@ -206,6 +208,14 @@ def init_database():
             print("Added default_budget column to asset_categories table")
         except sqlite3.OperationalError:
             pass
+
+        # 마이그레이션: asset_categories 테이블에 rollover_enabled 컬럼 추가
+        try:
+            cursor.execute("ALTER TABLE asset_categories ADD COLUMN rollover_enabled BOOLEAN DEFAULT TRUE")
+            print("Added rollover_enabled column to asset_categories table")
+        except sqlite3.OperationalError:
+            pass
+
 
         # assets 테이블에 sub_category_id 컬럼 추가
         try:

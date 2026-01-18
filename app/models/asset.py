@@ -31,9 +31,19 @@ class AssetCategoryBase(BaseModel):
     is_active: bool = True
     sort_order: int = 0
     default_budget: float = Field(0, description="기본 월 예산")
+    rollover_enabled: bool = Field(True, description="이월 가능 여부")
 
 class AssetCategoryCreate(AssetCategoryBase):
     pass
+
+class AssetCategoryUpdate(BaseModel):
+    display_name: Optional[str] = None
+    tier_id: Optional[int] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    sort_order: Optional[int] = None
+    default_budget: Optional[float] = None
+    rollover_enabled: Optional[bool] = None
 
 class AssetCategory(AssetCategoryBase):
     id: int

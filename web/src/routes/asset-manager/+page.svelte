@@ -5,6 +5,7 @@
 	import TransactionList from '$lib/components/asset-manager/TransactionList.svelte';
 	import CalendarView from '$lib/components/asset-manager/CalendarView.svelte';
 	import PeriodComparison from '$lib/components/asset-manager/PeriodComparison.svelte';
+	import YearlyIncomeChart from '$lib/components/asset-manager/YearlyIncomeChart.svelte';
 	import { getTransactions } from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
@@ -165,7 +166,16 @@
 
 	<hr>
 	<button class="part-btn">
-		🗓️ 기간별 통계
+		� 월별 수익 비교
+	</button>
+	<hr>
+
+	<!-- 월별 수익 비교 차트 -->
+	<YearlyIncomeChart year={new Date().getFullYear()} />
+
+	<hr>
+	<button class="part-btn">
+		�🗓️ 기간별 통계
 	</button>
 	<hr>
 

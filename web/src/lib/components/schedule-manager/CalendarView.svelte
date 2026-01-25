@@ -276,124 +276,35 @@
 <ScheduleDetailModal bind:visible={showModal} schedule={selectedSchedule} />
 
 <style>
-	.calendar-grid {
-		display: grid;
-		grid-template-columns: repeat(7, minmax(0, 1fr));
-		gap: 0; /* gap을 없애서 연결되게 함 */
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        overflow: hidden;
+	/* 월간 캘린더용 추가 스타일 */
+	.month-nav {
+		display: flex;
+		align-items: center;
+		gap: 12px;
 	}
 
-	.calendar-weekday {
+	.month-nav h3 {
+		margin: 0;
+		min-width: 140px;
 		text-align: center;
-		font-weight: 600;
-		padding: 12px 8px;
-		color: var(--text-secondary);
-        background: var(--bg-secondary);
-        border-bottom: 1px solid var(--border-color);
-        border-right: 1px solid var(--border-color);
 	}
-    
-    .calendar-weekday:last-child {
-        border-right: none;
-    }
 
-	.calendar-weekday.sunday { color: var(--text-danger); }
-	.calendar-weekday.saturday { color: var(--text-info); }
-
-	.calendar-day {
-		min-height: 120px;
-		padding: 4px 0; /* 좌우 패딩 제거 */
-		background: var(--bg-primary);
-		border-right: 1px solid var(--border-color);
-        border-bottom: 1px solid var(--border-color);
-        display: flex;
-        flex-direction: column;
-	}
-    
-    .calendar-day:nth-child(7n) {
-        border-right: none;
-    }
-
-	.calendar-day.today {
-		background: var(--bg-tertiary);
-	}
-    
-    .calendar-day.today .day-number {
-        color: var(--text-info);
-        font-weight: 700;
-    }
-
-	.calendar-day.empty {
+	.month-nav .nav-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
 		background: var(--bg-secondary);
-        border-right: 1px solid var(--border-color);
-        border-bottom: 1px solid var(--border-color);
-	}
-    
-    .calendar-day.empty:nth-child(7n) {
-        border-right: none;
-    }
-
-	.day-number {
-		font-weight: 600;
-		margin-bottom: 4px;
-        padding: 4px 8px;
-        font-size: 0.9rem;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.2s;
 	}
 
-    .day-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .schedule-item {
-		font-size: 0.75rem;
-		padding: 2px 4px;
-		color: white;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-        cursor: pointer;
-        height: 20px;
-        line-height: 16px;
-        margin: 0; /* 마진 제거 */
-        position: relative;
-        z-index: 1;
+	.month-nav .nav-btn:hover {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
 	}
-    
-    .schedule-item:hover {
-        filter: brightness(0.9);
-        z-index: 2;
-    }
-    
-    /* 시작 부분 둥글게, 왼쪽 마진 */
-    .schedule-item.start {
-        border-top-left-radius: 4px;
-        border-bottom-left-radius: 4px;
-        margin-left: 4px;
-    }
-    
-    /* 끝 부분 둥글게, 오른쪽 마진 */
-    .schedule-item.end {
-        border-top-right-radius: 4px;
-        border-bottom-right-radius: 4px;
-        margin-right: 4px;
-    }
-    
-    /* 중간 부분은 마진 없이 꽉 채움 */
-    .schedule-item:not(.start) {
-        margin-left: -1px; /* 겹치게 해서 선 없앰 */
-        padding-left: 0; /* 텍스트가 있으면 안보이게 */
-    }
-    
-    .schedule-item:not(.end) {
-        margin-right: -1px;
-    }
-
-    .schedule-placeholder {
-        height: 20px;
-    }
 </style>

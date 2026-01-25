@@ -280,3 +280,65 @@ async def get_google_events(year: int, month: int):
         print(f"Error fetching Google Calendar: {e}")
         return []
 
+
+@router.get("/google-events/week")
+async def get_google_events_for_week(start_date: date, end_date: date):
+    """
+    Fetch events from Google Calendar via iCal URL for a specific date range.
+    """
+    ics_url = os.getenv("GOOGLE_CALENDAR_ICS_URL")
+    if not ics_url:
+        print("GOOGLE_CALENDAR_ICS_URL not set")
+        return []
+
+    try:
+        response = requests.get(ics_url)
+        response.raise_for_status()
+        cal = Calendar.from_ical(response.content)
+        
+        events = []
+            
+        for component in cal.walk():
+            if component.name == "VEVENT":
+                summary = str(component.get('summary'))
+                dtstart_prop = component.get('dtstart')
+                dtend_prop = component.get('dtend')
+                
+                if not dtstart_prop:
+                    continue
+                    
+                dtstart = dtstart_prop.dt
+                
+                if dtend_prop:
+                    dtend = dtend_prop.dt
+                else:
+                    dtend = dtstart
+
+                # Normalize to date objects
+                if isinstance(dtstart, datetime):
+                    start_d = dtstart.date()
+                else:
+                    start_d = dtstart
+                
+                if isinstance(dtend, datetime):
+                    end_d = dtend.date()
+                else:
+                    end_d = dtend
+                    end_d = end_d - timedelta(days=1)
+                
+                # Check overlap with the requested range
+                if start_d <= end_date and end_d >= start_date:
+                    events.append({
+                        "title": summary,
+                        "start_date": start_d.isoformat(),
+                        "end_date": end_d.isoformat(),
+                        "color": "#4285F4",
+                        "source": "google"
+                    })
+                    
+        return events
+
+    except Exception as e:
+        print(f"Error fetching Google Calendar: {e}")
+        return []
+

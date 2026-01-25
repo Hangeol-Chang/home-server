@@ -433,7 +433,7 @@
 		padding: 6px 12px;
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
-		border-radius: 16px;
+		border-radius: 8px;
 		font-size: 0.85rem;
 		color: var(--text-secondary);
 	}
@@ -468,7 +468,7 @@
 	.sidebar {
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
-		border-radius: 12px;
+		border-radius: 8px;
 		padding: 20px;
 		overflow-y: auto;
 		max-height: calc(100vh - 200px);
@@ -510,7 +510,7 @@
 	.explorer-item.active {
 		background: var(--bg-tertiary);
 		color: var(--primary-color);
-		font-weight: 500;
+		font-weight: 300;
 	}
 
 	.explorer-item .icon {
@@ -544,7 +544,7 @@
 	.content-area {
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
-		border-radius: 12px;
+		border-radius: 8px;
 		padding: 24px;
 		overflow-y: auto;
 		max-height: calc(100vh - 200px);
@@ -694,7 +694,7 @@
 		max-width: 300px;
 		padding: 8px 12px;
 		border: 1px solid var(--border-color);
-		border-radius: 6px;
+		border-radius: 4px;
 		background: var(--bg-primary);
 		color: var(--text-primary);
 		font-size: 1rem;

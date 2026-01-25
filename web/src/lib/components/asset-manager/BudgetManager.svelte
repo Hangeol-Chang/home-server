@@ -265,13 +265,13 @@
 
     .distribution-header .label {
         font-size: 0.95rem;
-        font-weight: 600;
+        font-weight: 400;
         color: var(--text-primary);
     }
 
     .distribution-header .total-amount {
         font-size: 1rem;
-        font-weight: 700;
+        font-weight: 400;
         color: var(--text-primary);
     }
 
@@ -314,7 +314,7 @@
 
     .segment-label {
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 400;
         color: rgba(0, 0, 0, 0.6);
         white-space: nowrap;
         pointer-events: none;
@@ -370,12 +370,12 @@
     }
 
     .tooltip-name {
-        font-weight: 600;
+        font-weight: 400;
         color: #fff;
     }
 
     .tooltip-amount {
-        font-weight: 500;
+        font-weight: 300;
         color: #4ECDC4;
     }
 

@@ -419,9 +419,13 @@
 		pointer-events: none;
 	}
 
+	.grid-line:nth-child(4n) {
+		border-right: 1px solid var(--border-color);
+	}
+
 	.grid-line {
 		flex: 1;
-		border-right: 1px solid var(--border-color);
+		border-right: 1px solid var(--border-color-light);
 	}
 
 	.grid-line:last-child {
@@ -449,13 +453,13 @@
 	.schedule-bar {
 		position: absolute;
 		height: 100%;
-		border-radius: 4px;
+		border-radius: 2px;
 		display: flex;
 		align-items: center;
 		padding: 0 8px;
 		color: white;
 		font-size: 0.75rem;
-		font-weight: 600;
+		font-weight: 400;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;

@@ -492,7 +492,7 @@
 		background: var(--bg-primary);
 		box-shadow: var(--shadow-md);
 		padding: 24px;
-		border-radius: 12px;
+		border-radius: 8px;
 	}
 
 	.chart-container {
@@ -515,7 +515,7 @@
     }
 
     .period-value {
-        font-weight: 600;
+        font-weight: 400;
         color: var(--text-primary);
     }
 

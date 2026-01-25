@@ -5,11 +5,12 @@
 @import './module-common.css';
 @import './module-table.css';
 @import './module-extended.css';
+@import './module-calendar.css';
 
 .module-container {
     background-color: transparent;
     border: 1px solid var(--border-color);
-    border-radius: 16px;
+    border-radius: 8px;
     padding: 24px;
     margin-bottom: 24px;
 }

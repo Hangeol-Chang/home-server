@@ -179,9 +179,9 @@
 	.transaction-count {
 		padding: 6px 16px;
 		background: var(--bg-secondary);
-		border-radius: 20px;
+		border-radius: 8px;
 		font-size: 0.9rem;
-		font-weight: 600;
+		font-weight: 400;
 		color: var(--text-secondary);
 	}
 
@@ -247,7 +247,7 @@
 
 	.cell-name .name {
 		font-size: 1rem;
-		font-weight: 600;
+		font-weight: 400;
 		color: var(--text-primary);
 	}
 
@@ -295,9 +295,9 @@
 		padding: 4px 8px;
 		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 		color: white;
-		border-radius: 10px;
+		border-radius: 8px;
 		font-size: 0.7rem;
-		font-weight: 500;
+		font-weight: 300;
 	}
 
 	.amount-earn {

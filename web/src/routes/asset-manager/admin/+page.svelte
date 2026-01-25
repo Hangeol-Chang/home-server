@@ -1034,7 +1034,7 @@
 		border-radius: 8px;
 		color: var(--text-primary);
 		text-decoration: none;
-		font-weight: 600;
+		font-weight: 400;
 		transition: all 0.2s;
 	}
 
@@ -1052,7 +1052,7 @@
 	.manage-section {
 		background: var(--bg-primary);
 		border: 1px solid var(--border-color);
-		border-radius: 12px;
+		border-radius: 8px;
 		padding: 24px;
 	}
 
@@ -1091,7 +1091,7 @@
 		gap: 8px;
 		background: #f5f5f5;
 		padding: 4px;
-		border-radius: 10px;
+		border-radius: 8px;
 		margin-bottom: 20px;
 	}
 
@@ -1124,7 +1124,7 @@
 		padding: 8px;
 		background: transparent;
 		border: 1px solid var(--border-color);
-		border-radius: 6px;
+		border-radius: 4px;
 		color: var(--text-tertiary);
 		cursor: pointer;
 		transition: all 0.2s;
@@ -1141,7 +1141,7 @@
 		padding: 8px;
 		background: transparent;
 		border: 1px solid var(--border-color);
-		border-radius: 6px;
+		border-radius: 4px;
 		color: var(--text-tertiary);
 		cursor: pointer;
 		transition: all 0.2s;
@@ -1213,7 +1213,7 @@
 		background: var(--text-primary);
 		color: white;
 		padding: 8px 12px;
-		border-radius: 6px;
+		border-radius: 4px;
 		font-size: 13px;
 		white-space: nowrap;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -1344,7 +1344,7 @@
 	.badge.active {
 		background: #d4edda;
 		color: #155724;
-		font-weight: 600;
+		font-weight: 400;
 	}
 
 	/* Tablet/Mobile (< 768px) */

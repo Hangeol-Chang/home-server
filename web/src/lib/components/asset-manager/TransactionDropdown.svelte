@@ -161,7 +161,7 @@
 		left: 50%;
 		transform: translate(-50%, -50%);
 		background: white;
-		border-radius: 16px;
+		border-radius: 8px;
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 		z-index: 999;
 		width: 90%;
@@ -197,7 +197,7 @@
 	.dropdown-header h4 {
 		margin: 0;
 		font-size: 18px;
-		font-weight: 700;
+		font-weight: 400;
 		color: var(--text-primary);
 	}
 
@@ -268,7 +268,7 @@
 
 	.trans-name {
 		font-size: 15px;
-		font-weight: 600;
+		font-weight: 400;
 		color: var(--text-primary);
 	}
 

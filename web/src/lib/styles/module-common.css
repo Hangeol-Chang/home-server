@@ -48,9 +48,9 @@
 	background: var(--accent);
 	color: var(--text-primary);
 	border: none;
-	border-radius: 6px;
+	border-radius: 4px;
 	cursor: pointer;
-	font-weight: 600;
+	font-weight: 300;
 	transition: all 0.2s;
 }
 
@@ -91,7 +91,7 @@
 	color: var(--text-primary);
 	border: none;
 	border-radius: 8px;
-	font-weight: 600;
+	font-weight: 300;
 	cursor: pointer;
 	transition: all 0.2s;
 	text-decoration: none;
@@ -113,7 +113,7 @@
 	color: var(--text-primary);
 	border: 1px solid var(--border-color);
 	border-radius: 8px;
-	font-weight: 600;
+	font-weight: 400;
 	cursor: pointer;
 	transition: all 0.2s;
 	text-decoration: none;
@@ -129,8 +129,8 @@
 	background: var(--bg-tertiary);
 	color: var(--text-primary);
 	border: none;
-	border-radius: 6px;
-	font-weight: 600;
+	border-radius: 4px;
+	font-weight: 400;
 	cursor: pointer;
 	transition: all 0.2s;
 }
@@ -144,8 +144,8 @@
 	background: var(--accent);
 	color: var(--text-primary);
 	border: none;
-	border-radius: 6px;
-	font-weight: 600;
+	border-radius: 4px;
+	font-weight: 400;
 	cursor: pointer;
 	transition: all 0.2s;
 }
@@ -159,7 +159,7 @@
 	background: transparent;
 	color: var(--text-tertiary);
 	border: 1px solid var(--border-color);
-	border-radius: 6px;
+	border-radius: 4px;
 	cursor: pointer;
 	transition: all 0.2s;
 }
@@ -174,7 +174,7 @@
 .form-container {
 	background: var(--bg-secondary);
 	border: 1px solid var(--border-color);
-	border-radius: 10px;
+	border-radius: 8px;
 	padding: 20px;
 	margin-bottom: 20px;
 }
@@ -187,7 +187,7 @@
 }
 
 .form-group label {
-	font-weight: 600;
+	font-weight: 400;
 	min-width: 120px;
 	color: var(--text-primary);
 	font-size: 0.9rem;
@@ -203,7 +203,7 @@
 .form-group select {
 	padding: 4px 6px;
 	border: 1px solid var(--border-color);
-	border-radius: 6px;
+	border-radius: 4px;
 	background: var(--bg-primary);
 	color: var(--text-primary);
 	font-size: 1rem;
@@ -245,7 +245,7 @@
 .card {
 	background: var(--bg-primary);
 	border: 1px solid var(--border-color);
-	border-radius: 12px;
+	border-radius: 8px;
 	padding: 24px;
 	transition: all 0.2s;
 }
@@ -259,9 +259,9 @@
 	display: inline-flex;
 	padding: 4px 10px;
 	background: var(--bg-tertiary);
-	border-radius: 12px;
+	border-radius: 8px;
 	font-size: 0.8rem;
-	font-weight: 500;
+	font-weight: 300;
 	color: var(--text-secondary);
 }
 
@@ -302,7 +302,7 @@
 .section {
 	background: var(--bg-primary);
 	border: 1px solid var(--border-color);
-	border-radius: 12px;
+	border-radius: 8px;
 	padding: 24px;
 	margin-bottom: 24px;
 }
@@ -322,7 +322,7 @@
 	border: 2px solid var(--border-color);
 	border-radius: 8px;
 	color: var(--text-secondary);
-	font-weight: 600;
+	font-weight: 400;
 	cursor: pointer;
 	transition: all 0.2s;
 }
@@ -376,7 +376,7 @@
     border-radius: 8px;
     color: var(--text-primary);
     text-decoration: none;
-    font-weight: 600;
+    font-weight: 400;
     transition: all 0.2s;
 }
 
@@ -524,7 +524,7 @@
 .modal-container {
     background: var(--bg-primary);
     border: 2px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 24px;
     margin-bottom: 32px;
     box-shadow: var(--shadow-md);
@@ -607,7 +607,7 @@
     color: var(--text-primary);
     border: none;
     border-radius: 8px;
-    font-weight: 600;
+    font-weight: 400;
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
@@ -637,9 +637,9 @@
     padding: 6px 12px;
     background: var(--primary-color, #2196f3);
     color: white;
-    border-radius: 16px;
+    border-radius: 8px;
     font-size: 0.9rem;
-    font-weight: 500;
+    font-weight: 300;
 }
 
 .tag-remove {

@@ -212,11 +212,18 @@
                     
                     <tr class:completed={completed} onclick={() => openLogModal(schedule)}>
                         <td class="text-center" onclick={(e) => e.stopPropagation()}>
-                            <input 
-                                type="checkbox" 
-                                checked={completed} 
-                                onchange={(e) => toggleComplete(schedule, e.target.checked)}
-                            />
+                            <button 
+                                class="custom-checkbox"
+                                class:checked={completed}
+                                onclick={() => toggleComplete(schedule, !completed)}
+                                aria-label={completed ? '완료 취소' : '완료 체크'}
+                            >
+                                {#if completed}
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                {/if}
+                            </button>
                         </td>
                         <td>
                             <div class="title">{schedule.title}</div>
@@ -274,8 +281,18 @@
                 </div>
                 <div class="form-group">
                     <label for="is_completed">상태</label>
-                    <div class="checkbox-label">
-                        <input id="is_completed" type="checkbox" bind:checked={selectedLog.is_completed} />
+                    <div role="none" class="checkbox-label" onclick={() => selectedLog.is_completed = !selectedLog.is_completed}>
+                        <button 
+                            class="custom-checkbox"
+                            class:checked={selectedLog.is_completed}
+                            aria-label={selectedLog.is_completed ? '완료 취소' : '완료 체크'}
+                        >
+                            {#if selectedLog.is_completed}
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            {/if}
+                        </button>
                         <span>완료됨</span>
                     </div>
                 </div>
@@ -319,7 +336,7 @@
     }
 
     .title {
-        font-weight: 500;
+        font-weight: 300;
         color: var(--text-primary);
     }
     
@@ -327,9 +344,42 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        cursor: pointer;
     }
     
-    .checkbox-label input {
-        width: auto;
+    .checkbox-label span {
+        user-select: none;
+    }
+
+    /* Custom Checkbox */
+    .custom-checkbox {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        border: 1px solid var(--border-color, #ccc);
+        border-radius: 4px;
+        background: var(--bg-primary, #fff);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+        padding: 0;
+    }
+
+    .custom-checkbox:hover {
+        border-color: var(--primary-color, #4a90d9);
+        background: var(--bg-hover, #f5f5f5);
+    }
+
+    .custom-checkbox.checked {
+        background: var(--primary-color, #4a90d9);
+        border-color: var(--primary-color, #4a90d9);
+    }
+
+    .custom-checkbox svg {
+        width: 18px;
+        height: 18px;
+        color: white;
     }
 </style>

@@ -118,7 +118,7 @@
 	.explorer-item.active {
 		background: var(--bg-tertiary);
 		color: var(--primary-color);
-		font-weight: 500;
+		font-weight: 300;
 	}
 
 	.icon {

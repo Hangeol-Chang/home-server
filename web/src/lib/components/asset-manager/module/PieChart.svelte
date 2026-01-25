@@ -152,19 +152,19 @@
 		font-size: 10px;
 		fill: var(--text-secondary);
 		text-anchor: middle;
-		font-weight: 600;
+		font-weight: 400;
 	}
 
 	.chart-center-value {
 		font-size: 11px;
 		fill: var(--text-primary);
 		text-anchor: middle;
-		font-weight: 700;
+		font-weight: 400;
 	}
 
 	.chart-label {
 		font-size: 11px;
-		font-weight: 400;
+		font-weight: 300;
 		pointer-events: none;
 		text-shadow: 0 1px 2px var(--bg-primary);
 	}
@@ -190,7 +190,7 @@
 		padding-bottom: 8px;
 		margin-bottom: 8px;
 		border-bottom: 2px solid;
-		font-weight: 700;
+		font-weight: 400;
 	}
 
 	.tooltip-title {

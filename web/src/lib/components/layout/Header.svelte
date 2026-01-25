@@ -155,7 +155,7 @@
 
 	.app-title {
 		font-size: 1.1rem;
-		font-weight: 700;
+		font-weight: 400;
 		color: var(--text-primary);
 	}
 
@@ -207,7 +207,7 @@
 		text-decoration: none;
 		color: var(--text-primary);
 		font-size: 1rem;
-		font-weight: 500;
+		font-weight: 300;
 		transition: background 0.2s;
 		border: none;
 		background: none;
@@ -259,7 +259,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-weight: 600;
+		font-weight: 400;
 		font-size: 1.1rem;
 	}
 
@@ -298,7 +298,7 @@
 	.user-email {
 		font-size: 0.85rem;
 		color: var(--text-secondary);
-		font-weight: 500;
+		font-weight: 300;
 		word-break: break-all;
 	}
 

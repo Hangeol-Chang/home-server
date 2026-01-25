@@ -31,7 +31,7 @@
 .icon-btn {
 	background: var(--bg-secondary);
 	border: 1px solid var(--border-color);
-	border-radius: 6px;
+	border-radius: 4px;
 	padding: 8px;
 	cursor: pointer;
 	display: inline-flex;
@@ -71,10 +71,10 @@
 	padding: 8px 16px;
 	background: transparent;
 	border: none;
-	border-radius: 6px;
+	border-radius: 4px;
 	cursor: pointer;
 	font-size: 0.9rem;
-	font-weight: 500;
+	font-weight: 300;
 	color: var(--text-secondary);
 	transition: all 0.2s;
 }
@@ -105,7 +105,7 @@
 	align-items: center;
 	padding: 20px;
 	background: var(--bg-secondary);
-	border-radius: 10px;
+	border-radius: 8px;
 	margin-bottom: 24px;
 }
 
@@ -117,7 +117,7 @@
 
 .total-value {
 	font-size: 1.6rem;
-	font-weight: 700;
+	font-weight: 400;
 	color: var(--accent);
 }
 
@@ -159,7 +159,7 @@
 
 .bar-name {
 	font-size: 0.95rem;
-	font-weight: 600;
+	font-weight: 400;
 	color: var(--text-primary);
 }
 
@@ -188,7 +188,7 @@
 
 .bar-percentage {
 	color: white;
-	font-weight: 600;
+	font-weight: 400;
 	font-size: 0.85rem;
 	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
@@ -224,7 +224,7 @@
 	gap: 6px;
 	background: var(--bg-tertiary);
 	padding: 4px;
-	border-radius: 10px;
+	border-radius: 8px;
 	margin-bottom: 24px;
 }
 
@@ -239,7 +239,7 @@
 	border-radius: 8px;
 	cursor: pointer;
 	font-size: 14px;
-	font-weight: 500;
+	font-weight: 300;
 	color: #666;
 	transition: all 0.2s ease;
 	flex: 1;
@@ -401,7 +401,7 @@
 	gap: 8px;
 	background: var(--bg-tertiary);
 	padding: 4px;
-	border-radius: 10px;
+	border-radius: 8px;
 	width: fit-content;
 }
 
@@ -415,7 +415,7 @@
 	border-radius: 8px;
 	cursor: pointer;
 	font-size: 14px;
-	font-weight: 500;
+	font-weight: 300;
 	color: var(--text-secondary);
 	transition: all 0.2s ease;
 }

@@ -1,0 +1,209 @@
+/* ========================================
+   캘린더 공용 스타일
+   ======================================== */
+
+/* Grid Layout */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* Weekday Header */
+.calendar-weekday {
+    text-align: center;
+    font-weight: 400;
+    padding: 12px 8px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+}
+
+.calendar-weekday:last-child {
+    border-right: none;
+}
+
+.calendar-weekday.sunday {
+    color: var(--text-danger);
+}
+
+.calendar-weekday.saturday {
+    color: var(--text-info);
+}
+
+/* Calendar Day Cell */
+.calendar-day {
+    min-height: 120px;
+    padding: 4px 0;
+    background: var(--bg-primary);
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-day:nth-child(7n) {
+    border-right: none;
+}
+
+.calendar-day:nth-last-child(-n+7) {
+    border-bottom: none;
+}
+
+.calendar-day.today {
+    background: var(--bg-tertiary);
+}
+
+.calendar-day.today .day-number {
+    color: var(--text-info);
+    font-weight: 400;
+}
+
+.calendar-day.empty {
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.calendar-day.empty:nth-child(7n) {
+    border-right: none;
+}
+
+.calendar-day.sunday .day-number {
+    color: var(--text-danger);
+}
+
+.calendar-day.saturday .day-number {
+    color: var(--text-info);
+}
+
+/* Day Number */
+.day-number {
+    font-weight: 400;
+    margin-bottom: 4px;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+}
+
+/* Day Content */
+.day-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Schedule Item */
+.schedule-item {
+    font-size: 0.75rem;
+    padding: 2px 4px;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    height: 22px;
+    line-height: 18px;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    border: none;
+    text-align: left;
+    background: none;
+}
+
+.schedule-item:hover {
+    filter: brightness(0.9);
+    z-index: 2;
+}
+
+/* 시작 부분 둥글게, 왼쪽 마진 */
+.schedule-item.start {
+    border-top-left-radius: 2px;
+    border-bottom-left-radius: 2px;
+    margin-left: 2px;
+}
+
+/* 끝 부분 둥글게, 오른쪽 마진 */
+.schedule-item.end {
+    border-top-right-radius: 2px;
+    border-bottom-right-radius: 2px;
+    margin-right: 2px;
+}
+
+/* 중간 부분은 마진 없이 꽉 채움 */
+.schedule-item:not(.start) {
+    margin-left: -1px;
+    padding-left: 0;
+}
+
+.schedule-item:not(.end) {
+    margin-right: -1px;
+}
+
+.schedule-placeholder {
+    height: 22px;
+}
+
+/* Calendar Navigation */
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.calendar-nav .nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.calendar-nav .nav-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.calendar-nav .nav-title {
+    font-weight: 400;
+    min-width: 100px;
+    text-align: center;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .calendar-day {
+        min-height: 80px;
+    }
+
+    .calendar-weekday {
+        padding: 8px 4px;
+        font-size: 0.8rem;
+    }
+
+    .day-number {
+        font-size: 0.8rem;
+        padding: 2px 4px;
+    }
+
+    .schedule-item {
+        font-size: 0.65rem;
+        height: 18px;
+        line-height: 14px;
+    }
+
+    .schedule-placeholder {
+        height: 18px;
+    }
+}

@@ -46,6 +46,7 @@
 
     /* Borders */
     --border-color: #e0e0e0;
+    --border-color-light: #f1f1f1;
     --border-color-dark: var(--color-main-3);
 
     /* Buttons & Interactive */
@@ -71,6 +72,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-weight: 300;
 }
 
 body {
@@ -91,7 +93,7 @@ h3,
 h4,
 h5,
 h6 {
-    font-weight: 700;
+    font-weight: 300;
     line-height: 1.3;
     color: var(--text-primary);
 }

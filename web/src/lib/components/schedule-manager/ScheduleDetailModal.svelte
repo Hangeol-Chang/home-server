@@ -80,7 +80,7 @@
     .modal-title {
         margin: 0;
         font-size: 1.25rem;
-        font-weight: 600;
+        font-weight: 400;
         color: var(--text-primary);
         line-height: 1.4;
     }
@@ -102,7 +102,7 @@
         font-size: 0.85rem;
         color: var(--text-secondary);
         margin-bottom: 4px;
-        font-weight: 500;
+        font-weight: 300;
     }
 
     .value {
@@ -125,6 +125,6 @@
         border-radius: 4px;
         color: white;
         font-size: 0.85rem;
-        font-weight: 500;
+        font-weight: 300;
     }
 </style>

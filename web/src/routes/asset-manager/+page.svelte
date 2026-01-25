@@ -254,7 +254,7 @@
 		margin: 8px 0;
 		text-align: left;
 		font-size: 1.3rem;
-		font-weight: 600;
+		font-weight: 400;
 		color: var(--text-primary);
 		cursor: pointer;
 		transition: all 0.3s;

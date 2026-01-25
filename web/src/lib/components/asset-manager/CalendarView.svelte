@@ -412,12 +412,12 @@
 		align-items: center;
 		gap: 6px;
 		padding: 4px 12px;
-		border-radius: 20px;
+		border-radius: 8px;
 		border: transparent 1px solid;
 		background: var(--bg-primary);
 		color: var(--text-primary);
 		font-size: 0.8rem;
-		font-weight: 500;
+		font-weight: 300;
 		cursor: pointer;
 		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 		user-select: none;
@@ -462,7 +462,7 @@
 		justify-content: center;
 		display: flex;
 		height: 54px;
-		font-weight: 600;
+		font-weight: 400;
 		font-size: 14px;
 		padding: 4px 6px;
 		color: var(--text-primary);
@@ -517,7 +517,7 @@
 
 	.week-label {
 		font-size: 13px;
-		font-weight: 700;
+		font-weight: 400;
 		color: var(--text-primary);
 		text-align: center;
 		border-bottom: 1px solid var(--border-color);
@@ -575,7 +575,7 @@
 
 	.day-number {
 		font-size: 16px;
-		font-weight: 600;
+		font-weight: 400;
 		color: var(--text-primary);
 		margin-bottom: 4px;
 	}
@@ -592,7 +592,7 @@
 		font-size: 11px;
 		width: 100%;
 		text-align: center;
-		font-weight: 600;
+		font-weight: 400;
 		padding: 2px 4px;
 		border-radius: 4px;
 		overflow: hidden;

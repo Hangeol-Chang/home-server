@@ -274,7 +274,7 @@
 
     .category-select {
         padding: 8px 12px;
-        border-radius: 6px;
+        border-radius: 4px;
         border: 1px solid var(--border-color);
         background: var(--bg-secondary);
         color: var(--text-primary);
@@ -284,7 +284,7 @@
 
     .budget-detail-card {
         background: var(--bg-secondary);
-        border-radius: 12px;
+        border-radius: 8px;
         padding: 20px;
     }
 
@@ -362,7 +362,7 @@
         width: 100%;
         padding: 8px 12px;
         border: 1px solid var(--border-color);
-        border-radius: 6px;
+        border-radius: 4px;
         background: var(--bg-primary);
         color: var(--text-primary);
         font-size: 1rem;
@@ -375,7 +375,7 @@
 
     .stat-item .value {
         font-size: 1.2rem;
-        font-weight: 600;
+        font-weight: 400;
         color: var(--text-primary);
     }
 

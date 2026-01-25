@@ -88,7 +88,7 @@
 
 	.login-card {
 		background: white;
-		border-radius: 16px;
+		border-radius: 8px;
 		padding: 48px;
 		max-width: 440px;
 		width: 100%;
@@ -130,7 +130,7 @@
 		border: 2px solid #ddd;
 		border-radius: 8px;
 		font-size: 1rem;
-		font-weight: 600;
+		font-weight: 400;
 		color: #555;
 		cursor: pointer;
 		transition: all 0.2s;

@@ -11,54 +11,78 @@ if (!secret) {
 	throw new Error('AUTH_SECRET 환경 변수가 설정되지 않았습니다. 프로덕션 환경에서는 필수입니다.');
 }
 
-const { handle: authHandle } = SvelteKitAuth({
-	providers: [
-		Google({
-			clientId: GOOGLE_CLIENT_ID,
-			clientSecret: GOOGLE_CLIENT_SECRET
-		})
-	],
-	secret,
-	trustHost: true,
-	session: {
-		strategy: 'jwt',
-		maxAge: 24 * 60 * 60 // 24시간 (초 단위)
-	},
-	cookies: {
-		sessionToken: {
-			name: 'authjs.session-token',
-			options: {
-				httpOnly: true,
-				sameSite: 'lax',
-				path: '/',
-				secure: !dev, // 프로덕션에서만 secure
-				maxAge: 24 * 60 * 60 // 24시간 (초 단위)
-			}
-		}
-	},
-	callbacks: {
-		async signIn({ user, account, profile }) {
-			// 이메일이 허용된 목록에 있는지 확인
-			if (user?.email && isEmailAllowed(user.email)) {
-				return true;
-			}
-			// 허용되지 않은 이메일은 로그인 거부
-			console.log(`로그인 거부: ${user?.email}`);
-			return false;
+// 세션 만료 시간 상수
+const SESSION_MAX_AGE_DEFAULT = 24 * 60 * 60; // 24시간 (초 단위)
+const SESSION_MAX_AGE_REMEMBER = 30 * 24 * 60 * 60; // 30일 (초 단위)
+
+// remember_me 쿠키 확인 함수
+function getRememberMe(cookies) {
+	const rememberMeCookie = cookies?.get('remember_me');
+	return rememberMeCookie === 'true';
+}
+
+const authHandler = SvelteKitAuth(async ({ cookies }) => {
+	const rememberMe = getRememberMe(cookies);
+	const maxAge = rememberMe ? SESSION_MAX_AGE_REMEMBER : SESSION_MAX_AGE_DEFAULT;
+
+	return {
+		providers: [
+			Google({
+				clientId: GOOGLE_CLIENT_ID,
+				clientSecret: GOOGLE_CLIENT_SECRET
+			})
+		],
+		secret,
+		trustHost: true,
+		session: {
+			strategy: 'jwt',
+			maxAge: maxAge
 		},
-		async session({ session, token }) {
-			// 세션에 사용자 정보 추가
-			if (session?.user) {
-				session.user.id = token.sub;
+		cookies: {
+			sessionToken: {
+				name: 'authjs.session-token',
+				options: {
+					httpOnly: true,
+					sameSite: 'lax',
+					path: '/',
+					secure: !dev, // 프로덕션에서만 secure
+					maxAge: maxAge
+				}
 			}
-			return session;
+		},
+		callbacks: {
+			async signIn({ user, account, profile }) {
+				// 이메일이 허용된 목록에 있는지 확인
+				if (user?.email && isEmailAllowed(user.email)) {
+					return true;
+				}
+				// 허용되지 않은 이메일은 로그인 거부
+				console.log(`로그인 거부: ${user?.email}`);
+				return false;
+			},
+			async jwt({ token, account }) {
+				// 로그인 시 remember_me 상태를 토큰에 저장
+				if (account) {
+					token.rememberMe = rememberMe;
+				}
+				return token;
+			},
+			async session({ session, token }) {
+				// 세션에 사용자 정보 추가
+				if (session?.user) {
+					session.user.id = token.sub;
+				}
+				return session;
+			}
+		},
+		pages: {
+			signIn: '/login',
+			error: '/login'
 		}
-	},
-	pages: {
-		signIn: '/login',
-		error: '/login'
-	}
+	};
 });
+
+const { handle: authHandle } = authHandler;
 
 // 인증 확인 핸들러
 async function authorizationHandle({ event, resolve }) {

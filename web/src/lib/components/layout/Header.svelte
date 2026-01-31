@@ -20,28 +20,20 @@
 		isProfileDropdownOpen = false;
 	}
 
-	function handleMouseEnter(type) {
-		if ($device.isMobile) return;
-		
-		if (type === 'menu') {
-			isMenuDropdownOpen = true;
-			isProfileDropdownOpen = false;
-		} else if (type === 'profile') {
-			isProfileDropdownOpen = true;
-			isMenuDropdownOpen = false;
-		}
+	function closeAllDropdowns() {
+		isProfileDropdownOpen = false;
+		isMenuDropdownOpen = false;
 	}
 
-	function handleMouseLeave(type) {
-		if ($device.isMobile) return;
-
-		if (type === 'menu') {
-			isMenuDropdownOpen = false;
-		} else if (type === 'profile') {
-			isProfileDropdownOpen = false;
+	function handleClickOutside(event) {
+		const target = event.target;
+		if (!target.closest('.menu-dropdown-container') && !target.closest('.profile-menu')) {
+			closeAllDropdowns();
 		}
 	}
 </script>
+
+<svelte:window onclick={handleClickOutside} />
 
 {#if session?.user}
 	<header class="app-header" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
@@ -55,18 +47,16 @@
 			<div class="header-right">
 				<div 
 					class="menu-dropdown-container"
-					onmouseenter={() => handleMouseEnter('menu')}
-					onmouseleave={() => handleMouseLeave('menu')}
 					role="group"
 				>
-					<div class="menu-button" aria-label="메뉴">
+					<button class="menu-button" onclick={toggleMenuDropdown} aria-label="메뉴">
 						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<line x1="3" y1="12" x2="21" y2="12"></line>
 							<line x1="3" y1="6" x2="21" y2="6"></line>
 							<line x1="3" y1="18" x2="21" y2="18"></line>
 						</svg>
 						<span>메뉴</span>
-					</div>
+					</button>
 
 					{#if isMenuDropdownOpen}
 						<div class="menu-dropdown">
@@ -88,8 +78,6 @@
 
 				<div 
 					class="profile-menu"
-					onmouseenter={() => handleMouseEnter('profile')}
-					onmouseleave={() => handleMouseLeave('profile')}
 					role="group"
 				>
 					<button class="profile-button" onclick={toggleProfileDropdown} aria-label="프로필 메뉴">
@@ -266,7 +254,7 @@
 	/* Dropdown */
 	.dropdown {
 		position: absolute;
-		top: calc(100% + 8px);
+		top: calc(80% + 8px);
 		right: 0;
 		min-width: 240px;
 		background: var(--bg-primary);

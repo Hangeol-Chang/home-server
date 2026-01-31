@@ -4,6 +4,7 @@
 	import { device } from '$lib/stores/device';
 
 	let error = '';
+	let rememberMe = $state(false);
 	
 	// URL에서 에러 파라미터 확인
 	if (typeof window !== 'undefined') {
@@ -14,6 +15,15 @@
 	}
 
 	async function handleGoogleSignIn() {
+		// Remember me 쿠키 설정 (30일 또는 세션)
+		if (rememberMe) {
+			// 30일 동안 유지
+			const maxAge = 30 * 24 * 60 * 60; // 30일 (초)
+			document.cookie = `remember_me=true; path=/; max-age=${maxAge}; SameSite=Lax`;
+		} else {
+			// 쿠키 삭제
+			document.cookie = 'remember_me=; path=/; max-age=0';
+		}
 		await signIn('google', { callbackUrl: '/' });
 	}
 </script>
@@ -56,6 +66,12 @@
 			</svg>
 			<span>Google로 로그인</span>
 		</button>
+
+		<label class="remember-me">
+			<input type="checkbox" bind:checked={rememberMe} />
+			<span>로그인 정보 저장</span>
+		</label>
+
 	</div>
 </div>
 
@@ -117,6 +133,28 @@
 		border-radius: 8px;
 		margin-bottom: 24px;
 		font-size: 0.9rem;
+	}
+
+	.remember-me {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		margin: 20px;
+		cursor: pointer;
+		font-size: 0.9rem;
+		color: var(--text-secondary, #666);
+	}
+
+	.remember-me input[type="checkbox"] {
+		width: 18px;
+		height: 18px;
+		cursor: pointer;
+		accent-color: var(--accent-color, #4285F4);
+	}
+
+	.remember-me span {
+		user-select: none;
 	}
 
 	.google-signin-btn {

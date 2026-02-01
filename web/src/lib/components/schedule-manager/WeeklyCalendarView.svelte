@@ -178,7 +178,9 @@
 					<polyline points="15 18 9 12 15 6"></polyline>
 				</svg>
 			</button>
-			<h3>📅 {year}년 연간 일정</h3>
+			<a href="/schedule-manager">
+				<h3>📅 {year}년 연간 일정</h3>
+			</a>
 			<button class="nav-btn" onclick={() => changeYear(1)} aria-label="다음 해">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<polyline points="9 18 15 12 9 6"></polyline>

@@ -4,6 +4,7 @@
 	import TransactionDropdown from './TransactionDropdown.svelte';
 	import TransactionForm from './TransactionForm.svelte';
 	import { device } from '$lib/stores/device';
+	import '$lib/styles/module.css';
 
 	let { year = new Date().getFullYear(), month = new Date().getMonth() + 1 } = $props();
 
@@ -289,10 +290,10 @@
 		</div>
 	{:else}
 		<div class="calendar-container">
-			<div class="calendar-grid">
+			<div class="calendar-grid" style="flex-grow: 1;">
 				<!-- 요일 헤더 -->
 				{#each weekDays as day, index}
-					<div class="calendar-weekday" class:sunday={index === 0} class:saturday={index === 6}>
+					<div class="calendar-weekday" style="height: 60px;" class:sunday={index === 0} class:saturday={index === 6}>
 						{day}
 					</div>
 				{/each}
@@ -336,7 +337,7 @@
 
 			<!-- 주간 통계 -->
 			<div class="week-stats-column">
-				<div class="week-stats-header">
+				<div class="calendar-weekday" style="height: 60px; padding: 0px;">
 					{#if monthlyStats.spend > 0 || monthlyStats.save > 0}
 						<div class="amount spend">
 							<span class="amount-full">-{formatCurrency(monthlyStats.spend + monthlyStats.save)}</span>
@@ -355,20 +356,22 @@
 				</div>
 				{#each getCalendarDays() as week, weekIndex}
 					{@const weekStats = getWeekStats(week)}
-					<div class="week-stats-cell">
-						<div class="week-label">{weekIndex + 1}</div>
-						{#if weekStats.spend > 0 || weekStats.save > 0}
-							<div class="amount spend">
-								<span class="amount-full">-{formatCurrency(weekStats.spend + weekStats.save)}</span>
-								<span class="amount-compact">-{formatCurrencyCompact(weekStats.spend + weekStats.save)}</span>
-							</div>
-						{/if}
-						{#if weekStats.earn > 0}
-							<div class="amount earn">
-								<span class="amount-full">+{formatCurrency(weekStats.earn)}</span>
-								<span class="amount-compact">+{formatCurrencyCompact(weekStats.earn)}</span>
-							</div>
-						{/if}
+					<div class="calendar-day" style="border-bottom: 1px solid var(--border-color);">
+						<div class="day-number">{weekIndex + 1}</div>
+						<div class="day-amounts">
+							{#if weekStats.spend > 0 || weekStats.save > 0}
+								<div class="amount spend">
+									<span class="amount-full">-{formatCurrency(weekStats.spend + weekStats.save)}</span>
+									<span class="amount-compact">-{formatCurrencyCompact(weekStats.spend + weekStats.save)}</span>
+								</div>
+								{/if}
+							{#if weekStats.earn > 0}
+								<div class="amount earn">
+									<span class="amount-full">+{formatCurrency(weekStats.earn)}</span>
+									<span class="amount-compact">+{formatCurrencyCompact(weekStats.earn)}</span>
+								</div>
+							{/if}
+						</div>
 					</div>
 				{/each}
 			</div>
@@ -394,13 +397,39 @@
 {/if}
 
 <style>
-	.module-container {
-		padding: 28px;
-		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-		margin-bottom: 24px;
-		container-type: inline-size;
+	/* 1. 월간 캘린더 네비게이션 (Schedule Manager와 동일) */
+	.month-nav {
+		display: flex;
+		align-items: center;
+		gap: 12px;
 	}
 
+	.month-nav h3 {
+		margin: 0;
+		min-width: 140px;
+		text-align: center;
+	}
+
+	.month-nav .nav-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		background: var(--bg-secondary);
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.month-nav .nav-btn:hover {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+	}
+
+    /* 2. Asset Manager 전용 필터 스타일 */
 	.filters {
 		display: flex;
 		gap: 8px;
@@ -433,7 +462,7 @@
 		color: var(--text-primary);
 		border-color: var(--color-main-4);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-		padding-left: 12px; /* Icon space adjustment */
+		padding-left: 12px;
 	}
 
 	.check-icon {
@@ -446,156 +475,53 @@
 
 	.calendar-container {
 		display: flex;
-		gap: 16px;
+		gap: 12px;
 		align-items: flex-start;
-	}
-
-	.calendar-grid {
-		display: grid;
-		grid-template-columns: repeat(7, 1fr);
-		gap: 8px;
-		flex: 1;
-	}
-
-	.calendar-weekday {
-		align-items: center;
-		justify-content: center;
-		display: flex;
-		height: 54px;
-		font-weight: 400;
-		font-size: 14px;
-		padding: 4px 6px;
-		color: var(--text-primary);
-		background: var(--bg-tertiary);
-		border-radius: 4px;
-	}
-
-	.calendar-weekday.sunday {
-		color: #f44336;
-	}
-
-	.calendar-weekday.saturday {
-		color: #2196f3;
 	}
 
 	.week-stats-column {
 		width: 100px;
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 0; 
 		flex-shrink: 0;
-	}
-
-	.week-stats-header {
-		text-align: center;
-		height: 54px;
-		font-size: 14px;
-		padding: 4px 6px;
-		background: var(--bg-tertiary);
-		border-radius: 4px;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		gap: 2px;
-		min-height: 30px;
-	}
-
-	.week-stats-header .amount {
-		background: rgba(255, 255, 255, 0.2);
-		color: white;
-	}
-
-	.week-stats-cell {
-		background: var(--bg-tertiary);
-		border-radius: 4px;
-		padding: 8px;
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		min-height: 90px;
-	}
-
-	.week-label {
-		font-size: 13px;
-		font-weight: 400;
-		color: var(--text-primary);
-		text-align: center;
-		border-bottom: 1px solid var(--border-color);
-	}
-
-	.calendar-day {
-		min-height: 90px;
-		padding: 8px;
-		border-radius: 4px;
-		background: var(--bg-primary);
-		display: flex;
-		flex-direction: column;
-		transition: all 0.2s ease;
-		justify-content: center;
-		align-items: center;
-		position: relative;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        overflow: hidden;
+        background: var(--bg-secondary);
 	}
 
 	.calendar-day.clickable {
 		cursor: pointer;
 	}
-
-	.calendar-day.clickable:hover {
-		background: var(--bg-secondary);
-		transform: scale(1.02);
-	}
-
-	.calendar-day.clickable:focus {
-		outline: 2px solid var(--color-medium);
-		outline-offset: 2px;
-	}
-
-	.calendar-day.empty {
-		background: transparent;
-		border: none;
-		cursor: default;
-	}
-
-	.calendar-day.selected {
-		border: 2px solid var(--color-dark);
-		background: var(--color-light);
-		box-shadow: 0 4px 12px rgba(201, 124, 93, 0.3);
-	}
-
-	.calendar-day.today {
-		border: 2px solid var(--border-color);
+    
+    .calendar-day.clickable:hover {
         background: var(--bg-secondary);
-		box-shadow: 0 2px 8px rgba(200, 159, 156, 0.2);
-	}
+    }
+    
+    .calendar-day.selected {
+        border: 2px solid var(--color-dark); /* Keep explicit border for selection */
+    }
 
-	.calendar-day.has-data:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-	}
-
-	.day-number {
-		font-size: 16px;
-		font-weight: 400;
-		color: var(--text-primary);
-		margin-bottom: 4px;
-	}
-
+    /* 4. 데이터 표시 (Amounts) */
 	.day-amounts {
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
 		flex: 1;
         width: 100%;
+        justify-content: flex-start;
 	}
 
 	.amount {
 		font-size: 11px;
-		width: 100%;
+		width: calc(100% - 8px);
 		text-align: center;
 		font-weight: 400;
 		padding: 2px 4px;
 		border-radius: 4px;
 		overflow: hidden;
+		margin: 2px 4px;
 	}
 
 	.amount-full {
@@ -616,76 +542,22 @@
 		background: rgba(244, 67, 54, 0.1);
 	}
 
-	/* Tablet/Mobile (< 768px) */
-	.calendar-view {
-		&.tablet {
-			padding: 16px;
+    /* Media Queries matching module-calendar.css breakpoints */
+    @media (max-width: 768px) {
+        .week-stats-column {
+            width: 60px;
+        }
 
-			.calendar-grid {
-				gap: 4px;
-			}
+        .amount-full {
+            display: none;
+        }
 
-			.calendar-day {
-				min-height: 80px;
-				padding: 4px;
-				font-size: 0.85rem;
-			}
-
-			.week-stats-column {
-				width: 60px;
-				gap: 4px;
-			}
-
-			.week-stats-cell {
-				padding: 4px 2px;
-				font-size: 0.7rem;
-				min-height: 80px;
-			}
-
-			.amount-full {
-				display: none;
-			}
-
-			.amount-compact {
-				display: inline;
-			}
-
-			.day-number {
-				font-size: 14px;
-			}
-
-			.amount {
-				font-size: 10px;
-			}
-		}
-
-		/* Mobile (< 320px) */
-		&.mobile {
-			padding: 12px;
-
-			.calendar-grid {
-				gap: 2px;
-			}
-
-			.calendar-day {
-				min-height: 70px;
-				padding: 3px;
-				font-size: 0.8rem;
-			}
-
-			.week-stats-column {
-				width: 50px;
-				gap: 2px;
-			}
-
-			.week-stats-cell {
-				padding: 3px 1px;
-				font-size: 0.65rem;
-			}
-
-			.amount-compact {
-				font-size: 0.75rem;
-			}
-		}
-	}
+        .amount-compact {
+            display: inline;
+        }
+        
+        .amount {
+            font-size: 10px;
+        }
+    }
 </style>

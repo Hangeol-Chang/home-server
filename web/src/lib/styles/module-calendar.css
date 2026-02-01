@@ -103,6 +103,8 @@
 
 /* Schedule Item */
 .schedule-item {
+    display: flex;
+    align-items: center;
     font-size: 0.75rem;
     padding: 2px 4px;
     color: white;

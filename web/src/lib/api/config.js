@@ -123,6 +123,26 @@ export async function apiDelete(url) {
 }
 
 /**
+ * PATCH 요청 헬퍼
+ */
+export async function apiPatch(url, data = null, params = {}) {
+	const urlParams = new URLSearchParams();
+	Object.entries(params).forEach(([key, value]) => {
+		if (value !== null && value !== undefined && value !== '') {
+			urlParams.append(key, value);
+		}
+	});
+	
+	const queryString = urlParams.toString();
+	const fullUrl = queryString ? `${url}?${queryString}` : url;
+	
+	return apiRequest(fullUrl, {
+		method: 'PATCH',
+		body: data ? JSON.stringify(data) : undefined
+	});
+}
+
+/**
  * 전체 URL 생성 헬퍼
  */
 export function buildUrl(endpoint, path = '') {

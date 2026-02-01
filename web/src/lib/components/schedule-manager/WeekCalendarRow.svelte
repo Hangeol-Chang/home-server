@@ -1,17 +1,37 @@
 <script>
 	import { device } from '$lib/stores/device';
-	import { getGoogleEventsForWeek } from '$lib/api/schedule-manager.js';
+	import { getGoogleEventsForWeek, getTodos, moveTodo, toggleTodoCompletion } from '$lib/api/schedule-manager.js';
 	import ScheduleDetailModal from './ScheduleDetailModal.svelte';
+	import DayDetailModal from './DayDetailModal.svelte';
+	import TodoFormModal from './TodoFormModal.svelte';
 	let { style = '' } = $props();
 
 	let loading = $state(false);
 
-	// Modal State
+	// Schedule Detail Modal State
 	let showModal = $state(false);
 	let selectedSchedule = $state(null);
+	
+	// Day Detail Modal State
+	let showDayModal = $state(false);
+	let selectedDate = $state(null);
+	let selectedDaySchedules = $state([]);
+	let selectedDayTodos = $state([]);
+	
+	// Todo Form Modal State
+	let showTodoForm = $state(false);
+	let editingTodo = $state(null);
+	let initialTodoDate = $state(null);
+	
+	// Drag and Drop State
+	let draggingItem = $state(null);
+	let dragOverDate = $state(null);
 
 	// 현재 표시 중인 주의 기준 날짜 (해당 주의 일요일)
 	let weekOffset = $state(0);
+	
+	// 로드된 할일 목록
+	let loadedTodos = $state([]);
 
 	const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -52,8 +72,16 @@
 		try {
 			const startDate = dates[0].date;
 			const endDate = dates[6].date;
-			const fetchedSchedules = await getGoogleEventsForWeek(startDate, endDate);
-			weekDates = assignSchedulesToSlots(dates, fetchedSchedules);
+			const [fetchedSchedules, fetchedTodos] = await Promise.all([
+				getGoogleEventsForWeek(startDate, endDate),
+				getTodos(startDate, endDate)
+			]);
+			loadedTodos = fetchedTodos.map(t => ({ ...t, source: 'todo', type: 'todo' }));
+			const allItems = [
+				...fetchedSchedules.map(s => ({ ...s, type: 'schedule' })),
+				...loadedTodos
+			];
+			weekDates = assignSchedulesToSlots(dates, allItems);
 		} catch (err) {
 			console.error('Failed to load schedules:', err);
 			weekDates = dates;
@@ -135,9 +163,170 @@
 		return updatedDates;
 	}
 
-	function openModal(schedule) {
-		selectedSchedule = schedule;
-		showModal = true;
+	function openModal(item) {
+		if (item.type === 'todo') {
+			editingTodo = item;
+			showTodoForm = true;
+		} else {
+			selectedSchedule = { ...item, type: item.source || 'Google Calendar' };
+			showModal = true;
+		}
+	}
+	
+	function openDayModal(dateStr) {
+		selectedDate = dateStr;
+		selectedDaySchedules = weekDates.find(d => d.date === dateStr)?.slots
+			?.filter(s => s && s.type === 'schedule')
+			?.map(s => ({ ...s, type: s.source || 'Google Calendar' })) || [];
+		selectedDayTodos = loadedTodos.filter(t => 
+			t.start_date <= dateStr && t.end_date >= dateStr
+		);
+		showDayModal = true;
+	}
+	
+	function handleAddTodo(date) {
+		showDayModal = false;
+		initialTodoDate = date;
+		editingTodo = null;
+		showTodoForm = true;
+	}
+	
+	function handleEditTodo(todo) {
+		showDayModal = false;
+		editingTodo = todo;
+		initialTodoDate = null;
+		showTodoForm = true;
+	}
+	
+	async function handleTodoFormSuccess() {
+		const dates = getWeekDates(weekOffset);
+		await loadDataForWeek(dates);
+	}
+	
+	async function handleTodoChange() {
+		const dates = getWeekDates(weekOffset);
+		await loadDataForWeek(dates);
+		// Day modal 데이터 갱신
+		if (selectedDate) {
+			selectedDayTodos = loadedTodos.filter(t => 
+				t.start_date <= selectedDate && t.end_date >= selectedDate
+			);
+		}
+	}
+	
+	// Drag and Drop handlers
+	function handleDragStart(e, item) {
+		if (item.type !== 'todo') {
+			e.preventDefault();
+			return;
+		}
+		draggingItem = item;
+		e.dataTransfer.effectAllowed = 'move';
+		e.dataTransfer.setData('text/plain', JSON.stringify(item));
+	}
+	
+	function handleDragOver(e, dateStr) {
+		if (!draggingItem) return;
+		e.preventDefault();
+		e.dataTransfer.dropEffect = 'move';
+		dragOverDate = dateStr;
+	}
+	
+	function handleDragLeave(e) {
+		dragOverDate = null;
+	}
+	
+	async function handleDrop(e, targetDateStr) {
+		e.preventDefault();
+		dragOverDate = null;
+		
+		if (!draggingItem || draggingItem.type !== 'todo') {
+			draggingItem = null;
+			return;
+		}
+		
+		const todo = draggingItem;
+		draggingItem = null;
+		
+		const originalStart = new Date(todo.start_date);
+		const targetDate = new Date(targetDateStr);
+		const daysDiff = Math.round((targetDate - originalStart) / (1000 * 60 * 60 * 24));
+		
+		if (daysDiff === 0) return;
+		
+		const newStart = new Date(originalStart);
+		newStart.setDate(newStart.getDate() + daysDiff);
+		const newEnd = new Date(todo.end_date);
+		newEnd.setDate(newEnd.getDate() + daysDiff);
+		
+		const newStartStr = newStart.toISOString().split('T')[0];
+		const newEndStr = newEnd.toISOString().split('T')[0];
+		
+		try {
+			await moveTodo(todo.id, newStartStr, newEndStr);
+			const dates = getWeekDates(weekOffset);
+			await loadDataForWeek(dates);
+		} catch (err) {
+			console.error('Failed to move todo:', err);
+		}
+	}
+	
+	function handleDragEnd() {
+		draggingItem = null;
+		dragOverDate = null;
+	}
+	
+	// Todo 체크박스 토글
+	async function handleToggleTodo(e, todo) {
+		e.stopPropagation();
+		try {
+			await toggleTodoCompletion(todo.id);
+			const dates = getWeekDates(weekOffset);
+			await loadDataForWeek(dates);
+		} catch (err) {
+			console.error('Failed to toggle todo:', err);
+		}
+	}
+	
+	// 색상의 채도를 낮추는 함수 (완료된 할일용)
+	function desaturateColor(color) {
+		if (!color) return '#999';
+		// Hex to RGB
+		const hex = color.replace('#', '');
+		const r = parseInt(hex.substring(0, 2), 16);
+		const g = parseInt(hex.substring(2, 4), 16);
+		const b = parseInt(hex.substring(4, 6), 16);
+		// RGB to HSL
+		const max = Math.max(r, g, b) / 255;
+		const min = Math.min(r, g, b) / 255;
+		const l = (max + min) / 2;
+		let h = 0, s = 0;
+		if (max !== min) {
+			const d = max - min;
+			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+			const rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
+			if (max === rNorm) h = ((gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0)) / 6;
+			else if (max === gNorm) h = ((bNorm - rNorm) / d + 2) / 6;
+			else h = ((rNorm - gNorm) / d + 4) / 6;
+		}
+		// 채도를 15%로 낮추고, 명도를 약간 높임
+		const newS = 0.15;
+		const newL = Math.min(l + 0.1, 0.7);
+		// HSL to RGB
+		const hue2rgb = (p, q, t) => {
+			if (t < 0) t += 1;
+			if (t > 1) t -= 1;
+			if (t < 1/6) return p + (q - p) * 6 * t;
+			if (t < 1/2) return q;
+			if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+			return p;
+		};
+		const q = newL < 0.5 ? newL * (1 + newS) : newL + newS - newL * newS;
+		const p = 2 * newL - q;
+		const newR = Math.round(hue2rgb(p, q, h + 1/3) * 255);
+		const newG = Math.round(hue2rgb(p, q, h) * 255);
+		const newB = Math.round(hue2rgb(p, q, h - 1/3) * 255);
+		return `rgb(${newR}, ${newG}, ${newB})`;
 	}
 
 	function isToday(dateStr) {
@@ -173,6 +362,14 @@
 						class:today={isToday(dayInfo.date)}
 						class:sunday={index === 0}
 						class:saturday={index === 6}
+						class:drag-over={dragOverDate === dayInfo.date}
+						onclick={() => openDayModal(dayInfo.date)}
+						ondragover={(e) => handleDragOver(e, dayInfo.date)}
+						ondragleave={handleDragLeave}
+						ondrop={(e) => handleDrop(e, dayInfo.date)}
+						role="button"
+						tabindex="0"
+						onkeydown={(e) => e.key === 'Enter' && openDayModal(dayInfo.date)}
 					>
 						<div class="day-number">
 							<span class="weekday-label">{weekDays[index]}</span>
@@ -186,12 +383,28 @@
 										class:start={slot.isStart}
 										class:end={slot.isEnd}
 										class:continued={slot.isContinuedFromPrev}
-										style="background-color: {slot.color || '#4285F4'};"
-										title={slot.title}
-										onclick={() => openModal(slot)}
+										class:todo={slot.type === 'todo'}
+										class:completed={slot.is_completed}
+										style="background-color: {slot.is_completed ? desaturateColor(slot.color) : (slot.color || '#4285F4')};"
+										onclick={(e) => { e.stopPropagation(); openModal(slot); }}
+										draggable={slot.type === 'todo'}
+										ondragstart={(e) => handleDragStart(e, slot)}
+										ondragend={handleDragEnd}
 									>
 										{#if slot.isStart || !slot.isContinuedFromPrev}
-											{slot.title}
+											{#if slot.type === 'todo'}
+												<!-- svelte-ignore a11y_click_events_have_key_events -->
+												<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+												<label class="todo-checkbox" onclick={(e) => e.stopPropagation()}>
+													<input 
+														type="checkbox" 
+														checked={slot.is_completed}
+														onchange={(e) => handleToggleTodo(e, slot)}
+													/>
+												</label>
+											{/if}
+											<span class="item-title" class:strike={slot.is_completed}>{slot.title}</span>
+											<span class="tooltip">{slot.title}</span>
 										{:else}
 											&nbsp;
 										{/if}
@@ -230,6 +443,23 @@
 </div>
 
 <ScheduleDetailModal bind:visible={showModal} schedule={selectedSchedule} />
+
+<DayDetailModal 
+	bind:visible={showDayModal} 
+	date={selectedDate}
+	schedules={selectedDaySchedules}
+	todos={selectedDayTodos}
+	onAddTodo={handleAddTodo}
+	onEditTodo={handleEditTodo}
+	onTodoChange={handleTodoChange}
+/>
+
+<TodoFormModal 
+	bind:visible={showTodoForm} 
+	todo={editingTodo}
+	initialDate={initialTodoDate}
+	onSuccess={handleTodoFormSuccess}
+/>
 
 <style>
 	.week-calendar {
@@ -339,5 +569,96 @@
 
 	.mobile .spin-btn {
 		width: 24px;
+	}
+
+	/* 클릭 가능한 날짜 셀 */
+	.calendar-day {
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.calendar-day:hover {
+		background: var(--bg-secondary);
+	}
+
+	/* 드래그 오버 상태 */
+	.calendar-day.drag-over {
+		background: var(--bg-tertiary);
+		box-shadow: inset 0 0 0 2px var(--accent);
+	}
+
+	/* Todo 아이템 스타일 */
+	.schedule-item.todo {
+		cursor: grab;
+	}
+
+	.schedule-item.todo:active {
+		cursor: grabbing;
+	}
+
+	.schedule-item.completed {
+		opacity: 0.7;
+	}
+
+	/* 체크박스 스타일 */
+	.todo-checkbox {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		width: 14px;
+		height: 14px;
+		margin-right: 4px;
+		cursor: pointer;
+	}
+
+	.todo-checkbox input {
+		width: 12px;
+		height: 12px;
+		margin: 0;
+		cursor: pointer;
+		accent-color: var(--text-primary);
+	}
+
+	/* 제목 텍스트 */
+	.item-title {
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.item-title.strike {
+		text-decoration: line-through;
+		opacity: 0.7;
+	}
+
+	/* 툴팁 */
+	.schedule-item .tooltip {
+		position: absolute;
+		bottom: 100%;
+		left: 50%;
+		transform: translateX(-50%);
+		background: var(--bg-primary);
+		color: var(--text-primary);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		padding: 4px 8px;
+		font-size: 0.75rem;
+		white-space: nowrap;
+		max-width: 200px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		z-index: 1000;
+		pointer-events: none;
+		opacity: 0;
+		visibility: hidden;
+		transition: opacity 0.15s, visibility 0.15s;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+	}
+
+	.schedule-item:hover .tooltip {
+		opacity: 1;
+		visibility: visible;
 	}
 </style>

@@ -7,7 +7,8 @@ from icalendar import Calendar
 from models.schedule import (
     RecurringSchedule, RecurringScheduleCreate, RecurringScheduleUpdate,
     ScheduleLog, ScheduleLogCreate, ScheduleLogUpdate,
-    LongTermPlan, LongTermPlanCreate, LongTermPlanUpdate
+    LongTermPlan, LongTermPlanCreate, LongTermPlanUpdate,
+    Todo, TodoCreate, TodoUpdate
 )
 from utils.database import get_db_connection
 import sqlite3
@@ -341,4 +342,134 @@ async def get_google_events_for_week(start_date: date, end_date: date):
     except Exception as e:
         print(f"Error fetching Google Calendar: {e}")
         return []
+
+
+# --- Todo Items ---
+
+@router.get("/todos", response_model=List[Todo])
+async def get_todos(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    include_completed: bool = True
+):
+    """지정된 날짜 범위의 할일 목록 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        query = "SELECT * FROM todos WHERE 1=1"
+        params = []
+        
+        # Overlap check: (StartA <= EndB) and (EndA >= StartB)
+        if start_date and end_date:
+            query += " AND start_date <= ? AND end_date >= ?"
+            params.extend([end_date, start_date])
+        
+        if not include_completed:
+            query += " AND is_completed = 0"
+            
+        query += " ORDER BY start_date, created_at"
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+@router.post("/todos", response_model=Todo, status_code=status.HTTP_201_CREATED)
+async def create_todo(todo: TodoCreate):
+    """새 할일 생성"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        now = datetime.now()
+        cursor.execute("""
+            INSERT INTO todos (title, description, start_date, end_date, color, is_completed, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (todo.title, todo.description, todo.start_date, todo.end_date, todo.color, todo.is_completed, now, now))
+        todo_id = cursor.lastrowid
+        
+        cursor.execute("SELECT * FROM todos WHERE id = ?", (todo_id,))
+        return dict(cursor.fetchone())
+
+
+@router.get("/todos/{todo_id}", response_model=Todo)
+async def get_todo(todo_id: int):
+    """특정 할일 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM todos WHERE id = ?", (todo_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Todo not found")
+        return dict(row)
+
+
+@router.put("/todos/{todo_id}", response_model=Todo)
+async def update_todo(todo_id: int, todo: TodoUpdate):
+    """할일 수정"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM todos WHERE id = ?", (todo_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Todo not found")
+            
+        update_data = todo.dict(exclude_unset=True)
+        if not update_data:
+            cursor.execute("SELECT * FROM todos WHERE id = ?", (todo_id,))
+            return dict(cursor.fetchone())
+
+        update_data['updated_at'] = datetime.now()
+        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
+        values = list(update_data.values())
+        values.append(todo_id)
+        
+        cursor.execute(f"UPDATE todos SET {set_clause} WHERE id = ?", values)
+        
+        cursor.execute("SELECT * FROM todos WHERE id = ?", (todo_id,))
+        return dict(cursor.fetchone())
+
+
+@router.delete("/todos/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_todo(todo_id: int):
+    """할일 삭제"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Todo not found")
+
+
+@router.patch("/todos/{todo_id}/toggle", response_model=Todo)
+async def toggle_todo_completion(todo_id: int):
+    """할일 완료 상태 토글"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT is_completed FROM todos WHERE id = ?", (todo_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Todo not found")
+        
+        new_status = not row['is_completed']
+        now = datetime.now()
+        cursor.execute("UPDATE todos SET is_completed = ?, updated_at = ? WHERE id = ?", (new_status, now, todo_id))
+        
+        cursor.execute("SELECT * FROM todos WHERE id = ?", (todo_id,))
+        return dict(cursor.fetchone())
+
+
+@router.patch("/todos/{todo_id}/move", response_model=Todo)
+async def move_todo(todo_id: int, new_start_date: date, new_end_date: date):
+    """할일 날짜 이동 (드래그 앤 드롭용)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM todos WHERE id = ?", (todo_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Todo not found")
+        
+        now = datetime.now()
+        cursor.execute("""
+            UPDATE todos SET start_date = ?, end_date = ?, updated_at = ? WHERE id = ?
+        """, (new_start_date, new_end_date, now, todo_id))
+        
+        cursor.execute("SELECT * FROM todos WHERE id = ?", (todo_id,))
+        return dict(cursor.fetchone())
 

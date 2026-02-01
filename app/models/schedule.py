@@ -77,3 +77,31 @@ class LongTermPlan(LongTermPlanBase):
 
     class Config:
         from_attributes = True
+
+# --- Todo Items ---
+class TodoBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    start_date: date
+    end_date: date
+    color: Optional[str] = "#10B981"  # 기본 녹색
+    is_completed: bool = False
+
+class TodoCreate(TodoBase):
+    pass
+
+class TodoUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    color: Optional[str] = None
+    is_completed: Optional[bool] = None
+
+class Todo(TodoBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

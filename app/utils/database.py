@@ -202,6 +202,21 @@ def init_database():
             )
         """)
 
+        # 12. todos 테이블 (할일 관리)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS todos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                start_date DATE NOT NULL,
+                end_date DATE NOT NULL,
+                color TEXT DEFAULT '#10B981',
+                is_completed BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         # 마이그레이션: asset_categories 테이블에 default_budget 컬럼 추가
         try:
             cursor.execute("ALTER TABLE asset_categories ADD COLUMN default_budget REAL DEFAULT 0")
@@ -235,6 +250,7 @@ def init_database():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_name ON asset_tags(name)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tag_relations_asset ON asset_tag_relations(asset_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tag_relations_tag ON asset_tag_relations(tag_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_todos_date ON todos(start_date, end_date)")
      
 
         # 초기 데이터 삽입 (데이터가 없을 때만)

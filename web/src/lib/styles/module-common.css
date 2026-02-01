@@ -302,9 +302,8 @@
 .section {
 	background: var(--bg-primary);
 	border: 1px solid var(--border-color);
-	border-radius: 8px;
-	padding: 24px;
-	margin-bottom: 24px;
+	border-radius: 4px;
+	padding: 12px;
 }
 
 /* 필터/탭 버튼 */

@@ -217,6 +217,21 @@ def init_database():
             )
         """)
 
+        # 13. weekly_schedules 테이블 (주간 타임테이블)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS weekly_schedules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                day_of_week INTEGER NOT NULL,
+                start_time TEXT NOT NULL,
+                end_time TEXT NOT NULL,
+                color TEXT DEFAULT '#4ECDC4',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         # 마이그레이션: asset_categories 테이블에 default_budget 컬럼 추가
         try:
             cursor.execute("ALTER TABLE asset_categories ADD COLUMN default_budget REAL DEFAULT 0")
@@ -251,6 +266,7 @@ def init_database():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tag_relations_asset ON asset_tag_relations(asset_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tag_relations_tag ON asset_tag_relations(tag_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_todos_date ON todos(start_date, end_date)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_weekly_schedules_day ON weekly_schedules(day_of_week)")
      
 
         # 초기 데이터 삽입 (데이터가 없을 때만)

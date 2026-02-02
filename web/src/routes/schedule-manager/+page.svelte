@@ -3,6 +3,7 @@
 	import { device } from '$lib/stores/device';
 	import CalendarView from '$lib/components/schedule-manager/CalendarView.svelte';
 	import WeeklyCalendarView from '$lib/components/schedule-manager/WeeklyCalendarView.svelte';
+	import WeeklyTimetableView from '$lib/components/schedule-manager/WeeklyTimetableView.svelte';
     import ScheduleListView from '$lib/components/schedule-manager/ScheduleListView.svelte';
 	import '$lib/styles/module.css';
 	import '$lib/styles/module-common.css';
@@ -38,6 +39,7 @@
 	</header>
 
 	<ScheduleListView />
+	<WeeklyTimetableView />
 	<WeeklyCalendarView />
 	<CalendarView />
 </div>

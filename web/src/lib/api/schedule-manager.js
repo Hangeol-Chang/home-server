@@ -42,3 +42,21 @@ export async function moveTodo(todoId, newStartDate, newEndDate) {
         new_end_date: newEndDate
     });
 }
+
+// --- Weekly Timetable API ---
+
+export async function getWeeklySchedules() {
+    return apiGet(`${API_BASE}/weekly-schedules`);
+}
+
+export async function createWeeklySchedule(schedule) {
+    return apiPost(`${API_BASE}/weekly-schedules`, schedule);
+}
+
+export async function updateWeeklySchedule(scheduleId, schedule) {
+    return apiPut(`${API_BASE}/weekly-schedules/${scheduleId}`, schedule);
+}
+
+export async function deleteWeeklySchedule(scheduleId) {
+    return apiDelete(`${API_BASE}/weekly-schedules/${scheduleId}`);
+}

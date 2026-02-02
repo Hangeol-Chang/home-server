@@ -8,7 +8,8 @@ from models.schedule import (
     RecurringSchedule, RecurringScheduleCreate, RecurringScheduleUpdate,
     ScheduleLog, ScheduleLogCreate, ScheduleLogUpdate,
     LongTermPlan, LongTermPlanCreate, LongTermPlanUpdate,
-    Todo, TodoCreate, TodoUpdate
+    Todo, TodoCreate, TodoUpdate,
+    WeeklySchedule, WeeklyScheduleCreate, WeeklyScheduleUpdate
 )
 from utils.database import get_db_connection
 import sqlite3
@@ -472,4 +473,80 @@ async def move_todo(todo_id: int, new_start_date: date, new_end_date: date):
         
         cursor.execute("SELECT * FROM todos WHERE id = ?", (todo_id,))
         return dict(cursor.fetchone())
+
+
+# --- Weekly Timetable Schedules ---
+
+@router.get("/weekly-schedules", response_model=List[WeeklySchedule])
+async def get_weekly_schedules():
+    """주간 타임테이블 일정 목록 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM weekly_schedules ORDER BY day_of_week, start_time")
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+@router.post("/weekly-schedules", response_model=WeeklySchedule, status_code=status.HTTP_201_CREATED)
+async def create_weekly_schedule(schedule: WeeklyScheduleCreate):
+    """새 주간 타임테이블 일정 생성"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        now = datetime.now()
+        cursor.execute("""
+            INSERT INTO weekly_schedules (title, description, day_of_week, start_time, end_time, color, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (schedule.title, schedule.description, schedule.day_of_week, schedule.start_time, schedule.end_time, schedule.color, now, now))
+        schedule_id = cursor.lastrowid
+        
+        cursor.execute("SELECT * FROM weekly_schedules WHERE id = ?", (schedule_id,))
+        return dict(cursor.fetchone())
+
+
+@router.get("/weekly-schedules/{schedule_id}", response_model=WeeklySchedule)
+async def get_weekly_schedule(schedule_id: int):
+    """특정 주간 타임테이블 일정 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM weekly_schedules WHERE id = ?", (schedule_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Weekly schedule not found")
+        return dict(row)
+
+
+@router.put("/weekly-schedules/{schedule_id}", response_model=WeeklySchedule)
+async def update_weekly_schedule(schedule_id: int, schedule: WeeklyScheduleUpdate):
+    """주간 타임테이블 일정 수정"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM weekly_schedules WHERE id = ?", (schedule_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Weekly schedule not found")
+            
+        update_data = schedule.dict(exclude_unset=True)
+        if not update_data:
+            cursor.execute("SELECT * FROM weekly_schedules WHERE id = ?", (schedule_id,))
+            return dict(cursor.fetchone())
+
+        update_data['updated_at'] = datetime.now()
+        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
+        values = list(update_data.values())
+        values.append(schedule_id)
+        
+        cursor.execute(f"UPDATE weekly_schedules SET {set_clause} WHERE id = ?", values)
+        
+        cursor.execute("SELECT * FROM weekly_schedules WHERE id = ?", (schedule_id,))
+        return dict(cursor.fetchone())
+
+
+@router.delete("/weekly-schedules/{schedule_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_weekly_schedule(schedule_id: int):
+    """주간 타임테이블 일정 삭제"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM weekly_schedules WHERE id = ?", (schedule_id,))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Weekly schedule not found")
 

@@ -105,3 +105,32 @@ class Todo(TodoBase):
 
     class Config:
         from_attributes = True
+
+
+# --- Weekly Timetable Schedules ---
+class WeeklyScheduleBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    day_of_week: int  # 0: 일요일, 6: 토요일
+    start_time: str  # HH:MM 형식
+    end_time: str    # HH:MM 형식
+    color: Optional[str] = "#4ECDC4"
+
+class WeeklyScheduleCreate(WeeklyScheduleBase):
+    pass
+
+class WeeklyScheduleUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    day_of_week: Optional[int] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    color: Optional[str] = None
+
+class WeeklySchedule(WeeklyScheduleBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

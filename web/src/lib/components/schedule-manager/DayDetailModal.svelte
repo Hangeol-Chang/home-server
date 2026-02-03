@@ -195,15 +195,7 @@
         overflow-y: auto;
         flex: 1;
     }
-
-    .section {
-        margin-bottom: 24px;
-    }
-
-    .section:last-child {
-        margin-bottom: 0;
-    }
-
+    
     .section-header {
         display: flex;
         align-items: center;

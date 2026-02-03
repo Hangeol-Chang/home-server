@@ -69,7 +69,7 @@
         loading = false;
     }
 
-    // 특정 요일, 시간에 해당하는 일정들 찾기
+    // 특정 요일, 시간에 해당하는 일정들 찾기 (슬롯 시작점 기준 점유 여부)
     function getSchedulesForSlot(dayOfWeek, time) {
         return schedules.filter(s => {
             if (s.day_of_week !== dayOfWeek) return false;
@@ -80,11 +80,22 @@
         });
     }
 
-    // 일정이 해당 시간에 시작하는지 확인
-    function isScheduleStart(schedule, time) {
-        const slotMinutes = timeToMinutes(time);
-        const startMinutes = timeToMinutes(schedule.start_time);
-        return slotMinutes === startMinutes;
+    // 해당 슬롯 내에서 시작하는 일정들 찾기
+    function getSchedulesStartingInSlot(dayOfWeek, time) {
+        const slotStart = timeToMinutes(time);
+        const slotEnd = slotStart + 60;
+        return schedules.filter(s => {
+            if (s.day_of_week !== dayOfWeek) return false;
+            const start = timeToMinutes(s.start_time);
+            return start >= slotStart && start < slotEnd;
+        });
+    }
+
+    // 일정의 Top 위치 계산 (슬롯 시작 시간 기준 오프셋 %)
+    function getScheduleTop(schedule, time) {
+        const slotStart = timeToMinutes(time);
+        const start = timeToMinutes(schedule.start_time);
+        return (start - slotStart) / 60 * 100;
     }
 
     // 일정의 높이 계산 (시간 단위)
@@ -164,6 +175,7 @@
                     <!-- 각 요일의 셀 -->
                     {#each weekDays as _, dayIndex}
                         {@const cellSchedules = getSchedulesForSlot(dayIndex, time)}
+                        {@const startingSchedules = getSchedulesStartingInSlot(dayIndex, time)}
                         <div 
                             class="timetable-cell"
                             class:has-schedule={cellSchedules.length > 0}
@@ -172,24 +184,23 @@
                             tabindex="0"
                             onkeydown={(e) => e.key === 'Enter' && handleCellClick(dayIndex, time)}
                         >
-                            {#each cellSchedules as schedule}
-                                {#if isScheduleStart(schedule, time)}
-                                    <!-- svelte-ignore a11y_no_static_element_interactions -->
-                                    <div 
-                                        class="timetable-schedule"
-                                        style="
-                                            background-color: {schedule.color || '#4285F4'};
-                                            height: calc({getScheduleHeight(schedule)} * 100% - 2px);
-                                        "
-                                        onclick={(e) => handleScheduleClick(e, schedule)}
-                                        onkeydown={(e) => e.key === 'Enter' && handleScheduleClick(e, schedule)}
-                                    >
-                                        <span class="schedule-title">{schedule.title}</span>
-                                        <span class="schedule-time">
-                                            {schedule.start_time} - {schedule.end_time}
-                                        </span>
-                                    </div>
-                                {/if}
+                            {#each startingSchedules as schedule}
+                                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                                <div 
+                                    class="timetable-schedule"
+                                    style="
+                                        background-color: {schedule.color || '#4285F4'};
+                                        height: calc({getScheduleHeight(schedule)} * 100% - 2px);
+                                        top: {getScheduleTop(schedule, time)}%;
+                                    "
+                                    onclick={(e) => handleScheduleClick(e, schedule)}
+                                    onkeydown={(e) => e.key === 'Enter' && handleScheduleClick(e, schedule)}
+                                >
+                                    <span class="schedule-title">{schedule.title}</span>
+                                    <span class="schedule-time">
+                                        {schedule.start_time} - {schedule.end_time}
+                                    </span>
+                                </div>
                             {/each}
                         </div>
                     {/each}

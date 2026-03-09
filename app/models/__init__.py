@@ -1,4 +1,10 @@
 # models 패키지 초기화 파일
+from .chat import (
+    ChatMessage,
+    ChatRequest,
+    ChatResponse,
+    MessageRole
+)
 from .asset import (
     AssetClass, AssetClassCreate,
     AssetCategory, AssetCategoryCreate,
@@ -14,6 +20,8 @@ from .schedule import (
 )
 
 __all__ = [
+    # Chat models
+    "ChatMessage", "ChatRequest", "ChatResponse", "MessageRole",
     # Asset models
     "AssetClass", "AssetClassCreate",
     "AssetCategory", "AssetCategoryCreate",

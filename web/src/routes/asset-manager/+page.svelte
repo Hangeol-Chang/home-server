@@ -7,7 +7,6 @@
 	import PeriodComparison from '$lib/components/asset-manager/PeriodComparison.svelte';
 	import YearlyIncomeChart from '$lib/components/asset-manager/YearlyIncomeChart.svelte';
 	import { getTransactions } from '$lib/api/asset-manager.js';
-	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
 	import BudgetManager from '$lib/components/asset-manager/BudgetManager.svelte';
 	import BudgetComparisonChart from '$lib/components/asset-manager/BudgetComparisonChart.svelte';
@@ -45,10 +44,9 @@
 
 	// 날짜 범위 계산
 	const startDate = $derived(`${currentYear}-${String(currentMonth).padStart(2, '0')}-01`);
-	const endDate = $derived(() => {
-		const lastDay = new Date(currentYear, currentMonth, 0).getDate();
-		return `${currentYear}-${String(currentMonth).padStart(2, '0')}-${lastDay}`;
-	});
+	const endDate = $derived(
+		`${currentYear}-${String(currentMonth).padStart(2, '0')}-${new Date(currentYear, currentMonth, 0).getDate()}`
+	);
 
 	const classTypes = [
 		{ id: null, name: 'all', label: '전체', color: '#6366f1', icon: '📊' },
@@ -57,17 +55,13 @@
 		{ id: 3, name: 'save', label: '저축', color: '#2196f3', icon: '🏦' }
 	];
 
-	onMount(async () => {
-		await loadTransactions();
-	});
-
 	async function loadTransactions() {
 		loading = true;
 		error = '';
 		try {
 			const filters = {
 				start_date: startDate,
-				end_date: endDate(),
+				end_date: endDate,
 				limit: 100
 			};
 			if (selectedClass) {

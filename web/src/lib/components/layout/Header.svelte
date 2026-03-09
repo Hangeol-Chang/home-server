@@ -72,6 +72,10 @@
 								<span>📓</span>
 								<span>노트북</span>
 							</a>
+							<a href="/chat" class="menu-dropdown-item">
+								<span>💬</span>
+								<span>채팅</span>
+							</a>
 						</div>
 					{/if}
 				</div>

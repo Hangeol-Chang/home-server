@@ -22,6 +22,7 @@ export const ENDPOINTS = {
 	assetManager: '/asset-manager',
 	scheduleManager: '/schedule-manager',
 	notebook: '/notebook',
+	chat: '/chat',
 	// 추가 모듈들...
 };
 

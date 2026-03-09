@@ -9,5 +9,8 @@ export * from './asset-manager.js';
 // Schedule Manager API (추후 구현)
 // export * from './schedule-manager.js';
 
+// Chat API
+export * from './chat.js';
+
 // Config (필요 시 접근용)
 export { BASE_URL, ENDPOINTS, API_CONFIG } from './config.js';

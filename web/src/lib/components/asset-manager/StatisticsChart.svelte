@@ -1,6 +1,5 @@
 <script>
 	import { getPeriodStatistics } from '$lib/api/asset-manager.js';
-	import { onMount } from 'svelte';
 
 	let {
 		classId = 1,
@@ -12,10 +11,6 @@
 	let loading = $state(true);
 	let error = $state('');
 	let viewType = $state('category'); // 'category' 또는 'tier'
-
-	onMount(async () => {
-		await loadStatistics();
-	});
 
 	async function loadStatistics() {
 		loading = true;

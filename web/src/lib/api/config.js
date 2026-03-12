@@ -23,6 +23,7 @@ export const ENDPOINTS = {
 	scheduleManager: '/schedule-manager',
 	notebook: '/notebook',
 	chat: '/chat',
+	gdrive: '/gdrive',
 	// 추가 모듈들...
 };
 

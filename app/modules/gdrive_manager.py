@@ -1,6 +1,8 @@
 import os
 import io
-from fastapi import APIRouter, HTTPException, Query
+import requests
+import google.auth.transport.requests as google_requests
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from typing import Optional
 from pathlib import Path
@@ -108,10 +110,21 @@ def get_file_meta(file_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class DownloadStreamer:
+    def __init__(self):
+        self.buffer = b""
+    def write(self, d):
+        self.buffer += d
+    def get_and_clear(self):
+        ret = self.buffer
+        self.buffer = b""
+        return ret
+
+
 @router.get("/files/{file_id}/content")
-def get_file_content(file_id: str):
+def get_file_content(file_id: str, request: Request):
     """
-    파일 내용을 스트리밍으로 반환합니다.
+    파일 내용을 스트리밍으로 반환합니다. HTTP Range 요청을 지원하여 재생 탐색이 가능하게 합니다.
     Google Docs/Sheets/Slides 같은 Google 네이티브 형식은 PDF로 export합니다.
     """
     service = _get_service()
@@ -132,7 +145,86 @@ def get_file_content(file_id: str):
 
     mime = meta["mimeType"]
     filename = meta["name"]
-    buffer = io.BytesIO()
+    from urllib.parse import quote
+    encoded_filename = quote(filename.encode("utf-8"))
+
+    try:
+        if mime in EXPORT_MIME_MAP:
+            export_mime, ext = EXPORT_MIME_MAP[mime]
+            req_api = service.files().export_media(fileId=file_id, mimeType=export_mime)
+            if not filename.endswith(ext):
+                filename += ext
+            encoded_filename = quote(filename.encode("utf-8"))
+
+            def gdrive_stream():
+                streamer = DownloadStreamer()
+                downloader = MediaIoBaseDownload(streamer, req_api, chunksize=5*1024*1024)
+                done = False
+                while not done:
+                    try:
+                        _, done = downloader.next_chunk()
+                        yield streamer.get_and_clear()
+                    except Exception:
+                        break
+
+            return StreamingResponse(
+                gdrive_stream(),
+                media_type=export_mime,
+                headers={
+                    "Content-Disposition": f"inline; filename*=UTF-8''{encoded_filename}"
+                }
+            )
+        else:
+            # Native media - Supports Range header via direct requests
+            cred_path = Path(__file__).resolve().parent.parent / SERVICE_ACCOUNT_FILE
+            credentials = service_account.Credentials.from_service_account_file(
+                str(cred_path), scopes=SCOPES
+            )
+            req = google_requests.Request()
+            credentials.refresh(req)
+            token = credentials.token
+
+            url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            # Forward Range request
+            range_header = request.headers.get("Range")
+            if range_header:
+                headers["Range"] = range_header
+                
+            upstream_response = requests.get(url, headers=headers, stream=True)
+            
+            def stream_generator():
+                for chunk in upstream_response.iter_content(chunk_size=1024*1024):
+                    if chunk:
+                        yield chunk
+                        
+            resp_headers = {
+                "Content-Disposition": f"inline; filename*=UTF-8''{encoded_filename}",
+                "Accept-Ranges": "bytes"
+            }
+            
+            for h in ["Content-Length", "Content-Range", "Content-Type"]:
+                if h in upstream_response.headers:
+                    resp_headers[h] = upstream_response.headers[h]
+                    
+            if "Content-Type" not in resp_headers:
+                resp_headers["Content-Type"] = mime
+
+            status_code = upstream_response.status_code
+            # Ensure it is allowed by FastAPI (FastAPI automatically handles 200/206 based on standard Response if passed properly, but we explicitly set it)
+            return StreamingResponse(
+                stream_generator(),
+                status_code=status_code,
+                headers=resp_headers
+            )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    mime = meta["mimeType"]
+    filename = meta["name"]
+    from urllib.parse import quote
 
     try:
         if mime in EXPORT_MIME_MAP:
@@ -144,19 +236,31 @@ def get_file_content(file_id: str):
             export_mime = mime
             request = service.files().get_media(fileId=file_id)
 
-        downloader = MediaIoBaseDownload(buffer, request)
-        done = False
-        while not done:
-            _, done = downloader.next_chunk()
+        def gdrive_stream():
+            streamer = DownloadStreamer()
+            # 5MB chunks
+            downloader = MediaIoBaseDownload(streamer, request, chunksize=5*1024*1024)
+            done = False
+            while not done:
+                try:
+                    _, done = downloader.next_chunk()
+                    yield streamer.get_and_clear()
+                except Exception:
+                    break
+                    
+        encoded_filename = quote(filename.encode("utf-8"))
+        # 스트리밍 응답 (inline으로 바로 볼 수 있도록 변경)
+        return StreamingResponse(
+            gdrive_stream(),
+            media_type=export_mime,
+            headers={
+                "Content-Disposition": f"inline; filename*=UTF-8''{encoded_filename}"
+            }
+        )
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    buffer.seek(0)
-    return StreamingResponse(
-        buffer,
-        media_type=export_mime,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
-    )
 
 
 @router.get("/breadcrumb")

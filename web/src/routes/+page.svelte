@@ -48,7 +48,7 @@
 
 	.module-nav {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 		gap: 12px;
 		margin-bottom: 40px;
 	}
@@ -60,18 +60,19 @@
 		justify-content: center;
 		gap: 8px;
 		padding: 20px 12px;
-		border-radius: 12px;
-		background: var(--color-surface, #1e1e2e);
-		border: 1px solid var(--color-border, #313244);
+		border-radius: 4px;
+		border: 1px solid transparent;
+		background: var(--bg-primary-dark);
 		text-decoration: none;
-		color: var(--color-text, #cdd6f4);
+		color: var(--text-primary);
+
 		transition: background 0.15s, border-color 0.15s, transform 0.1s;
 		cursor: pointer;
 	}
 
 	.module-btn:hover {
-		background: var(--color-surface-hover, #313244);
-		border-color: var(--color-accent, #89b4fa);
+		background: var(--bg-primary);
+		border: 1px solid var(--border-color-dark);
 		transform: translateY(-2px);
 	}
 
@@ -96,7 +97,6 @@
 			padding: 8px;
 
 			.module-nav {
-				grid-template-columns: repeat(2, 1fr);
 				gap: 8px;
 				margin-bottom: 28px;
 			}
@@ -111,7 +111,6 @@
 			padding: 4px;
 
 			.module-nav {
-				grid-template-columns: repeat(2, 1fr);
 				gap: 6px;
 			}
 

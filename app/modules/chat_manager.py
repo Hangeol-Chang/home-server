@@ -131,7 +131,7 @@ def call_gemini(client: genai.Client, model: str, request: ChatRequest, system_p
 # ===== API Endpoints =====
 
 @router.post("/message", response_model=ChatResponse)
-async def send_message(request: ChatRequest):
+def send_message(request: ChatRequest):
     """
     사용자 메시지를 Gemini API로 전달하고 응답을 반환합니다.
     - 워크스페이스 파일시스템 도구가 항상 활성화됩니다.
@@ -167,7 +167,7 @@ async def send_message(request: ChatRequest):
 
 
 @router.get("/health")
-async def chat_health():
+def chat_health():
     """Chat 모듈 상태 확인"""
     return {
         "status": "ok",

@@ -23,7 +23,7 @@ router = APIRouter(
 # --- Recurring Schedules ---
 
 @router.get("/recurring-schedules", response_model=List[RecurringSchedule])
-async def get_recurring_schedules(active_only: bool = True):
+def get_recurring_schedules(active_only: bool = True):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         query = "SELECT * FROM recurring_schedules"
@@ -34,7 +34,7 @@ async def get_recurring_schedules(active_only: bool = True):
         return [dict(row) for row in rows]
 
 @router.post("/recurring-schedules", response_model=RecurringSchedule, status_code=status.HTTP_201_CREATED)
-async def create_recurring_schedule(schedule: RecurringScheduleCreate):
+def create_recurring_schedule(schedule: RecurringScheduleCreate):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -48,7 +48,7 @@ async def create_recurring_schedule(schedule: RecurringScheduleCreate):
         return dict(row)
 
 @router.put("/recurring-schedules/{schedule_id}", response_model=RecurringSchedule)
-async def update_recurring_schedule(schedule_id: int, schedule: RecurringScheduleUpdate):
+def update_recurring_schedule(schedule_id: int, schedule: RecurringScheduleUpdate):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
@@ -72,7 +72,7 @@ async def update_recurring_schedule(schedule_id: int, schedule: RecurringSchedul
         return dict(cursor.fetchone())
 
 @router.delete("/recurring-schedules/{schedule_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_recurring_schedule(schedule_id: int):
+def delete_recurring_schedule(schedule_id: int):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM recurring_schedules WHERE id = ?", (schedule_id,))
@@ -82,7 +82,7 @@ async def delete_recurring_schedule(schedule_id: int):
 # --- Schedule Logs ---
 
 @router.get("/schedule-logs", response_model=List[ScheduleLog])
-async def get_schedule_logs(
+def get_schedule_logs(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     schedule_id: Optional[int] = None
@@ -107,7 +107,7 @@ async def get_schedule_logs(
         return [dict(row) for row in rows]
 
 @router.post("/schedule-logs", response_model=ScheduleLog)
-async def create_or_update_log(log: ScheduleLogCreate):
+def create_or_update_log(log: ScheduleLogCreate):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
@@ -144,7 +144,7 @@ async def create_or_update_log(log: ScheduleLogCreate):
 # --- Long Term Plans ---
 
 @router.get("/long-term-plans", response_model=List[LongTermPlan])
-async def get_long_term_plans(
+def get_long_term_plans(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None
 ):
@@ -163,7 +163,7 @@ async def get_long_term_plans(
         return [dict(row) for row in rows]
 
 @router.post("/long-term-plans", response_model=LongTermPlan, status_code=status.HTTP_201_CREATED)
-async def create_long_term_plan(plan: LongTermPlanCreate):
+def create_long_term_plan(plan: LongTermPlanCreate):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -176,7 +176,7 @@ async def create_long_term_plan(plan: LongTermPlanCreate):
         return dict(cursor.fetchone())
 
 @router.put("/long-term-plans/{plan_id}", response_model=LongTermPlan)
-async def update_long_term_plan(plan_id: int, plan: LongTermPlanUpdate):
+def update_long_term_plan(plan_id: int, plan: LongTermPlanUpdate):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
@@ -199,7 +199,7 @@ async def update_long_term_plan(plan_id: int, plan: LongTermPlanUpdate):
         return dict(cursor.fetchone())
 
 @router.delete("/long-term-plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_long_term_plan(plan_id: int):
+def delete_long_term_plan(plan_id: int):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM long_term_plans WHERE id = ?", (plan_id,))
@@ -209,7 +209,7 @@ async def delete_long_term_plan(plan_id: int):
 # --- Google Calendar Events ---
 
 @router.get("/google-events")
-async def get_google_events(year: int, month: int):
+def get_google_events(year: int, month: int):
     """
     Fetch events from Google Calendar via iCal URL.
     Requires GOOGLE_CALENDAR_ICS_URL environment variable.
@@ -284,7 +284,7 @@ async def get_google_events(year: int, month: int):
 
 
 @router.get("/google-events/week")
-async def get_google_events_for_week(start_date: date, end_date: date):
+def get_google_events_for_week(start_date: date, end_date: date):
     """
     Fetch events from Google Calendar via iCal URL for a specific date range.
     """
@@ -348,7 +348,7 @@ async def get_google_events_for_week(start_date: date, end_date: date):
 # --- Todo Items ---
 
 @router.get("/todos", response_model=List[Todo])
-async def get_todos(
+def get_todos(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     include_completed: bool = True
@@ -374,7 +374,7 @@ async def get_todos(
 
 
 @router.post("/todos", response_model=Todo, status_code=status.HTTP_201_CREATED)
-async def create_todo(todo: TodoCreate):
+def create_todo(todo: TodoCreate):
     """새 할일 생성"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -390,7 +390,7 @@ async def create_todo(todo: TodoCreate):
 
 
 @router.get("/todos/{todo_id}", response_model=Todo)
-async def get_todo(todo_id: int):
+def get_todo(todo_id: int):
     """특정 할일 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -402,7 +402,7 @@ async def get_todo(todo_id: int):
 
 
 @router.put("/todos/{todo_id}", response_model=Todo)
-async def update_todo(todo_id: int, todo: TodoUpdate):
+def update_todo(todo_id: int, todo: TodoUpdate):
     """할일 수정"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -428,7 +428,7 @@ async def update_todo(todo_id: int, todo: TodoUpdate):
 
 
 @router.delete("/todos/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_todo(todo_id: int):
+def delete_todo(todo_id: int):
     """할일 삭제"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -438,7 +438,7 @@ async def delete_todo(todo_id: int):
 
 
 @router.patch("/todos/{todo_id}/toggle", response_model=Todo)
-async def toggle_todo_completion(todo_id: int):
+def toggle_todo_completion(todo_id: int):
     """할일 완료 상태 토글"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -457,7 +457,7 @@ async def toggle_todo_completion(todo_id: int):
 
 
 @router.patch("/todos/{todo_id}/move", response_model=Todo)
-async def move_todo(todo_id: int, new_start_date: date, new_end_date: date):
+def move_todo(todo_id: int, new_start_date: date, new_end_date: date):
     """할일 날짜 이동 (드래그 앤 드롭용)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -478,7 +478,7 @@ async def move_todo(todo_id: int, new_start_date: date, new_end_date: date):
 # --- Weekly Timetable Schedules ---
 
 @router.get("/weekly-schedules", response_model=List[WeeklySchedule])
-async def get_weekly_schedules():
+def get_weekly_schedules():
     """주간 타임테이블 일정 목록 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -488,7 +488,7 @@ async def get_weekly_schedules():
 
 
 @router.post("/weekly-schedules", response_model=WeeklySchedule, status_code=status.HTTP_201_CREATED)
-async def create_weekly_schedule(schedule: WeeklyScheduleCreate):
+def create_weekly_schedule(schedule: WeeklyScheduleCreate):
     """새 주간 타임테이블 일정 생성"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -504,7 +504,7 @@ async def create_weekly_schedule(schedule: WeeklyScheduleCreate):
 
 
 @router.get("/weekly-schedules/{schedule_id}", response_model=WeeklySchedule)
-async def get_weekly_schedule(schedule_id: int):
+def get_weekly_schedule(schedule_id: int):
     """특정 주간 타임테이블 일정 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -516,7 +516,7 @@ async def get_weekly_schedule(schedule_id: int):
 
 
 @router.put("/weekly-schedules/{schedule_id}", response_model=WeeklySchedule)
-async def update_weekly_schedule(schedule_id: int, schedule: WeeklyScheduleUpdate):
+def update_weekly_schedule(schedule_id: int, schedule: WeeklyScheduleUpdate):
     """주간 타임테이블 일정 수정"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -542,7 +542,7 @@ async def update_weekly_schedule(schedule_id: int, schedule: WeeklyScheduleUpdat
 
 
 @router.delete("/weekly-schedules/{schedule_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_weekly_schedule(schedule_id: int):
+def delete_weekly_schedule(schedule_id: int):
     """주간 타임테이블 일정 삭제"""
     with get_db_connection() as conn:
         cursor = conn.cursor()

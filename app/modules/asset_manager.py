@@ -93,7 +93,7 @@ def get_asset_tags(cursor, asset_id: int) -> List[str]:
 # ===== Classes (거래 분류) API =====
 
 @router.get("/classes", response_model=List[AssetClass])
-async def get_classes():
+def get_classes():
     """모든 거래 분류 조회 (지출/수익/저축)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -109,7 +109,7 @@ async def get_classes():
 # ===== Categories (카테고리) API =====
 
 @router.get("/categories", response_model=List[AssetCategory])
-async def get_categories(
+def get_categories(
     class_id: Optional[int] = Query(None, description="거래 분류 ID로 필터링")
 ):
     """카테고리 목록 조회 (선택적으로 class_id로 필터링)"""
@@ -135,7 +135,7 @@ async def get_categories(
         return [dict(row) for row in rows]
 
 @router.post("/categories", response_model=AssetCategory, status_code=status.HTTP_201_CREATED)
-async def create_category(category: AssetCategoryCreate):
+def create_category(category: AssetCategoryCreate):
     """새 카테고리 생성"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -182,7 +182,7 @@ async def create_category(category: AssetCategoryCreate):
 # ===== Sub Categories (하위 카테고리) API =====
 
 @router.get("/sub-categories", response_model=List[AssetSubCategory])
-async def get_sub_categories(
+def get_sub_categories(
     category_id: Optional[int] = Query(None, description="상위 카테고리 ID로 필터링")
 ):
     """하위 카테고리 목록 조회"""
@@ -206,7 +206,7 @@ async def get_sub_categories(
         return [dict(row) for row in rows]
 
 @router.post("/sub-categories", response_model=AssetSubCategory, status_code=status.HTTP_201_CREATED)
-async def create_sub_category(sub_category: AssetSubCategoryCreate):
+def create_sub_category(sub_category: AssetSubCategoryCreate):
     """새 하위 카테고리 생성"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -240,7 +240,7 @@ async def create_sub_category(sub_category: AssetSubCategoryCreate):
         return dict(cursor.fetchone())
 
 @router.delete("/sub-categories/{sub_category_id}")
-async def delete_sub_category(sub_category_id: int):
+def delete_sub_category(sub_category_id: int):
     """하위 카테고리 삭제 (비활성화)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -270,7 +270,7 @@ async def delete_sub_category(sub_category_id: int):
 # ===== Tiers (중요도/필수도) API =====
 
 @router.get("/tiers", response_model=List[AssetTier])
-async def get_tiers(
+def get_tiers(
     class_id: Optional[int] = Query(None, description="거래 분류 ID로 필터링")
 ):
     """티어 목록 조회 (선택적으로 class_id로 필터링)"""
@@ -296,7 +296,7 @@ async def get_tiers(
         return [dict(row) for row in rows]
 
 @router.post("/tiers", response_model=AssetTier, status_code=status.HTTP_201_CREATED)
-async def create_tier(tier: AssetTierCreate):
+def create_tier(tier: AssetTierCreate):
     """새 티어 생성"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -324,7 +324,7 @@ async def create_tier(tier: AssetTierCreate):
         return dict(cursor.fetchone())
 
 @router.delete("/categories/{category_id}")
-async def delete_category(category_id: int):
+def delete_category(category_id: int):
     """카테고리 삭제 (비활성화)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -361,7 +361,7 @@ async def delete_category(category_id: int):
         }
 
 @router.delete("/tiers/{tier_id}")
-async def delete_tier(tier_id: int):
+def delete_tier(tier_id: int):
     """티어 삭제 (비활성화)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -400,7 +400,7 @@ async def delete_tier(tier_id: int):
 # ===== Transactions (거래) CRUD API =====
 
 @router.post("/transactions", response_model=AssetTransaction, status_code=status.HTTP_201_CREATED)
-async def create_transaction(transaction: AssetTransactionCreate):
+def create_transaction(transaction: AssetTransactionCreate):
     """새 거래 생성 (지출/수익/저축)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -478,7 +478,7 @@ async def create_transaction(transaction: AssetTransactionCreate):
         return row
 
 @router.get("/transactions/unclassified", response_model=List[AssetTransactionDetail])
-async def get_unclassified_transactions():
+def get_unclassified_transactions():
     """분류되지 않은 거래 내역 조회 (sub_category_id가 NULL인 경우)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -510,7 +510,7 @@ async def get_unclassified_transactions():
         return transactions
 
 @router.get("/transactions", response_model=List[AssetTransactionDetail])
-async def get_transactions(
+def get_transactions(
     class_id: Optional[int] = Query(None, description="거래 분류 ID (1=지출, 2=수익, 3=저축)"),
     start_date: Optional[date_type] = Query(None, description="시작 날짜 (YYYY-MM-DD)"),
     end_date: Optional[date_type] = Query(None, description="종료 날짜 (YYYY-MM-DD)"),
@@ -576,7 +576,7 @@ async def get_transactions(
         return result
 
 @router.get("/transactions/{transaction_id}", response_model=AssetTransactionDetail)
-async def get_transaction(transaction_id: int):
+def get_transaction(transaction_id: int):
     """특정 거래 상세 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -607,7 +607,7 @@ async def get_transaction(transaction_id: int):
         return row_dict
 
 @router.put("/transactions/{transaction_id}", response_model=AssetTransaction)
-async def update_transaction(transaction_id: int, transaction: AssetTransactionUpdate):
+def update_transaction(transaction_id: int, transaction: AssetTransactionUpdate):
     """거래 정보 수정"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -702,7 +702,7 @@ async def update_transaction(transaction_id: int, transaction: AssetTransactionU
         return row_dict
 
 @router.delete("/transactions/{transaction_id}")
-async def delete_transaction(transaction_id: int):
+def delete_transaction(transaction_id: int):
     """거래 삭제"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -721,7 +721,7 @@ async def delete_transaction(transaction_id: int):
 # ===== 통계 및 분석 API =====
 
 @router.get("/statistics/period", response_model=PeriodSummary)
-async def get_period_statistics(
+def get_period_statistics(
     class_id: int = Query(..., description="거래 분류 ID (1=지출, 2=수익, 3=저축)"),
     start_date: Optional[date_type] = Query(None, description="시작 날짜"),
     end_date: Optional[date_type] = Query(None, description="종료 날짜")
@@ -810,7 +810,7 @@ async def get_period_statistics(
         }
 
 @router.get("/statistics/monthly", response_model=MonthlyStatistics)
-async def get_monthly_statistics(
+def get_monthly_statistics(
     year: int = Query(..., description="연도"),
     month: int = Query(..., ge=1, le=12, description="월")
 ):
@@ -878,7 +878,7 @@ async def get_monthly_statistics(
 # ===== Period Comparison (기간별 비교) API =====
 
 @router.get("/statistics/period-comparison")
-async def get_period_comparison(
+def get_period_comparison(
     unit: str = Query("week", description="비교 단위: day, week, month, year"),
     periods: int = Query(4, ge=1, le=8, description="비교할 기간 수 (1~8)"),
     end_date: Optional[str] = Query(None, description="기준 종료일 (YYYY-MM-DD), 미지정시 오늘")
@@ -1095,7 +1095,7 @@ async def get_period_comparison(
 # ===== Tags (태그) API =====
 
 @router.get("/tags", response_model=List[AssetTag])
-async def get_all_tags(active_only: bool = Query(True, description="활성 태그만 조회")):
+def get_all_tags(active_only: bool = Query(True, description="활성 태그만 조회")):
     """모든 태그 목록 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -1118,7 +1118,7 @@ async def get_all_tags(active_only: bool = Query(True, description="활성 태�
         return [dict(row) for row in rows]
 
 @router.post("/tags", response_model=AssetTag, status_code=status.HTTP_201_CREATED)
-async def create_tag(tag: AssetTagCreate):
+def create_tag(tag: AssetTagCreate):
     """새 태그 생성"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -1145,7 +1145,7 @@ async def create_tag(tag: AssetTagCreate):
         return dict(cursor.fetchone())
 
 @router.put("/tags/{tag_id}", response_model=AssetTag)
-async def update_tag(tag_id: int, tag: AssetTagUpdate):
+def update_tag(tag_id: int, tag: AssetTagUpdate):
     """태그 정보 수정"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -1193,7 +1193,7 @@ async def update_tag(tag_id: int, tag: AssetTagUpdate):
         return dict(cursor.fetchone())
 
 @router.delete("/tags/{tag_id}")
-async def delete_tag(tag_id: int, force: bool = Query(False, description="강제 삭제")):
+def delete_tag(tag_id: int, force: bool = Query(False, description="강제 삭제")):
     """태그 삭제 (또는 비활성화)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -1233,7 +1233,7 @@ async def delete_tag(tag_id: int, force: bool = Query(False, description="강제
         }
 
 @router.get("/search")
-async def search_transactions(
+def search_transactions(
     query: str = Query(..., min_length=1, description="검색어 (거래명 또는 설명)"),
     class_id: Optional[int] = Query(None, description="거래 분류 ID로 필터링")
 ):
@@ -1370,7 +1370,7 @@ def calculate_budget_for_month(cursor, category_id: int, year: int, month: int) 
     return dict(cursor.fetchone())
 
 @router.get("/budgets", response_model=List[AssetBudget])
-async def get_budgets(
+def get_budgets(
     year: int,
     month: int,
     class_id: Optional[int] = Query(None, description="거래 분류 ID로 필터링")
@@ -1395,7 +1395,7 @@ async def get_budgets(
         return budgets
 
 @router.put("/budgets/{category_id}/{year}/{month}", response_model=AssetBudget)
-async def update_budget(
+def update_budget(
     category_id: int,
     year: int,
     month: int,
@@ -1424,7 +1424,7 @@ async def update_budget(
         return dict(cursor.fetchone())
 
 @router.put("/categories/{category_id}", response_model=AssetCategory)
-async def update_category(category_id: int, category: AssetCategoryUpdate):
+def update_category(category_id: int, category: AssetCategoryUpdate):
     """카테고리 정보 수정"""
     with get_db_connection() as conn:
         cursor = conn.cursor()

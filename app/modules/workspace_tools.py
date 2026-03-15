@@ -4,7 +4,6 @@ Workspace filesystem tools for Gemini function calling.
 """
 
 import os
-import glob
 from pathlib import Path
 from typing import Any
 

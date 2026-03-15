@@ -64,7 +64,7 @@ def get_file_info(file_path: Path, vault_path: Path) -> NoteInfo:
 # ===== API Endpoints =====
 
 @router.get("/tree", response_model=TreeNode)
-async def get_directory_tree(path: str = Query("", description="조회할 경로")):
+def get_directory_tree(path: str = Query("", description="조회할 경로")):
     """디렉토리 트리 구조 조회"""
     target_path = get_safe_path(path)
     
@@ -122,7 +122,7 @@ async def get_directory_tree(path: str = Query("", description="조회할 경로
     return tree
 
 @router.get("/folders", response_model=List[FolderInfo])
-async def get_folders(path: str = Query("", description="조회할 경로")):
+def get_folders(path: str = Query("", description="조회할 경로")):
     """특정 경로의 하위 폴더 목록 조회"""
     target_path = get_safe_path(path)
     
@@ -155,7 +155,7 @@ async def get_folders(path: str = Query("", description="조회할 경로")):
     return folders
 
 @router.get("/files", response_model=List[NoteInfo])
-async def get_files(path: str = Query("", description="조회할 폴더 경로")):
+def get_files(path: str = Query("", description="조회할 폴더 경로")):
     """특정 폴더의 마크다운 파일 목록 조회"""
     target_path = get_safe_path(path)
     
@@ -175,7 +175,7 @@ async def get_files(path: str = Query("", description="조회할 폴더 경로")
     return files
 
 @router.get("/content", response_model=NoteContent)
-async def get_file_content(path: str = Query(..., description="파일 경로")):
+def get_file_content(path: str = Query(..., description="파일 경로")):
     """마크다운 파일 내용 조회"""
     target_path = get_safe_path(path)
     
@@ -208,7 +208,7 @@ async def get_file_content(path: str = Query(..., description="파일 경로")):
     )
 
 @router.get("/search", response_model=SearchResult)
-async def search_notes(
+def search_notes(
     query: str = Query(..., min_length=1, description="검색어"),
     path: str = Query("", description="검색할 폴더 경로"),
     in_content: bool = Query(False, description="내용도 검색할지 여부")
@@ -259,7 +259,7 @@ async def search_notes(
     )
 
 @router.get("/stats")
-async def get_vault_stats():
+def get_vault_stats():
     """Vault 통계 정보"""
     if not VAULT_PATH.exists():
         raise HTTPException(
@@ -340,7 +340,7 @@ def sync_vault_to_git(commit_message: str):
     run_git_command(["git", "push"])
 
 @router.post("/git-pull")
-async def git_pull():
+def git_pull():
     """Git Pull 실행"""
     try:
         # 1. git pull 실행
@@ -365,7 +365,7 @@ async def git_pull():
         )
 
 @router.post("/save")
-async def save_note(request: SaveNoteRequest):
+def save_note(request: SaveNoteRequest):
     """노트 저장 및 Git 자동 동기화"""
     target_path = get_safe_path(request.path)
     
@@ -395,7 +395,7 @@ async def save_note(request: SaveNoteRequest):
     return {"status": "success", "path": request.path}
 
 @router.post("/folder")
-async def create_folder(request: CreateFolderRequest):
+def create_folder(request: CreateFolderRequest):
     """폴더 생성 및 Git 자동 동기화"""
     target_path = get_safe_path(request.path)
     

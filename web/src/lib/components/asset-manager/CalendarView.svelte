@@ -15,6 +15,7 @@
 	// 거래 등록 폼 상태
 	let isFormOpen = $state(false);
 	let formDate = $state(null);
+	let editTransaction = $state(null);
 
 	// 티어 필터 상태 (name -> boolean, true=visible)
 	let tierFilters = $state({});
@@ -233,8 +234,16 @@
 
 	function handleAddTransaction(date) {
 		formDate = date;
+		editTransaction = null;
 		isFormOpen = true;
 		// 드롭다운은 닫기
+		dropdownVisible = false;
+	}
+
+	function handleEditTransaction(transaction) {
+		formDate = transaction.date;
+		editTransaction = transaction;
+		isFormOpen = true;
 		dropdownVisible = false;
 	}
 
@@ -385,6 +394,7 @@
 		{transactions}
 		{dailyData}
 		onAddTransaction={handleAddTransaction}
+		onEditTransaction={handleEditTransaction}
 	/>
 </div>
 
@@ -392,6 +402,7 @@
 	<TransactionForm 
 		bind:isOpen={isFormOpen} 
 		initialDate={formDate}
+		initialTransaction={editTransaction}
 		onSuccess={handleFormSuccess} 
 	/>
 {/if}

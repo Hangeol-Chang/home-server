@@ -7,10 +7,12 @@
 		loading = false,
 		error = '',
 		onReload = () => {},
-		onOpenForm = () => {}
+		onOpenForm = () => {},
+		onEditTransaction = () => {}
 	} = $props();
 
-	async function handleDelete(transactionId) {
+	async function handleDelete(e, transactionId) {
+		e.stopPropagation();
 		if (!confirm('이 거래를 삭제하시겠습니까?')) return;
 
 		try {
@@ -71,6 +73,10 @@
 							class:row-earn={transaction.class_name === 'earn'}
 							class:row-spend={transaction.class_name === 'spend'}
 							class:row-save={transaction.class_name === 'save'}
+							class="clickable-row"
+							onclick={() => onEditTransaction(transaction)}
+							onkeydown={(e) => e.key === 'Enter' && onEditTransaction(transaction)}
+							tabindex="0"
 						>
 							<td class="cell-icon">
 								{#if transaction.class_name === 'earn'}
@@ -119,7 +125,7 @@
 							<td class="text-center">
 								<button
 									class="icon-btn danger"
-									onclick={() => handleDelete(transaction.id)}
+									onclick={(e) => handleDelete(e, transaction.id)}
 									title="삭제"
 									aria-label="거래 삭제"
 								>
@@ -298,6 +304,15 @@
 		border-radius: 8px;
 		font-size: 0.7rem;
 		font-weight: 300;
+	}
+
+	.clickable-row {
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.clickable-row:hover {
+		background-color: var(--bg-tertiary) !important;
 	}
 
 	.amount-earn {

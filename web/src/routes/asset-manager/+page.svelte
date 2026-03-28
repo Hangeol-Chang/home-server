@@ -16,6 +16,7 @@
 
 	// 상태 관리
 	let isFormOpen = $state(false);
+	let editTransaction = $state(null);
 	let transactions = $state([]);
 	let loading = $state(true);
 	let error = $state('');
@@ -75,6 +76,11 @@
 		}
 	}
 
+	function handleEditTransaction(transaction) {
+		editTransaction = transaction;
+		isFormOpen = true;
+	}
+
 	async function handleTransactionSuccess() {
 		await loadTransactions();
 	}
@@ -104,7 +110,7 @@
 			</a>
 			<button
 				class="add-btn"
-				onclick={() => (isFormOpen = true)}
+				onclick={() => { editTransaction = null; isFormOpen = true; }}
 			>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<line x1="12" y1="5" x2="12" y2="19" />
@@ -116,7 +122,7 @@
 	</header>
 
 	<!-- 거래 등록 폼 -->
-	<TransactionForm bind:isOpen={isFormOpen} onSuccess={handleTransactionSuccess} />
+	<TransactionForm bind:isOpen={isFormOpen} initialTransaction={editTransaction} onSuccess={handleTransactionSuccess} />
 
 	<!-- 월간 리포트 -->
 	<MonthlyReport style="border: 1px solid var(--border-color); margin-bottom: 32px; padding: 24px;" />
@@ -223,7 +229,8 @@
 		{loading}
 		{error}
 		onReload={loadTransactions}
-		onOpenForm={() => (isFormOpen = true)}
+		onOpenForm={() => { editTransaction = null; isFormOpen = true; }}
+		onEditTransaction={handleEditTransaction}
 	/>
 </div>
 

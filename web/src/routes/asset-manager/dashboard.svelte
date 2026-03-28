@@ -10,6 +10,7 @@
 	let loading = $state(true);
 	let error = $state('');
 	let isFormOpen = $state(false);
+	let editTransaction = $state(null);
 
 	// 현재 년월
 	const now = new Date();
@@ -35,6 +36,7 @@
 	}
 
 	function openForm() {
+		editTransaction = null;
 		isFormOpen = true;
 	}
 
@@ -65,5 +67,5 @@
 </div>
 
 {#if isFormOpen}
-	<TransactionForm bind:isOpen={isFormOpen} onSuccess={handleFormSuccess} />
+	<TransactionForm bind:isOpen={isFormOpen} initialTransaction={editTransaction} onSuccess={handleFormSuccess} />
 {/if}

@@ -5,6 +5,7 @@
 	import { CHART_COLORS } from '$lib/constants.js';
 	import PieChart from './module/PieChart.svelte';
 	import TransactionDropdown from './TransactionDropdown.svelte';
+	import TransactionForm from './TransactionForm.svelte';
     import BudgetManager from './BudgetManager.svelte';
 
     let { class: className = '', style = '' } = $props();
@@ -21,6 +22,9 @@
 	let selectedTierTransactions = $state([]);
 	let isDropdownVisible = $state(false);
 	let dropdownTitle = $state('');
+
+	let isFormOpen = $state(false);
+	let editTransaction = $state(null);
 
 	const circleRadius = 80; // 외부 원의 반지름
 
@@ -44,6 +48,16 @@
 		selectedTierTransactions = transactions.filter(t => t.tier_name === tier.name);
 		dropdownTitle = tier.display_name;
 		isDropdownVisible = true;
+	}
+
+	function handleEditTransaction(transaction) {
+		editTransaction = transaction;
+		isFormOpen = true;
+		isDropdownVisible = false;
+	}
+
+	async function handleFormSuccess() {
+		await loadStatistics();
 	}
 
 	async function loadStatistics() {
@@ -321,8 +335,17 @@
 		transactions={selectedTierTransactions}
 		mode="list"
 		title={dropdownTitle}
+		onEditTransaction={handleEditTransaction}
 	/>
 </div>
+
+{#if isFormOpen}
+    <TransactionForm 
+        bind:isOpen={isFormOpen} 
+        initialTransaction={editTransaction}
+        onSuccess={handleFormSuccess} 
+    />
+{/if}
 
 <style>
 	/* 동심원 차트 컨테이너 */

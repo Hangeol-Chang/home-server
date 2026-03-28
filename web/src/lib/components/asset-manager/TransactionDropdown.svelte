@@ -5,6 +5,7 @@
 		transactions = [],
 		dailyData = {},
 		onAddTransaction = () => {},
+		onEditTransaction = () => {},
 		mode = 'date', // 'date' | 'list'
 		title = '' // Used in 'list' mode
 	} = $props();
@@ -84,6 +85,10 @@
 									class:row-spend={trans.class_name === 'spend'}
 									class:row-earn={trans.class_name === 'earn'}
 									class:row-save={trans.class_name === 'save'}
+									class="clickable-row"
+									onclick={() => onEditTransaction(trans)}
+									onkeydown={(e) => e.key === 'Enter' && onEditTransaction(trans)}
+									tabindex="0"
 								>
 									<td class="trans-date">{trans.date.slice(5)}</td>
 									<td class="trans-name">{trans.name}</td>
@@ -250,6 +255,15 @@
 		padding: 20px 24px;
 		overflow-y: auto;
 		flex: 1;
+	}
+
+	.clickable-row {
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.clickable-row:hover {
+		background-color: var(--bg-tertiary) !important;
 	}
 
 	.no-transactions {

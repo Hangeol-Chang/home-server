@@ -1,6 +1,7 @@
 <script>
     import { getBudgets, getCategories, getSubCategories, getTransactions } from '$lib/api/asset-manager.js';
     import TransactionDropdown from './TransactionDropdown.svelte';
+    import TransactionForm from './TransactionForm.svelte';
     import BudgetEditor from './BudgetEditor.svelte';
     import { onMount } from 'svelte';
     import { getChartColor } from '$lib/constants.js';
@@ -22,10 +23,24 @@
     let transactionDropdownTitle = $state('');
     let transactionDropdownList = $state([]);
 
+    // Transaction Form State
+    let isFormOpen = $state(false);
+    let editTransaction = $state(null);
+
     function openTransactionDropdown(categoryName, categoryId) {
         transactionDropdownTitle = `${categoryName} 지출 내역`;
         transactionDropdownList = transactions.filter(t => t.category_id === categoryId);
         showTransactionDropdown = true;
+    }
+
+    function handleEditTransaction(transaction) {
+        editTransaction = transaction;
+        isFormOpen = true;
+        showTransactionDropdown = false;
+    }
+
+    async function handleTransactionSuccess() {
+        await loadTransactions();
     }
 
     // 지출 예산 분포 계산
@@ -242,7 +257,16 @@
     mode="list"
     title={transactionDropdownTitle}
     transactions={transactionDropdownList}
+    onEditTransaction={handleEditTransaction}
 />
+
+{#if isFormOpen}
+    <TransactionForm 
+        bind:isOpen={isFormOpen} 
+        initialTransaction={editTransaction}
+        onSuccess={handleTransactionSuccess} 
+    />
+{/if}
 
 <style>
     .module-container {

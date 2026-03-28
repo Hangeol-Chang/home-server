@@ -1,12 +1,13 @@
 <script>
-	import { createTransaction, getCategories, getSubCategories, getTiers, getTags } from '$lib/api/asset-manager.js';
-	import { onMount } from 'svelte';
+	import { createTransaction, updateTransaction, deleteTransaction, getCategories, getSubCategories, getTiers, getTags } from '$lib/api/asset-manager.js';
+	import { onMount, untrack } from 'svelte';
 	import { device } from '$lib/stores/device';
 
 	let { 
 		isOpen = $bindable(false), 
 		onSuccess = () => {},
 		initialDate = null,
+		initialTransaction = null,
 	} = $props();
 
 	// 거래 분류: 1=지출, 2=수익, 3=저축
@@ -32,6 +33,7 @@
 	let filteredTagSuggestions = $state([]);
 
 	let isSubmitting = $state(false);
+	let isDeleting = $state(false);
 	let error = $state('');
 
 	const classTypes = [
@@ -90,7 +92,9 @@
 		try {
 			subCategories = await getSubCategories(categoryId);
 			if (subCategories.length > 0) {
-				formData.sub_category_id = subCategories[0].id;
+				if (!formData.sub_category_id || !subCategories.find(s => s.id == formData.sub_category_id)) {
+					formData.sub_category_id = subCategories[0].id;
+				}
 			} else {
 				formData.sub_category_id = '';
 			}
@@ -110,14 +114,31 @@
 		}
 	}
 
-	// 거래 분류 변경 시
+	// 거래 폼 열릴 때 초기화
 	$effect(() => {
 		if (isOpen) {
-			if (initialDate) {
-				formData.date = initialDate;
-			}
-			loadCategoriesAndTiers();
-			loadTags();
+			untrack(() => {
+				const isFirstLoad = !formData.name;
+				if (initialTransaction && isFirstLoad) {
+					selectedClass = initialTransaction.class_id;
+					formData.name = initialTransaction.name;
+					formData.cost = String(Math.abs(initialTransaction.cost));
+					formData.date = initialTransaction.date;
+					formData.description = initialTransaction.description || '';
+					formData.tags = initialTransaction.tags ? [...initialTransaction.tags] : [];
+					formData.category_id = initialTransaction.category_id;
+					formData.sub_category_id = initialTransaction.sub_category_id || '';
+					
+					loadCategoriesAndTiers();
+				} else if (initialDate && isFirstLoad) {
+					formData.date = initialDate;
+					loadCategoriesAndTiers();
+				} else if (isFirstLoad) {
+					loadCategoriesAndTiers();
+				}
+			});
+			// 태그는 폼 열릴때마다 로드
+			untrack(() => loadTags());
 		}
 	});
 
@@ -178,9 +199,15 @@
 				tags: formData.tags.length > 0 ? formData.tags : undefined
 			};
 
-			console.log('거래 등록 요청:', transactionData);
-		const result = await createTransaction(transactionData);
-			console.log('거래 등록 성공:', result);
+			if (initialTransaction && initialTransaction.id) {
+				console.log('거래 수정 요청:', transactionData);
+				const result = await updateTransaction(initialTransaction.id, transactionData);
+				console.log('거래 수정 성공:', result);
+			} else {
+				console.log('거래 등록 요청:', transactionData);
+				const result = await createTransaction(transactionData);
+				console.log('거래 등록 성공:', result);
+			}
 			
 			// 성공 시 폼 리셋
 			try {
@@ -191,14 +218,44 @@
 				isOpen = false;
 			} catch (callbackErr) {
 				console.error('성공 콜백 실행 중 에러:', callbackErr);
-				// 콜백 에러는 사용자에게 보여주지 않음 (거래는 성공)
 				isOpen = false;
 			}
 		} catch (err) {
-			console.error('거래 등록 실패:', err);
-			error = err?.message || err?.toString() || '거래 등록에 실패했습니다';
+			console.error('거래 저장 실패:', err);
+			error = err?.message || err?.toString() || '거래 저장에 실패했습니다';
 		} finally {
 			isSubmitting = false;
+		}
+	}
+
+	async function handleDelete() {
+		if (!initialTransaction || !initialTransaction.id || !confirm('정말 이 거래 내역을 삭제하시겠습니까?')) {
+			return;
+		}
+
+		error = '';
+		isDeleting = true;
+
+		try {
+			console.log('거래 삭제 요청:', initialTransaction.id);
+			await deleteTransaction(initialTransaction.id);
+			console.log('거래 삭제 성공');
+			
+			try {
+				resetForm();
+				if (typeof onSuccess === 'function') {
+					await onSuccess();
+				}
+				isOpen = false;
+			} catch (callbackErr) {
+				console.error('성공 콜백 실행 중 에러:', callbackErr);
+				isOpen = false;
+			}
+		} catch (err) {
+			console.error('거래 삭제 실패:', err);
+			error = err?.message || err?.toString() || '거래 삭제에 실패했습니다';
+		} finally {
+			isDeleting = false;
 		}
 	}
 
@@ -228,7 +285,7 @@
 {#snippet formContent()}
 	<form class="transaction-form" onsubmit={handleSubmit}>
 		<div class="chart-header">
-			<h3>📝 거래 등록</h3>
+			<h3>📝 {initialTransaction ? '거래 수정' : '거래 등록'}</h3>
 			<button type="button" class="icon-btn" onclick={handleCancel} aria-label="닫기">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<line x1="18" y1="6" x2="6" y2="18"></line>
@@ -398,11 +455,17 @@
 
 		<!-- 버튼 -->
 		<div class="form-actions">
-			<button type="button" class="btn-cancel" onclick={handleCancel} disabled={isSubmitting}>
+			{#if initialTransaction}
+			<button type="button" class="btn-danger" onclick={handleDelete} disabled={isSubmitting || isDeleting}>
+				{isDeleting ? '삭제 중...' : '삭제'}
+			</button>
+			<div style="flex-grow: 1;"></div>
+			{/if}
+			<button type="button" class="btn-cancel" onclick={handleCancel} disabled={isSubmitting || isDeleting}>
 				취소
 			</button>
-			<button type="submit" class="btn-submit" disabled={isSubmitting}>
-				{isSubmitting ? '등록 중...' : '등록하기'}
+			<button type="submit" class="btn-submit" disabled={isSubmitting || isDeleting}>
+				{isSubmitting ? '저장 중...' : (initialTransaction ? '수정하기' : '등록하기')}
 			</button>
 		</div>
 	</form>

@@ -33,6 +33,12 @@ allowed_origins = [
     "http://hgchang1.iptime.org:5173",
 ]
 
+# .env 파일에서 동적으로 NGROK 호스트 추가 (github 등 노출 방지)
+ngrok_origin = os.getenv("NGROK_ORIGIN")
+if ngrok_origin:
+    allowed_origins.append(ngrok_origin)
+
+
 # CORS 미들웨어 추가 (특정 도메인만 허용)
 app.add_middleware(
     CORSMiddleware,

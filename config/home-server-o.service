@@ -1,0 +1,19 @@
+[Unit]
+Description=Home Server service
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/home/ubuntu/workspace/home-server/start.sh
+ExecStop=/home/ubuntu/workspace/home-server/stop.sh
+WorkingDirectory=/home/ubuntu/workspace/home-server
+Restart=always
+RestartSec=10
+User=ubuntu
+Environment=PYTHONUNBUFFERED=1
+ubuntuDFile=/home/ubuntu/workspace/home-server/logs/web.ubuntud
+KillMode=control-group
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

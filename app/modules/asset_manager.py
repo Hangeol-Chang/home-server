@@ -1276,17 +1276,8 @@ def search_transactions(
 
 def calculate_budget_for_month(cursor, category_id: int, year: int, month: int) -> dict:
     """특정 월의 예산을 계산하고 DB에 저장 (이월 로직 포함)"""
-    # 1. 이미 존재하는지 확인
-    cursor.execute("""
-        SELECT id, category_id, year, month, budget_amount, rollover_amount, created_at, updated_at
-        FROM asset_budgets
-        WHERE category_id = ? AND year = ? AND month = ?
-    """, (category_id, year, month))
-    existing = cursor.fetchone()
-    if existing:
-        return dict(existing)
-
-    # 2. 카테고리 기본 정보 조회
+    
+    # 1. 카테고리 기본 정보 조회
     cursor.execute("SELECT default_budget, class_id, rollover_enabled FROM asset_categories WHERE id = ?", (category_id,))
     category = cursor.fetchone()
     if not category:
@@ -1294,10 +1285,9 @@ def calculate_budget_for_month(cursor, category_id: int, year: int, month: int) 
     
     default_budget = category['default_budget'] or 0
     class_id = category['class_id']
-    rollover_enabled = category['rollover_enabled']
+    rollover_enabled = bool(category['rollover_enabled'])
 
-    # 3. 이전 달 정보 조회 (이월 계산용)
-    # 지출(class_id=1)인 경우 + 이월이 활성화된 경우에만 이월 계산
+    # 2. 이전 달 정보 조회 (이월 계산용)
     rollover_amount = 0
     
     if class_id == 1 and rollover_enabled:
@@ -1339,7 +1329,45 @@ def calculate_budget_for_month(cursor, category_id: int, year: int, month: int) 
                     rollover_amount = default_budget * 0.5
                 else:
                     rollover_amount = remaining * 0.5
+
+    # 3. 이미 존재하는지 확인
+    cursor.execute("""
+        SELECT id, category_id, year, month, budget_amount, rollover_amount, created_at, updated_at
+        FROM asset_budgets
+        WHERE category_id = ? AND year = ? AND month = ?
+    """, (category_id, year, month))
+    existing = cursor.fetchone()
     
+    if existing:
+        existing_dict = dict(existing)
+        # 이월 로직에 따른 롤오버가 기존과 달라졌다면 업데이트 (과거 지출 수정으로 인한 변경 또는 이월 설정 변경)
+        if existing_dict['rollover_amount'] != rollover_amount:
+            # budget_amount는 (기존 예산액 - 기존 이월액 + 새 이월액)으로 보정
+            new_budget_amount = existing_dict['budget_amount'] - existing_dict['rollover_amount'] + rollover_amount
+            
+            # 단, 이월외는 예산이 많더라도 최대 2N원을 넘어가지 않게 해줘
+            if default_budget > 0:
+                max_cap = default_budget * 2
+                if new_budget_amount > max_cap:
+                    new_budget_amount = max_cap
+            elif default_budget == 0 and rollover_amount > 0:
+                new_budget_amount = 0
+
+            cursor.execute("""
+                UPDATE asset_budgets
+                SET budget_amount = ?, rollover_amount = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (new_budget_amount, rollover_amount, existing_dict['id']))
+            
+            # 다시 조회하여 최신본 반환
+            cursor.execute("""
+                SELECT id, category_id, year, month, budget_amount, rollover_amount, created_at, updated_at
+                FROM asset_budgets
+                WHERE id = ?
+            """, (existing_dict['id'],))
+            return dict(cursor.fetchone())
+        return existing_dict
+
     # 4. 새 예산 계산
     new_budget = default_budget + rollover_amount
     

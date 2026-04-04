@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
 		server: {
 			host: '0.0.0.0',
 			port: 5173,
-			allowedHosts: env.VITE_NGROK_HOST ? [env.VITE_NGROK_HOST] : [],
+			allowedHosts: env.VITE_ALLOWED_HOSTS ? env.VITE_ALLOWED_HOSTS.split(',') : [],
 			hmr: {
 			host: 'hgchang1.iptime.org',
 			port: 5173

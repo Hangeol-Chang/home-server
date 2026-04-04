@@ -17,8 +17,6 @@ load_dotenv(env_dir / ".env")
 # 데이터베이스 초기화
 init_database()
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
-
 # FastAPI 앱 인스턴스 생성
 app = FastAPI(
     title="Home Server API",
@@ -26,18 +24,18 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# 허용된 오리진 목록
+# 환경변수에서 허용할 오리진(CORS) 목록을 가져옵니다 (쉼표로 구분)
+env_allowed_origins = os.getenv("ALLOWED_ORIGINS", "")
+
+# 기본적으로 로컬 환경은 허용
 allowed_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "http://hgchang1.iptime.org:5173",
 ]
 
-# .env 파일에서 동적으로 NGROK 호스트 추가 (github 등 노출 방지)
-ngrok_origin = os.getenv("NGROK_ORIGIN")
-if ngrok_origin:
-    allowed_origins.append(ngrok_origin)
-
+# 환경변수에 등록된 오리진들을 배열에 추가
+if env_allowed_origins:
+    allowed_origins.extend([origin.strip() for origin in env_allowed_origins.split(",") if origin.strip()])
 
 # CORS 미들웨어 추가 (특정 도메인만 허용)
 app.add_middleware(

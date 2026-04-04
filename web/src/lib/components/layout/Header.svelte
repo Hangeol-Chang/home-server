@@ -76,6 +76,10 @@
 								<span>💬</span>
 								<span>채팅</span>
 							</a>
+							<a href="/test" class="menu-dropdown-item">
+								<span>🛠️</span>
+								<span>시스템 테스트</span>
+							</a>
 						</div>
 					{/if}
 				</div>

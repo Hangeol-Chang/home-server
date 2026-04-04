@@ -14,3 +14,4 @@ export * from './chat.js';
 
 // Config (필요 시 접근용)
 export { BASE_URL, ENDPOINTS, API_CONFIG } from './config.js';
+export * from './test.js';

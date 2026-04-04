@@ -6,9 +6,11 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 # 라우터 임포트
-from modules import asset_manager, schedule_manager, notebook_manager, chat_manager, gdrive_manager
+from modules import asset_manager, schedule_manager, notebook_manager, chat_manager, gdrive_manager, test_manager
 # 데이터베이스 초기화
 from utils.database import init_database
+# 디스코드 리포트 스케줄러
+from modules.discord_report import init_scheduler
 
 # .env load 예시
 env_dir = Path(__file__).resolve().parent / "env"
@@ -52,6 +54,12 @@ app.include_router(schedule_manager.router)
 app.include_router(notebook_manager.router)
 app.include_router(chat_manager.router)
 app.include_router(gdrive_manager.router)
+app.include_router(test_manager.router)
+
+# 스케줄러 실행 (서버 시동 시)
+@app.on_event("startup")
+def startup_event():
+    init_scheduler()
 
 # 기본 라우트
 @app.get("/")

@@ -10,7 +10,8 @@
 		{ name: 'Schedule', href: '/schedule-manager', icon: '📅' },
 		{ name: 'Notebook', href: '/notebook', icon: '📓' },
 		{ name: 'Chat', href: '/chat', icon: '💬' },
-		{ name: 'Google Drive', href: '/gdrive', icon: '☁️' }
+		{ name: 'Google Drive', href: '/gdrive', icon: '☁️' },
+		{ name: 'System Test', href: '/test', icon: '🛠️' }
 	];
 </script>
 

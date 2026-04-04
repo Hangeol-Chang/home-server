@@ -84,8 +84,24 @@
 	}
 
 	onMount(() => {
+		// localStorage에서 기존 대화 불러오기
+		const stored = localStorage.getItem('chat_history');
+		if (stored) {
+			try {
+				messages = JSON.parse(stored);
+				scrollToBottom();
+			} catch (e) {
+				console.error('채팅 기록 복원 실패', e);
+			}
+		}
+
 		// 처음 마운트 시 입력창 포커스
 		inputEl?.focus();
+	});
+
+	// messages 배열이 변경될 때마다 자동으로 localStorage에 저장
+	$effect(() => {
+		localStorage.setItem('chat_history', JSON.stringify(messages));
 	});
 </script>
 

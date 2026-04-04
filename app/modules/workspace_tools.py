@@ -1,5 +1,5 @@
 """
-Workspace filesystem tools for Gemini function calling.
+Workspace filesystem tools for LLM function calling.
 모든 경로 접근은 WORKSPACE_PATH 내부로 샌드박싱됩니다.
 """
 
@@ -53,7 +53,7 @@ def list_directory(path: str = "") -> dict[str, Any]:
                 "name": item.name,
                 "path": relative,
                 "type": "directory" if item.is_dir() else "file",
-                "size": item.stat().st_size if item.is_file() else None,
+                "size": item.stat().st_size if item.is_file() else None,        
             })
         return {
             "path": str(target.relative_to(WORKSPACE_PATH)) or ".",
@@ -80,7 +80,7 @@ def read_file(path: str) -> dict[str, Any]:
 
         size = target.stat().st_size
         if size > 200 * 1024:  # 200KB 제한
-            return {"error": f"파일이 너무 큽니다 ({size} bytes, 최대 200KB)"}
+            return {"error": f"파일이 너무 큽니다 ({size} bytes, 최대 200KB)"}  
 
         content = target.read_text(encoding="utf-8", errors="replace")
         return {
@@ -150,89 +150,6 @@ def find_files(pattern: str, directory: str = "") -> dict[str, Any]:
         return {"error": f"파일 검색 실패: {str(e)}"}
 
 
-# ===== Gemini Function Declarations =====
-
-from google.genai import types
-
-WORKSPACE_TOOL = types.Tool(
-    function_declarations=[
-        types.FunctionDeclaration(
-            name="list_directory",
-            description=(
-                "워크스페이스 내 디렉토리 목록을 조회합니다. "
-                "path가 빈 문자열이면 루트를 조회합니다."
-            ),
-            parameters=types.Schema(
-                type="OBJECT",
-                properties={
-                    "path": types.Schema(
-                        type="STRING",
-                        description="조회할 상대 경로 (예: 'home-server/app'). 기본값: 루트",
-                    )
-                },
-                required=[],
-            ),
-        ),
-        types.FunctionDeclaration(
-            name="read_file",
-            description="워크스페이스 내 파일의 내용을 읽습니다.",
-            parameters=types.Schema(
-                type="OBJECT",
-                properties={
-                    "path": types.Schema(
-                        type="STRING",
-                        description="읽을 파일의 상대 경로 (예: 'home-server/app/main.py')",
-                    )
-                },
-                required=["path"],
-            ),
-        ),
-        types.FunctionDeclaration(
-            name="write_file",
-            description=(
-                "워크스페이스 내 파일에 내용을 씁니다. "
-                "파일이 없으면 생성하고, 있으면 전체를 덮어씁니다."
-            ),
-            parameters=types.Schema(
-                type="OBJECT",
-                properties={
-                    "path": types.Schema(
-                        type="STRING",
-                        description="쓸 파일의 상대 경로",
-                    ),
-                    "content": types.Schema(
-                        type="STRING",
-                        description="파일에 쓸 전체 내용",
-                    ),
-                },
-                required=["path", "content"],
-            ),
-        ),
-        types.FunctionDeclaration(
-            name="find_files",
-            description=(
-                "glob 패턴으로 파일을 검색합니다. "
-                "예) pattern='**/*.py' 로 모든 파이썬 파일 검색"
-            ),
-            parameters=types.Schema(
-                type="OBJECT",
-                properties={
-                    "pattern": types.Schema(
-                        type="STRING",
-                        description="glob 패턴 (예: '**/*.py', '*.md')",
-                    ),
-                    "directory": types.Schema(
-                        type="STRING",
-                        description="검색 시작 디렉토리 상대 경로. 기본값: 루트",
-                    ),
-                },
-                required=["pattern"],
-            ),
-        ),
-    ]
-)
-
-
 # ===== Tool Dispatcher =====
 
 TOOL_FUNCTIONS = {
@@ -244,7 +161,7 @@ TOOL_FUNCTIONS = {
 
 
 def execute_tool_call(name: str, args: dict) -> dict:
-    """Gemini가 요청한 함수 호출을 실행하고 결과를 반환합니다."""
+    """LLM이 요청한 함수 호출을 실행하고 결과를 반환합니다."""
     fn = TOOL_FUNCTIONS.get(name)
     if not fn:
         return {"error": f"알 수 없는 도구: {name}"}

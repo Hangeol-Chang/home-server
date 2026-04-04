@@ -24,6 +24,7 @@ export const ENDPOINTS = {
 	notebook: '/notebook',
 	chat: '/chat',
 	gdrive: '/gdrive',
+		test: '/test',
 	// 추가 모듈들...
 };
 

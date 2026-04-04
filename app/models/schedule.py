@@ -60,6 +60,7 @@ class LongTermPlanBase(BaseModel):
     start_date: date
     end_date: date
     color: Optional[str] = None
+    progress: int = 0
 
 class LongTermPlanCreate(LongTermPlanBase):
     pass
@@ -70,6 +71,7 @@ class LongTermPlanUpdate(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     color: Optional[str] = None
+    progress: Optional[int] = None
 
 class LongTermPlan(LongTermPlanBase):
     id: int

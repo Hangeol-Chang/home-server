@@ -198,9 +198,17 @@ def init_database():
                 start_date DATE NOT NULL,
                 end_date DATE NOT NULL,
                 color TEXT,
+                progress INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # Add progress column if not exists (migration)
+        try:
+            cursor.execute("ALTER TABLE long_term_plans ADD COLUMN progress INTEGER DEFAULT 0")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e).lower():
+                raise e
 
         # 12. todos 테이블 (할일 관리)
         cursor.execute("""

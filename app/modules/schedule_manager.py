@@ -167,9 +167,9 @@ def create_long_term_plan(plan: LongTermPlanCreate):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO long_term_plans (title, description, start_date, end_date, color)
-            VALUES (?, ?, ?, ?, ?)
-        """, (plan.title, plan.description, plan.start_date, plan.end_date, plan.color))
+            INSERT INTO long_term_plans (title, description, start_date, end_date, color, progress)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (plan.title, plan.description, plan.start_date, plan.end_date, plan.color, plan.progress))
         plan_id = cursor.lastrowid
         
         cursor.execute("SELECT * FROM long_term_plans WHERE id = ?", (plan_id,))

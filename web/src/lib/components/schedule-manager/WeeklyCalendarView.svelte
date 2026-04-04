@@ -12,6 +12,7 @@
     }
 
 	let schedules = $state([]);
+    let totalTracks = $state(0);
     let showAddModal = $state(false);
     let showDetailModal = $state(false);
     let editingSchedule = $state(null);
@@ -20,7 +21,8 @@
         description: '',
         start_date: new Date().toISOString().split('T')[0],
         end_date: new Date().toISOString().split('T')[0],
-        color: getRandomColor()
+        color: getRandomColor(),
+        progress: 0
     });
 
     function adjustColor(color, amount) {
@@ -60,11 +62,44 @@
             const res = await fetch(`/api/schedule-manager/long-term-plans?start_date=${start}&end_date=${end}`);
             if (res.ok) {
                 const plans = await res.json();
-                schedules = plans.map(p => ({
+                let processed = plans.map(p => ({
                     ...p,
                     startWeek: getWeekNumber(new Date(p.start_date)),
                     endWeek: getWeekNumber(new Date(p.end_date))
                 }));
+
+                // 먼저 시작하는 순서, 시작이 같다면 더 긴 일정 순으로 정렬
+                processed.sort((a, b) => {
+                    if (a.startWeek !== b.startWeek) return a.startWeek - b.startWeek;
+                    return (b.endWeek - a.startWeek) - (a.endWeek - a.startWeek);
+                });
+
+                // 트랙(행) 할당 로직
+                const trackEnds = []; // 각 트랙별 마지막 일정의 종료 주차 저장
+                for (const plan of processed) {
+                    let assignedTrack = -1;
+                    // 현재 일정이 들어갈 수 있는 트랙 탐색 (최소 1주 이상 거리 필요)
+                    for (let i = 0; i < trackEnds.length; i++) {
+                        if (trackEnds[i] < plan.startWeek) {
+                            assignedTrack = i;
+                            break;
+                        }
+                    }
+                    
+                    if (assignedTrack === -1) {
+                        // 빈 트랙이 없다면 새 트랙 추가
+                        assignedTrack = trackEnds.length;
+                        trackEnds.push(plan.endWeek);
+                    } else {
+                        // 기존 트랙 갱신
+                        trackEnds[assignedTrack] = plan.endWeek;
+                    }
+                    
+                    plan.trackIndex = assignedTrack;
+                }
+
+                totalTracks = trackEnds.length;
+                schedules = processed;
             }
         } catch (e) {
             console.error(e);
@@ -86,7 +121,8 @@
                     description: '',
                     start_date: new Date().toISOString().split('T')[0],
                     end_date: new Date().toISOString().split('T')[0],
-                    color: getRandomColor()
+                    color: getRandomColor(),
+                    progress: 0
                 };
             }
         } catch (e) {
@@ -161,8 +197,14 @@
 		
 		const left = ((start - 1) / totalWeeks) * 100;
 		const width = (duration / totalWeeks) * 100;
+        const trackTop = schedule.trackIndex !== undefined ? schedule.trackIndex * 32 : 0;
+		const color = schedule.color || '#3BBA9C';
+		const progress = schedule.progress || 0;
+		const bg = progress > 0 
+			? `linear-gradient(to right, ${color} ${progress}%, ${color}66 ${progress}%)` 
+			: `${color}`;
 		
-		return `left: ${left}%; width: ${width}%; background-color: ${schedule.color || '#3BBA9C'}`;
+		return `left: ${left}%; width: ${width}%; top: ${trackTop}px; background: ${bg};`;
 	}
 
 	function changeYear(delta) {
@@ -240,6 +282,10 @@
                     </div>
                 </div>
                 <div class="form-group">
+                    <label for="progress">달성율 ({newPlan.progress}%)</label>
+                    <input id="progress" type="range" min="0" max="100" bind:value={newPlan.progress} />
+                </div>
+                <div class="form-group">
                     <label for="description">설명</label>
 					<textarea 
 						id="description" 
@@ -304,6 +350,10 @@
                     </div>
                 </div>
                 <div class="form-group">
+                    <label for="edit-progress">달성율 ({editingSchedule.progress}%)</label>
+                    <input id="edit-progress" type="range" min="0" max="100" bind:value={editingSchedule.progress} />
+                </div>
+                <div class="form-group">
                     <label for="edit-description">설명</label>
 					<textarea 
 						id="edit-description" 
@@ -338,21 +388,21 @@
 				</div>
 
 				<!-- Schedule Bars -->
-				<div class="tracks">
+				<div class="tracks" style="min-height: {Math.max(totalTracks * 32 + 16, 120)}px;">
 					{#each schedules as schedule}
-						<div class="track-row">
-							<div 
-                                role="button"
-                                tabindex="0"
-								class="schedule-bar" 
-								style={getBarStyle(schedule)}
-								title="{schedule.title} (W{schedule.startWeek}~W{schedule.endWeek})"
-                                onclick={() => openDetailModal(schedule)}
-                                onkeydown={(e) => e.key === 'Enter' && openDetailModal(schedule)}
-							>
-								<span class="bar-label">{schedule.title}</span>
-							</div>
-						</div>
+                        <div 
+                            role="button"
+                            tabindex="0"
+                            class="schedule-bar" 
+                            style={getBarStyle(schedule)}
+                            title="{schedule.title} (W{schedule.startWeek}~W{schedule.endWeek})"
+                            onclick={() => openDetailModal(schedule)}
+                            onkeydown={(e) => e.key === 'Enter' && openDetailModal(schedule)}
+                        >
+                            <span class="bar-label" style={schedule.progress === 100 ? 'text-decoration: line-through; opacity: 0.8;' : ''}>
+                                {schedule.title}
+                            </span>
+                        </div>
 					{/each}
 				</div>
 				
@@ -440,22 +490,15 @@
 
 	.tracks {
 		position: relative;
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-		z-index: 1;
-	}
-
-	.track-row {
-		position: relative;
-		height: 24px;
+		display: block;
 		width: 100%;
+		z-index: 1;
 	}
 
 	.schedule-bar {
 		position: absolute;
-		height: 100%;
-		border-radius: 2px;
+		height: 24px;
+		border-radius: 4px;
 		display: flex;
 		align-items: center;
 		padding: 0 8px;

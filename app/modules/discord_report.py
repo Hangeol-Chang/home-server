@@ -48,8 +48,11 @@ Discord 메시지로 보낼 것이므로 마크다운과 이모지를 적절히 
 (반드시 한국어로 작성하고, 인사말로 시작해서 응원의 말로 마무리해주세요.)
 """
 
+    # 디스코드 리포트용 모델 환경변수 (기본값: llama3.1:8b)
+    report_model = os.getenv("OLLAMA_MODEL_REPORT", "llama3.1:8b")
+
     payload = {
-        "model": "llama3.1:8b",
+        "model": report_model,
         "messages": [
             {"role": "system", "content": "You are a friendly and professional financial advisor analyzing a user's monthly budget."},
             {"role": "user", "content": prompt}
@@ -58,7 +61,7 @@ Discord 메시지로 보낼 것이므로 마크다운과 이모지를 적절히 
     }
 
     try:
-        print(f"[Report] Requesting report from Ollama (llama3.1:8b)...")
+        print(f"[Report] Requesting report from Ollama ({report_model})...")
         response = requests.post("http://127.0.0.1:11434/api/chat", json=payload, timeout=300)
         response.raise_for_status()
         report_content = response.json().get("message", {}).get("content", "")

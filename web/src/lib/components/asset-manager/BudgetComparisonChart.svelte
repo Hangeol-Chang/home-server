@@ -1,5 +1,4 @@
 <script>
-	import { onMount } from 'svelte';
 	import { Chart, registerables } from 'chart.js';
 	import { getBudgets, getPeriodComparison, getCategories } from '$lib/api/asset-manager.js';
 	import { device } from '$lib/stores/device';
@@ -12,10 +11,6 @@
 	let chartInstance = null;
 	let loading = $state(false);
 	let error = $state(null);
-
-	onMount(() => {
-		loadData();
-	});
 
 	$effect(() => {
 		if (year && month) {

@@ -11,6 +11,7 @@
 	import BudgetManager from '$lib/components/asset-manager/BudgetManager.svelte';
 	import BudgetComparisonChart from '$lib/components/asset-manager/BudgetComparisonChart.svelte';
 	import BudgetEditor from '$lib/components/asset-manager/BudgetEditor.svelte';
+	import RecurringPaymentManager from '$lib/components/asset-manager/RecurringPaymentManager.svelte';
 	import '$lib/styles/module.css';
 	import '$lib/styles/module-common.css';
 
@@ -207,21 +208,29 @@
 		<StatisticsChart
 			classId={1}
 			startDate={startDate}
-			endDate={endDate()}
+			endDate={endDate}
 		/>
 	{:else if selectedClass === 2}
 		<StatisticsChart
 			classId={2}
 			startDate={startDate}
-			endDate={endDate()}
+			endDate={endDate}
 		/>
 	{:else if selectedClass === 3}
 		<StatisticsChart
 			classId={3}
 			startDate={startDate}
-			endDate={endDate()}
+			endDate={endDate}
 		/>
 	{/if}
+
+	<hr>
+	<button class="part-btn">
+		🔄 정기 결제
+	</button>
+	<hr>
+
+	<RecurringPaymentManager />
 
 	<!-- 거래 내역 리스트 -->
 	<TransactionList

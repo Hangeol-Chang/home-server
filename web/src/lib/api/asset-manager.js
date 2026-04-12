@@ -127,3 +127,20 @@ export async function updateTag(tagId, tagData) {
 export async function deleteTag(tagId, force = false) {
 	return apiDelete(`${API_BASE}/tags/${tagId}`, force ? { force } : {});
 }
+
+// ===== Recurring Payments (정기 결제) =====
+export async function getRecurringPayments(activeOnly = true) {
+	return apiGet(`${API_BASE}/recurring-payments`, { active_only: activeOnly });
+}
+
+export async function createRecurringPayment(data) {
+	return apiPost(`${API_BASE}/recurring-payments`, data);
+}
+
+export async function updateRecurringPayment(id, data) {
+	return apiPut(`${API_BASE}/recurring-payments/${id}`, data);
+}
+
+export async function deleteRecurringPayment(id) {
+	return apiDelete(`${API_BASE}/recurring-payments/${id}`);
+}

@@ -234,6 +234,60 @@ class PeriodComparison(BaseModel):
     spend_trend: float = Field(..., description="지출 증감률 (최근 기간 대비 이전 기간 평균)")
     earn_trend: float = Field(..., description="수익 증감률")
 
+# ===== Recurring Payments (정기 결제) =====
+class RecurringPaymentBase(BaseModel):
+    name: str = Field(..., description="결제명 (예: 넷플릭스 구독)")
+    cost: float = Field(..., gt=0, description="금액")
+    class_id: int = Field(..., description="거래 분류 ID")
+    category_id: int = Field(..., description="카테고리 ID")
+    sub_category_id: Optional[int] = Field(None, description="하위 카테고리 ID")
+    tier_id: Optional[int] = Field(None, description="티어 ID")
+    day_of_month: int = Field(..., ge=1, le=31, description="매월 결제일 (1~31)")
+    description: Optional[str] = None
+    is_active: bool = True
+
+class RecurringPaymentCreate(RecurringPaymentBase):
+    pass
+
+class RecurringPaymentUpdate(BaseModel):
+    name: Optional[str] = None
+    cost: Optional[float] = Field(None, gt=0)
+    category_id: Optional[int] = None
+    sub_category_id: Optional[int] = None
+    tier_id: Optional[int] = None
+    day_of_month: Optional[int] = Field(None, ge=1, le=31)
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class RecurringPayment(RecurringPaymentBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class RecurringPaymentDetail(BaseModel):
+    id: int
+    name: str
+    cost: float
+    day_of_month: int
+    description: Optional[str]
+    is_active: bool
+    class_id: int
+    class_name: str
+    class_display_name: str
+    category_id: int
+    category_name: str
+    category_display_name: str
+    sub_category_id: Optional[int]
+    sub_category_name: Optional[str]
+    tier_id: Optional[int]
+    tier_name: Optional[str]
+    tier_display_name: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
 # ===== Tags (태그) =====
 class AssetTagBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=50, description="태그명")

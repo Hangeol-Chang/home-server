@@ -10,7 +10,8 @@ from models.asset import (
     AssetTransactionDetail, CategoryStatistics, TierStatistics,
     PeriodSummary, MonthlyStatistics,
     AssetTag, AssetTagCreate, AssetTagUpdate,
-    AssetBudget, AssetBudgetCreate, AssetBudgetUpdate
+    AssetBudget, AssetBudgetCreate, AssetBudgetUpdate,
+    RecurringPayment, RecurringPaymentCreate, RecurringPaymentUpdate, RecurringPaymentDetail
 )
 from utils.database import get_db_connection
 
@@ -1450,6 +1451,125 @@ def update_budget(
         """, (category_id, year, month))
         
         return dict(cursor.fetchone())
+
+# ===== Recurring Payments (정기 결제) API =====
+
+@router.get("/recurring-payments", response_model=List[RecurringPaymentDetail])
+def get_recurring_payments(active_only: bool = Query(True, description="활성 항목만 조회")):
+    """정기 결제 목록 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        where = "WHERE rp.is_active = TRUE" if active_only else ""
+        cursor.execute(f"""
+            SELECT
+                rp.id, rp.name, rp.cost, rp.day_of_month, rp.description, rp.is_active,
+                rp.class_id, ac.name as class_name, ac.display_name as class_display_name,
+                rp.category_id, cat.name as category_name, cat.display_name as category_display_name,
+                rp.sub_category_id, sc.name as sub_category_name,
+                rp.tier_id, t.name as tier_name, t.display_name as tier_display_name,
+                rp.created_at, rp.updated_at
+            FROM recurring_payments rp
+            JOIN asset_classes ac ON rp.class_id = ac.id
+            JOIN asset_categories cat ON rp.category_id = cat.id
+            LEFT JOIN asset_sub_categories sc ON rp.sub_category_id = sc.id
+            LEFT JOIN asset_tiers t ON rp.tier_id = t.id
+            {where}
+            ORDER BY rp.day_of_month, rp.name
+        """)
+        return [dict(row) for row in cursor.fetchall()]
+
+@router.post("/recurring-payments", response_model=RecurringPaymentDetail, status_code=status.HTTP_201_CREATED)
+def create_recurring_payment(payment: RecurringPaymentCreate):
+    """정기 결제 등록"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        # tier_id가 없으면 sub_category 또는 category 기본 tier 사용
+        tier_id = payment.tier_id
+        if not tier_id and payment.sub_category_id:
+            cursor.execute("SELECT tier_id FROM asset_sub_categories WHERE id = ?", (payment.sub_category_id,))
+            row = cursor.fetchone()
+            if row:
+                tier_id = row[0]
+        if not tier_id:
+            cursor.execute("SELECT tier_id FROM asset_categories WHERE id = ?", (payment.category_id,))
+            row = cursor.fetchone()
+            if row:
+                tier_id = row[0]
+
+        cursor.execute("""
+            INSERT INTO recurring_payments (name, cost, class_id, category_id, sub_category_id, tier_id, day_of_month, description, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (payment.name, payment.cost, payment.class_id, payment.category_id,
+              payment.sub_category_id, tier_id, payment.day_of_month, payment.description, payment.is_active))
+
+        new_id = cursor.lastrowid
+        cursor.execute("""
+            SELECT
+                rp.id, rp.name, rp.cost, rp.day_of_month, rp.description, rp.is_active,
+                rp.class_id, ac.name as class_name, ac.display_name as class_display_name,
+                rp.category_id, cat.name as category_name, cat.display_name as category_display_name,
+                rp.sub_category_id, sc.name as sub_category_name,
+                rp.tier_id, t.name as tier_name, t.display_name as tier_display_name,
+                rp.created_at, rp.updated_at
+            FROM recurring_payments rp
+            JOIN asset_classes ac ON rp.class_id = ac.id
+            JOIN asset_categories cat ON rp.category_id = cat.id
+            LEFT JOIN asset_sub_categories sc ON rp.sub_category_id = sc.id
+            LEFT JOIN asset_tiers t ON rp.tier_id = t.id
+            WHERE rp.id = ?
+        """, (new_id,))
+        return dict(cursor.fetchone())
+
+@router.put("/recurring-payments/{payment_id}", response_model=RecurringPaymentDetail)
+def update_recurring_payment(payment_id: int, payment: RecurringPaymentUpdate):
+    """정기 결제 수정"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT id FROM recurring_payments WHERE id = ?", (payment_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Recurring payment {payment_id} not found")
+
+        update_data = payment.dict(exclude_unset=True)
+        if not update_data:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
+
+        update_data['updated_at'] = datetime.now().isoformat()
+        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
+        params = list(update_data.values()) + [payment_id]
+
+        cursor.execute(f"UPDATE recurring_payments SET {set_clause} WHERE id = ?", params)
+
+        cursor.execute("""
+            SELECT
+                rp.id, rp.name, rp.cost, rp.day_of_month, rp.description, rp.is_active,
+                rp.class_id, ac.name as class_name, ac.display_name as class_display_name,
+                rp.category_id, cat.name as category_name, cat.display_name as category_display_name,
+                rp.sub_category_id, sc.name as sub_category_name,
+                rp.tier_id, t.name as tier_name, t.display_name as tier_display_name,
+                rp.created_at, rp.updated_at
+            FROM recurring_payments rp
+            JOIN asset_classes ac ON rp.class_id = ac.id
+            JOIN asset_categories cat ON rp.category_id = cat.id
+            LEFT JOIN asset_sub_categories sc ON rp.sub_category_id = sc.id
+            LEFT JOIN asset_tiers t ON rp.tier_id = t.id
+            WHERE rp.id = ?
+        """, (payment_id,))
+        return dict(cursor.fetchone())
+
+@router.delete("/recurring-payments/{payment_id}")
+def delete_recurring_payment(payment_id: int):
+    """정기 결제 삭제"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM recurring_payments WHERE id = ?", (payment_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Recurring payment {payment_id} not found")
+        cursor.execute("DELETE FROM recurring_payment_logs WHERE recurring_payment_id = ?", (payment_id,))
+        cursor.execute("DELETE FROM recurring_payments WHERE id = ?", (payment_id,))
+        return {"message": f"Recurring payment '{row[1]}' deleted"}
 
 @router.put("/categories/{category_id}", response_model=AssetCategory)
 def update_category(category_id: int, category: AssetCategoryUpdate):

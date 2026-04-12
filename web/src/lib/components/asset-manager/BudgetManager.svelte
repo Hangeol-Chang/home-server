@@ -1,5 +1,5 @@
 <script>
-    import { getBudgets, getCategories, getSubCategories, getTransactions } from '$lib/api/asset-manager.js';
+    import { getBudgets, getCategories, getSubCategories } from '$lib/api/asset-manager.js';
     import TransactionDropdown from './TransactionDropdown.svelte';
     import TransactionForm from './TransactionForm.svelte';
     import BudgetEditor from './BudgetEditor.svelte';
@@ -40,7 +40,7 @@
     }
 
     async function handleTransactionSuccess() {
-        await loadTransactions();
+        // transactions는 부모(MonthlyReport)가 관리 - 부모에서 자동 갱신됨
     }
 
     // 지출 예산 분포 계산
@@ -86,13 +86,10 @@
         await loadData();
     });
 
-    // year, month가 바뀌면 거래 데이터 다시 로드 (필요한 경우)
+    // year, month가 바뀌면 예산 데이터 다시 로드
     $effect(() => {
         if (year && month) {
             loadBudgets();
-            if (!transactions || transactions.length === 0) {
-                loadTransactions();
-            }
         }
     });
 
@@ -104,15 +101,10 @@
                 getBudgets(year, month),
                 getSubCategories()
             ]);
-            
+
             categories = catData;
             budgets = budgetData;
             allSubCategories = subCatData;
-
-            // transactions가 비어있으면 직접 로드
-            if (year && month && (!transactions || transactions.length === 0)) {
-                await loadTransactions();
-            }
         } catch (err) {
             console.error('Failed to load budget data:', err);
         } finally {
@@ -125,28 +117,6 @@
             budgets = await getBudgets(year, month);
         } catch (err) {
             console.error('Failed to reload budgets:', err);
-        }
-    }
-
-    async function loadTransactions() {
-        try {
-            const startDate = new Date(year, month - 1, 1);
-            const endDate = new Date(year, month, 0);
-            
-            const formatDate = (date) => {
-                const y = date.getFullYear();
-                const m = String(date.getMonth() + 1).padStart(2, '0');
-                const d = String(date.getDate()).padStart(2, '0');
-                return `${y}-${m}-${d}`;
-            };
-
-            transactions = await getTransactions({
-                start_date: formatDate(startDate),
-                end_date: formatDate(endDate),
-                limit: 10000
-            });
-        } catch (err) {
-            console.error('Failed to load transactions:', err);
         }
     }
 

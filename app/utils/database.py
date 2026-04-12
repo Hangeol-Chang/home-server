@@ -261,6 +261,42 @@ def init_database():
         except sqlite3.OperationalError:
             pass
 
+        # 14. recurring_payments 테이블 (정기 결제)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS recurring_payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                cost REAL NOT NULL,
+                class_id INTEGER NOT NULL,
+                category_id INTEGER NOT NULL,
+                sub_category_id INTEGER,
+                tier_id INTEGER,
+                day_of_month INTEGER NOT NULL CHECK(day_of_month >= 1 AND day_of_month <= 31),
+                description TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (class_id) REFERENCES asset_classes(id),
+                FOREIGN KEY (category_id) REFERENCES asset_categories(id),
+                FOREIGN KEY (sub_category_id) REFERENCES asset_sub_categories(id),
+                FOREIGN KEY (tier_id) REFERENCES asset_tiers(id)
+            )
+        """)
+
+        # 15. recurring_payment_logs 테이블 (정기 결제 실행 기록)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS recurring_payment_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recurring_payment_id INTEGER NOT NULL,
+                executed_date DATE NOT NULL,
+                asset_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (recurring_payment_id) REFERENCES recurring_payments(id),
+                FOREIGN KEY (asset_id) REFERENCES assets(id),
+                UNIQUE(recurring_payment_id, executed_date)
+            )
+        """)
+
         # 인덱스 생성
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_date ON assets(date)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_class ON assets(class_id)")

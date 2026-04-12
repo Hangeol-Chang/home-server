@@ -1,6 +1,5 @@
 <script>
 	import { getTransactions } from '$lib/api/asset-manager.js';
-	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
 	import { CHART_COLORS } from '$lib/constants.js';
 	import PieChart from './module/PieChart.svelte';
@@ -27,10 +26,6 @@
 	let editTransaction = $state(null);
 
 	const circleRadius = 80; // 외부 원의 반지름
-
-	onMount(async () => {
-		await loadStatistics();
-	});
 
 	function changeMonth(delta) {
 		month += delta;

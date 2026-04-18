@@ -1,7 +1,7 @@
 import os
+import anthropic
 from fastapi import APIRouter, HTTPException, status
 from typing import List, Dict, Any
-import requests
 from models.chat import (
     ChatRequest,
     ChatResponse,
@@ -18,14 +18,10 @@ router = APIRouter(
 )
 
 # ===== 모델 설정 =====
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 
-# Ollama 설정
-# 로컬에서 실행할 경우 "http://127.0.0.1:11434"
-# 별도 서버에서 실행될 경우 예) "http://hihangeol.duckdns.org:11434"
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://hihangeol.duckdns.org:11434")
-OLLAMA_MODEL_CHAT = os.getenv("OLLAMA_MODEL_CHAT", "qwen2.5-coder:14b")
-
-MAX_TOOL_ITERATIONS = 10  # 무한 루프 방지
+MAX_TOOL_ITERATIONS = 10
 
 DEFAULT_SYSTEM_PROMPT = (
     "You are a helpful home server assistant running on a Raspberry Pi. "
@@ -35,178 +31,139 @@ DEFAULT_SYSTEM_PROMPT = (
     "Always answer in the same language the user uses."
 )
 
-# ===== Ollama Tool Schema =====
-# Ollama/OpenAI 호환 JSON Schema 형식의 Tools 정의
-OLLAMA_TOOLS = [
+# ===== Claude Tool Schema =====
+# Anthropic API 형식: input_schema 사용 (OpenAI의 parameters와 다름)
+CLAUDE_TOOLS = [
     {
-        "type": "function",
-        "function": {
-            "name": "list_directory",
-            "description": "워크스페이스 내 디렉토리 목록을 조회합니다.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "조회할 상대 경로 (예: 'home-server/app'). 기본값: 루트"
-                    }
-                },
-                "required": []
-            }
+        "name": "list_directory",
+        "description": "워크스페이스 내 디렉토리 목록을 조회합니다.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "조회할 상대 경로 (예: 'home-server/app'). 기본값: 루트"
+                }
+            },
+            "required": []
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "read_file",
-            "description": "워크스페이스 내 파일의 내용을 읽습니다.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "읽을 파일의 상대 경로 (예: 'home-server/app/main.py')"
-                    }
-                },
-                "required": ["path"]
-            }
+        "name": "read_file",
+        "description": "워크스페이스 내 파일의 내용을 읽습니다.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "읽을 파일의 상대 경로 (예: 'home-server/app/main.py')"
+                }
+            },
+            "required": ["path"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "write_file",
-            "description": "워크스페이스 내 파일에 내용을 씁니다. 파일이 없으면 생성하고, 있으면 전체를 덮어씁니다.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "쓸 파일의 상대 경로"
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "파일에 쓸 전체 내용"
-                    }
+        "name": "write_file",
+        "description": "워크스페이스 내 파일에 내용을 씁니다. 파일이 없으면 생성하고, 있으면 전체를 덮어씁니다.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "쓸 파일의 상대 경로"
                 },
-                "required": ["path", "content"]
-            }
+                "content": {
+                    "type": "string",
+                    "description": "파일에 쓸 전체 내용"
+                }
+            },
+            "required": ["path", "content"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "find_files",
-            "description": "glob 패턴으로 파일을 검색합니다. 예) pattern='**/*.py' 로 모든 파이썬 파일 검색",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "pattern": {
-                        "type": "string",
-                        "description": "glob 패턴 (예: '**/*.py', '*.md')"
-                    },
-                    "directory": {
-                        "type": "string",
-                        "description": "검색 시작 디렉토리 상대 경로. 기본값: 루트"
-                    }
+        "name": "find_files",
+        "description": "glob 패턴으로 파일을 검색합니다. 예) pattern='**/*.py' 로 모든 파이썬 파일 검색",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "glob 패턴 (예: '**/*.py', '*.md')"
                 },
-                "required": ["pattern"]
-            }
+                "directory": {
+                    "type": "string",
+                    "description": "검색 시작 디렉토리 상대 경로. 기본값: 루트"
+                }
+            },
+            "required": ["pattern"]
         }
     }
 ]
 
-# ===== Ollama 로직 =====
+# ===== Claude 로직 =====
 
-def build_ollama_messages(history: List[ChatMessage], message: str, system_prompt: str) -> List[Dict[str, Any]]:
-    """Ollama API에 전달할 메시지 구조체를 구성"""
+def build_claude_messages(history: List[ChatMessage], message: str) -> List[Dict[str, Any]]:
+    """Anthropic API에 전달할 messages 구조체를 구성 (system은 별도 파라미터로 전달)"""
     messages = []
-    if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    
     for msg in history:
         messages.append({
             "role": "user" if msg.role == MessageRole.user else "assistant",
             "content": msg.content
         })
-    
     messages.append({"role": "user", "content": message})
     return messages
 
-def call_ollama(messages: List[Dict[str, Any]]) -> str:
-    """Ollama API 호출 + Tool 실행 Agentic Loop"""
-    messages_copy = messages.copy() # 루프 돌 동안 메시지 누적
-    
+
+def call_claude(messages: List[Dict[str, Any]], system_prompt: str) -> str:
+    """Anthropic API 호출 + Tool 실행 Agentic Loop"""
+    if not ANTHROPIC_API_KEY:
+        raise Exception("ANTHROPIC_API_KEY가 설정되지 않았습니다. app/env/.env 파일을 확인하세요.")
+
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    messages_copy = [m.copy() for m in messages]
+
     for iteration in range(MAX_TOOL_ITERATIONS):
-        payload = {
-            "model": OLLAMA_MODEL_CHAT,
-            "messages": messages_copy,
-            "stream": False,
-            "tools": OLLAMA_TOOLS
-        }
+        print(f"[Claude] iteration={iteration}, model={CLAUDE_MODEL}, messages={len(messages_copy)}")
 
-        try:
-            # 1. Ollama API POST 호출
-            url = f"{OLLAMA_BASE_URL}/api/chat"
-            print(f"[Ollama] Requesting {url} with model {OLLAMA_MODEL_CHAT}")
-            
-            # 공유기 내부망(NAT Loopback 미지원) 등에서 외부 DDNS 도메인으로의 라우팅이 막혀있을 수 있으므로
-            # ConnectionError 발생 시 localhost(127.0.0.1) 경로로 우회하여 재시도합니다.
-            try:
-                response = requests.post(url, json=payload, timeout=300)
-                if response.status_code != 200:
-                    print(f"[Ollama] Error Body: {response.text}")
-                response.raise_for_status()
-            except requests.exceptions.ConnectionError:
-                fallback_url = "http://127.0.0.1:11434/api/chat"
-                print(f"[Ollama] Connection error with {url}, falling back to {fallback_url}")
-                response = requests.post(fallback_url, json=payload, timeout=300)
-                if response.status_code != 200:
-                    print(f"[Ollama] Fallback Error Body: {response.text}")
-                response.raise_for_status()
+        response = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=4096,
+            system=system_prompt,
+            messages=messages_copy,
+            tools=CLAUDE_TOOLS
+        )
 
-            data = response.json()
-        except requests.exceptions.RequestException as e:
-            # 타임아웃, 연결 거부 등의 오류 시 상세 원인 포함
-            error_msg = f"Ollama API 호출 네트워크 (URL: {OLLAMA_BASE_URL}): {str(e)}"
-            print(f"[Ollama Error] {error_msg}")
-            raise Exception(error_msg)
-        except Exception as e:
-            error_msg = f"Ollama API 호출 시스템 오류: {str(e)}"
-            print(f"[Ollama Error] {error_msg}")
-            raise Exception(error_msg)
+        # 최종 응답 (tool 호출 없음)
+        if response.stop_reason == "end_turn":
+            text_blocks = [b.text for b in response.content if hasattr(b, "text")]
+            return "\n".join(text_blocks)
 
-        assistant_message = data.get("message", {})
-        
-        # 2. Tool 호출 여부 확인
-        tool_calls = assistant_message.get("tool_calls", [])
-        
-        if not tool_calls:
-            # 툴 호출이 없으면 최종 텍스트 반환
-            return assistant_message.get("content", "")
-
-        # 3. 모델의 툴 호출을 메시지에 누적 저장
-        messages_copy.append({
-            "role": assistant_message.get("role", "assistant"),
-            "content": assistant_message.get("content", ""),
-            "tool_calls": tool_calls
-        })
-
-        # 4. 각 툴 실행 결과를 메시지 내역(role: tool)에 추가하여 다시 LLM 확인 (반복)
-        for tool_call in tool_calls:
-            func = tool_call.get("function", {})
-            name = func.get("name")
-            args = func.get("arguments", {})
-            
-            print(f"[workspace] Ollama tool call: {name}({args})")
-            
-            result = execute_tool_call(name, args)
-            
+        # Tool 호출 처리
+        if response.stop_reason == "tool_use":
+            # 1. assistant 메시지(tool_use 블록 포함) 누적
             messages_copy.append({
-                "role": "tool",
-                "name": name,
-                "content": str(result)
+                "role": "assistant",
+                "content": [b.model_dump() for b in response.content]
             })
+
+            # 2. 각 tool 실행 후 tool_result 메시지 누적
+            tool_results = []
+            for block in response.content:
+                if block.type == "tool_use":
+                    print(f"[workspace] Claude tool call: {block.name}({block.input})")
+                    result = execute_tool_call(block.name, block.input)
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": str(result)
+                    })
+
+            messages_copy.append({"role": "user", "content": tool_results})
+            continue
+
+        # 예상치 못한 stop_reason
+        text_blocks = [b.text for b in response.content if hasattr(b, "text")]
+        return "\n".join(text_blocks) if text_blocks else ""
 
     return "무한 루프 방지: 최대 도구 실행 횟수(10회)에 도달했습니다."
 
@@ -215,17 +172,12 @@ def call_ollama(messages: List[Dict[str, Any]]) -> str:
 
 @router.post("/message", response_model=ChatResponse)
 def send_message(request: ChatRequest):
-    """
-    Ollama(qwen2.5-coder:14b)로 요청.
-    - 프론트엔드 → 백엔드 → Ollama API 백엔드로 요청 체이닝.
-    """
+    """Claude API로 메시지 전송"""
     system_prompt = request.system_prompt or DEFAULT_SYSTEM_PROMPT
 
     try:
-        messages = build_ollama_messages(request.history, request.message, system_prompt)
-        reply_text = call_ollama(messages)
-        used_model = OLLAMA_MODEL_CHAT
-
+        messages = build_claude_messages(request.history, request.message)
+        reply_text = call_claude(messages, system_prompt)
     except HTTPException:
         raise
     except Exception as e:
@@ -236,7 +188,7 @@ def send_message(request: ChatRequest):
 
     return ChatResponse(
         message=reply_text,
-        model=used_model
+        model=CLAUDE_MODEL
     )
 
 
@@ -245,8 +197,8 @@ def chat_health():
     """Chat 모듈 상태 확인"""
     return {
         "status": "ok",
-        "provider": "ollama",
-        "base_url": OLLAMA_BASE_URL,
-        "model": OLLAMA_MODEL_CHAT,
+        "provider": "claude",
+        "model": CLAUDE_MODEL,
+        "api_key_set": bool(ANTHROPIC_API_KEY),
         "workspace_path": str(WORKSPACE_PATH),
     }

@@ -51,3 +51,13 @@ class SaveNoteRequest(BaseModel):
 class CreateFolderRequest(BaseModel):
     path: str = Field(..., description="폴더 경로")
     commit_message: Optional[str] = Field(None, description="커밋 메시지")
+
+# ===== Move Request =====
+class MoveRequest(BaseModel):
+    src_path: str = Field(..., description="이동할 파일/폴더 경로")
+    dest_folder: str = Field("", description="이동 대상 폴더 경로 (빈 문자열 = vault 루트)")
+
+# ===== Rename Request =====
+class RenameRequest(BaseModel):
+    src_path: str = Field(..., description="이름을 변경할 파일/폴더 경로")
+    new_name: str = Field(..., description="새 이름 (경로 구분자 없이 파일명만)")

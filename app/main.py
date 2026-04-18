@@ -60,6 +60,14 @@ app.include_router(test_manager.router)
 @app.on_event("startup")
 def startup_event():
     init_scheduler()
+    # obsidian-vault 브랜치 초기화 (git 저장소가 있을 때만)
+    if notebook_manager.is_git_repo(notebook_manager.VAULT_PATH):
+        try:
+            notebook_manager.ensure_vault_branch()
+        except Exception as e:
+            print(f"[startup] ensure_vault_branch failed: {e}")
+    else:
+        print("[startup] obsidian-vault에 .git 없음 — git sync 비활성화 (Mutagen 환경)")
 
 # 기본 라우트
 @app.get("/")

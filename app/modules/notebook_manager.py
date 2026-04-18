@@ -2,10 +2,11 @@ from fastapi import APIRouter, HTTPException, status, Query, BackgroundTasks
 from typing import List, Optional
 from pathlib import Path
 import os
+import shutil
 import subprocess
 from datetime import datetime
 from models.notebook import (
-    FolderInfo, NoteInfo, NoteContent, TreeNode, SearchResult, SaveNoteRequest, CreateFolderRequest
+    FolderInfo, NoteInfo, NoteContent, TreeNode, SearchResult, SaveNoteRequest, CreateFolderRequest, MoveRequest, RenameRequest
 )
 
 # 라우터 생성
@@ -40,10 +41,16 @@ def is_markdown_file(file_path: Path) -> bool:
     """마크다운 파일인지 확인"""
     return file_path.suffix.lower() in ['.md', '.markdown']
 
-def should_skip(path: Path) -> bool:
+def should_skip(path: Path, show_hidden: bool = False) -> bool:
     """숨김 파일/폴더 또는 .git 등 제외"""
     name = path.name
-    return name.startswith('.') or name.startswith('_') or name == 'node_modules'
+    # 항상 제외
+    if name in ('.git', 'node_modules'):
+        return True
+    # 숨김 표시 off일 때만 점(.)으로 시작하는 항목 제외
+    if not show_hidden and (name.startswith('.') or name.startswith('_')):
+        return True
+    return False
 
 def get_file_info(file_path: Path, vault_path: Path) -> NoteInfo:
     """파일 정보 추출"""
@@ -122,28 +129,30 @@ def get_directory_tree(path: str = Query("", description="조회할 경로")):
     return tree
 
 @router.get("/folders", response_model=List[FolderInfo])
-def get_folders(path: str = Query("", description="조회할 경로")):
+def get_folders(
+    path: str = Query("", description="조회할 경로"),
+    show_hidden: bool = Query(False, description="숨김 항목(.으로 시작) 표시 여부")
+):
     """특정 경로의 하위 폴더 목록 조회"""
     target_path = get_safe_path(path)
-    
+
     if not target_path.exists() or not target_path.is_dir():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Folder not found"
         )
-    
+
     folders = []
     for item in sorted(target_path.iterdir(), key=lambda x: x.name.lower()):
-        if not item.is_dir() or should_skip(item):
+        if not item.is_dir() or should_skip(item, show_hidden):
             continue
-        
+
         relative_path = str(item.relative_to(VAULT_PATH)).replace('\\', '/')
         parent_path = str(item.parent.relative_to(VAULT_PATH)).replace('\\', '/') if item.parent != VAULT_PATH else ""
-        
-        # 하위 파일/폴더 개수 계산
-        file_count = sum(1 for f in item.iterdir() if f.is_file() and is_markdown_file(f) and not should_skip(f))
-        folder_count = sum(1 for f in item.iterdir() if f.is_dir() and not should_skip(f))
-        
+
+        file_count = sum(1 for f in item.iterdir() if f.is_file() and is_markdown_file(f) and not should_skip(f, show_hidden))
+        folder_count = sum(1 for f in item.iterdir() if f.is_dir() and not should_skip(f, show_hidden))
+
         folders.append(FolderInfo(
             name=item.name,
             path=relative_path,
@@ -151,27 +160,30 @@ def get_folders(path: str = Query("", description="조회할 경로")):
             file_count=file_count,
             folder_count=folder_count
         ))
-    
+
     return folders
 
 @router.get("/files", response_model=List[NoteInfo])
-def get_files(path: str = Query("", description="조회할 폴더 경로")):
+def get_files(
+    path: str = Query("", description="조회할 폴더 경로"),
+    show_hidden: bool = Query(False, description="숨김 항목(.으로 시작) 표시 여부")
+):
     """특정 폴더의 마크다운 파일 목록 조회"""
     target_path = get_safe_path(path)
-    
+
     if not target_path.exists() or not target_path.is_dir():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Folder not found"
         )
-    
+
     files = []
     for item in sorted(target_path.iterdir(), key=lambda x: x.name.lower()):
-        if not item.is_file() or not is_markdown_file(item) or should_skip(item):
+        if not item.is_file() or should_skip(item, show_hidden):
             continue
-        
+
         files.append(get_file_info(item, VAULT_PATH))
-    
+
     return files
 
 @router.get("/content", response_model=NoteContent)
@@ -185,17 +197,13 @@ def get_file_content(path: str = Query(..., description="파일 경로")):
             detail="File not found"
         )
     
-    if not is_markdown_file(target_path):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Not a markdown file"
-        )
-    
     try:
         content = target_path.read_text(encoding='utf-8')
     except UnicodeDecodeError:
         try:
             content = target_path.read_text(encoding='cp949')
+        except UnicodeDecodeError:
+            content = f"[바이너리 파일 — 텍스트로 표시할 수 없습니다: {target_path.name}]"
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -299,12 +307,16 @@ def get_vault_stats():
 
 # ===== Git Integration =====
 
-def run_git_command(commands: List[str]):
+REPO_PATH = VAULT_PATH.parent  # home-server 루트 레포
+VAULT_BRANCH = "home-server"   # obsidian-vault에서 사용할 브랜치
+
+
+def run_git_command(commands: List[str], cwd: Path = None):
     """Git 명령어 실행"""
     try:
         subprocess.run(
             commands,
-            cwd=VAULT_PATH,
+            cwd=cwd or VAULT_PATH,
             check=True,
             capture_output=True,
             text=True
@@ -316,42 +328,172 @@ def run_git_command(commands: List[str]):
             detail=f"Git error: {e.stderr}"
         )
 
+
+def ensure_vault_branch():
+    """obsidian-vault가 VAULT_BRANCH 브랜치에 있도록 보장 (없으면 생성 후 checkout)"""
+    # vault 경로 및 git 초기화 여부 확인
+    if not VAULT_PATH.exists():
+        raise RuntimeError(f"obsidian-vault 디렉토리가 없습니다: {VAULT_PATH}\n'git submodule update --init'을 실행하세요.")
+
+    git_dir = VAULT_PATH / ".git"
+    if not git_dir.exists():
+        raise RuntimeError(f"obsidian-vault가 git 저장소가 아닙니다: {VAULT_PATH}\n'git submodule update --init'을 실행하세요.")
+
+    # 현재 브랜치 확인 (detached HEAD면 빈 문자열)
+    result = subprocess.run(
+        ["git", "branch", "--show-current"],
+        cwd=VAULT_PATH, capture_output=True, text=True
+    )
+    current = result.stdout.strip()
+    if current == VAULT_BRANCH:
+        return
+
+    # 로컬 브랜치 존재 여부 확인
+    result = subprocess.run(
+        ["git", "branch", "--list", VAULT_BRANCH],
+        cwd=VAULT_PATH, capture_output=True, text=True
+    )
+    if VAULT_BRANCH in result.stdout:
+        subprocess.run(
+            ["git", "checkout", VAULT_BRANCH],
+            cwd=VAULT_PATH, check=True, capture_output=True, text=True
+        )
+    else:
+        # 로컬 없으면 리모트 확인
+        result = subprocess.run(
+            ["git", "branch", "-r", "--list", f"origin/{VAULT_BRANCH}"],
+            cwd=VAULT_PATH, capture_output=True, text=True
+        )
+        if f"origin/{VAULT_BRANCH}" in result.stdout:
+            subprocess.run(
+                ["git", "checkout", "-b", VAULT_BRANCH, "--track", f"origin/{VAULT_BRANCH}"],
+                cwd=VAULT_PATH, check=True, capture_output=True, text=True
+            )
+        else:
+            subprocess.run(
+                ["git", "checkout", "-b", VAULT_BRANCH],
+                cwd=VAULT_PATH, check=True, capture_output=True, text=True
+            )
+    print(f"[notebook] Switched obsidian-vault to branch '{VAULT_BRANCH}' (was: '{current or 'detached HEAD'}')")
+
+
+def update_parent_submodule_pointer(vault_commit_message: str):
+    """home-server 레포의 obsidian-vault 서브모듈 포인터를 최신으로 갱신"""
+    try:
+        status_result = subprocess.run(
+            ["git", "status", "--porcelain", "obsidian-vault"],
+            cwd=REPO_PATH, capture_output=True, text=True
+        )
+        if not status_result.stdout.strip():
+            return
+
+        subprocess.run(
+            ["git", "add", "obsidian-vault"],
+            cwd=REPO_PATH, check=True, capture_output=True, text=True
+        )
+        subprocess.run(
+            ["git", "commit", "-m", f"chore: update obsidian-vault pointer ({vault_commit_message})"],
+            cwd=REPO_PATH, check=True, capture_output=True, text=True
+        )
+        subprocess.run(
+            ["git", "push"],
+            cwd=REPO_PATH, check=True, capture_output=True, text=True
+        )
+        print("Parent submodule pointer updated.")
+    except subprocess.CalledProcessError as e:
+        # 포인터 갱신 실패는 vault 작업 자체를 막지 않도록 경고만 출력
+        print(f"update_parent_submodule_pointer failed: {e.stderr}")
+
+
+def is_git_repo(path: Path) -> bool:
+    """해당 경로가 유효한 git 저장소인지 확인"""
+    git_dir = path / ".git"
+    if not git_dir.exists():
+        return False
+    result = subprocess.run(
+        ["git", "rev-parse", "--is-inside-work-tree"],
+        cwd=path, capture_output=True, text=True
+    )
+    return result.returncode == 0
+
+
 def sync_vault_to_git(commit_message: str):
-    """Vault 변경사항을 Git에 커밋하고 푸시"""
-    # 1. 변경사항 확인
+    """Vault 변경사항을 Git에 커밋하고 푸시한 뒤 부모 레포 서브모듈 포인터도 갱신.
+    .git이 없는 환경(Mutagen sync 등)에서는 git 작업을 건너뜀."""
+    if not is_git_repo(VAULT_PATH):
+        print(f"[notebook] .git 없음 — git sync 건너뜀 ({commit_message})")
+        return
+
+    # 1. home-server 브랜치 보장
+    ensure_vault_branch()
+
+    # 2. 변경사항 확인
     status_result = subprocess.run(
         ["git", "status", "--porcelain"],
-        cwd=VAULT_PATH,
-        capture_output=True,
-        text=True
+        cwd=VAULT_PATH, capture_output=True, text=True
     )
-    
-    # 변경사항이 없으면 리턴
     if not status_result.stdout.strip():
         return
 
-    # 2. Add all changes
+    # 3. Add / Commit / Push (submodule)
     run_git_command(["git", "add", "."])
-    
-    # 3. Commit
     run_git_command(["git", "commit", "-m", commit_message])
-    
-    # 4. Push
-    run_git_command(["git", "push"])
+    run_git_command(["git", "push", "--set-upstream", "origin", VAULT_BRANCH])
+
+    # 4. 부모 레포 서브모듈 포인터 갱신
+    update_parent_submodule_pointer(commit_message)
+
+@router.get("/git-status")
+def git_status():
+    """obsidian-vault와 부모 레포의 git 상태 반환 (디버그용)"""
+    def run(cmds, cwd):
+        r = subprocess.run(cmds, cwd=cwd, capture_output=True, text=True)
+        return r.stdout.strip() or r.stderr.strip()
+
+    vault_git = is_git_repo(VAULT_PATH)
+    repo_git = is_git_repo(REPO_PATH)
+
+    return {
+        "vault": {
+            "path": str(VAULT_PATH),
+            "git_available": vault_git,
+            **(
+                {
+                    "branch": run(["git", "branch", "--show-current"], VAULT_PATH),
+                    "status": run(["git", "status", "--short"], VAULT_PATH),
+                    "last_commit": run(["git", "log", "-1", "--oneline"], VAULT_PATH),
+                    "remotes": run(["git", "remote", "-v"], VAULT_PATH),
+                } if vault_git else {"note": ".git 없음 — Mutagen sync 환경으로 추정"}
+            )
+        },
+        "repo": {
+            "path": str(REPO_PATH),
+            "git_available": repo_git,
+            **(
+                {
+                    "branch": run(["git", "branch", "--show-current"], REPO_PATH),
+                    "submodule_status": run(["git", "submodule", "status"], REPO_PATH),
+                    "last_commit": run(["git", "log", "-1", "--oneline"], REPO_PATH),
+                } if repo_git else {"note": ".git 없음"}
+            )
+        }
+    }
+
 
 @router.post("/git-pull")
 def git_pull():
-    """Git Pull 실행"""
+    """Git Pull 실행 (home-server 브랜치 보장 후 pull)"""
     try:
-        # 1. git pull 실행
+        ensure_vault_branch()
+
         result = subprocess.run(
-            ["git", "pull"],
+            ["git", "pull", "origin", VAULT_BRANCH],
             cwd=VAULT_PATH,
             capture_output=True,
             text=True,
             check=True
         )
-        
+
         return {
             "success": True,
             "message": result.stdout,
@@ -368,11 +510,7 @@ def git_pull():
 def save_note(request: SaveNoteRequest):
     """노트 저장 및 Git 자동 동기화"""
     target_path = get_safe_path(request.path)
-    
-    # 마크다운 파일인지 확인 (새 파일인 경우 확장자 체크)
-    if not request.path.lower().endswith(('.md', '.markdown')):
-        target_path = target_path.with_suffix('.md')
-    
+
     try:
         # 상위 디렉토리 생성
         target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -393,6 +531,110 @@ def save_note(request: SaveNoteRequest):
         )
     
     return {"status": "success", "path": request.path}
+
+@router.delete("/file")
+def delete_file(path: str = Query(..., description="삭제할 파일 경로")):
+    """파일 삭제 및 Git 자동 동기화"""
+    target_path = get_safe_path(path)
+
+    if not target_path.exists() or not target_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found"
+        )
+
+    try:
+        target_path.unlink()
+        sync_vault_to_git(f"Delete {path}")
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+    return {"status": "success", "path": path}
+
+
+@router.delete("/folder")
+def delete_folder(path: str = Query(..., description="삭제할 폴더 경로")):
+    """폴더 삭제 및 Git 자동 동기화"""
+    target_path = get_safe_path(path)
+
+    if not target_path.exists() or not target_path.is_dir():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Folder not found"
+        )
+
+    try:
+        shutil.rmtree(target_path)
+        sync_vault_to_git(f"Delete folder {path}")
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+    return {"status": "success", "path": path}
+
+
+@router.post("/move")
+def move_item(request: MoveRequest):
+    """파일 또는 폴더를 다른 위치로 이동"""
+    src = get_safe_path(request.src_path)
+
+    if not src.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+
+    dest_folder = get_safe_path(request.dest_folder) if request.dest_folder else VAULT_PATH
+    if not dest_folder.exists() or not dest_folder.is_dir():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Destination folder not found")
+
+    # 자기 자신 또는 하위 폴더로의 이동 방지
+    try:
+        dest_folder.relative_to(src)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot move a folder into itself")
+    except ValueError:
+        pass
+
+    dest = dest_folder / src.name
+    if dest.exists():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"'{src.name}' already exists in destination")
+
+    try:
+        shutil.move(str(src), str(dest))
+        sync_vault_to_git(f"Move {request.src_path} → {request.dest_folder or '/'}")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    dest_relative = str(dest.relative_to(VAULT_PATH)).replace('\\', '/')
+    return {"status": "success", "src_path": request.src_path, "dest_path": dest_relative}
+
+
+@router.post("/rename")
+def rename_item(request: RenameRequest):
+    """파일 또는 폴더 이름 변경"""
+    src = get_safe_path(request.src_path)
+    if not src.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    new_name = request.new_name.strip()
+    if not new_name or '/' in new_name or '\\' in new_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid name")
+
+    dest = src.parent / new_name
+    if dest.exists():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"'{new_name}' already exists")
+
+    try:
+        src.rename(dest)
+        sync_vault_to_git(f"Rename {src.name} → {new_name}")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    dest_relative = str(dest.relative_to(VAULT_PATH)).replace('\\', '/')
+    return {"status": "success", "new_path": dest_relative, "new_name": new_name}
+
 
 @router.post("/folder")
 def create_folder(request: CreateFolderRequest):

@@ -11,10 +11,10 @@ export default defineConfig(({ mode }) => {
 			host: '0.0.0.0',
 			port: 5173,
 			allowedHosts: env.VITE_ALLOWED_HOSTS ? env.VITE_ALLOWED_HOSTS.split(',') : [],
-			hmr: {
-			host: 'hgchang1.iptime.org',
-			port: 5173
-		},
+			hmr: env.VITE_HMR_HOST ? {
+				host: env.VITE_HMR_HOST,
+				port: 5173
+			} : true,
 			 proxy: {
 				 '/api': {
 					 target: 'http://localhost:5005',

@@ -52,3 +52,21 @@ export async function agentStatus(logTail = 30) {
 export async function agentClearLogs() {
 	return apiDelete(`${API_BASE}/agent/logs`);
 }
+
+// ===== Agent sessions =====
+
+export async function listSessions() {
+	return apiGet(`${API_BASE}/agent/sessions`);
+}
+
+export async function getSession(sessionId) {
+	return apiGet(`${API_BASE}/agent/sessions/${sessionId}`);
+}
+
+export async function resumeSession(sessionId) {
+	return apiPost(`${API_BASE}/agent/sessions/${sessionId}/resume`, {});
+}
+
+export async function deleteSession(sessionId) {
+	return apiDelete(`${API_BASE}/agent/sessions/${sessionId}`);
+}

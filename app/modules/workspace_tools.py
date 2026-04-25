@@ -20,8 +20,9 @@ MAX_OUTPUT = 4000  # 도구 결과 최대 문자 수
 # ── 경로 보안 ──────────────────────────────────────────────
 
 def _safe_path(relative_or_absolute: str) -> Path:
-    raw = Path(relative_or_absolute)
-    full = (WORKSPACE_PATH / raw).resolve() if not raw.is_absolute() else raw.resolve()
+    # ~ 를 먼저 홈 디렉토리로 변환
+    expanded = Path(os.path.expanduser(relative_or_absolute))
+    full = expanded.resolve() if expanded.is_absolute() else (WORKSPACE_PATH / expanded).resolve()
     try:
         full.relative_to(WORKSPACE_PATH)
     except ValueError:

@@ -11,10 +11,13 @@ from models.chat import (
     MessageRole,
     AgentStartRequest,
     AgentStatusResponse,
+    AgentSessionSummary,
+    AgentSessionDetail,
 )
 from modules.workspace_tools import execute_tool_call, WORKSPACE_PATH
 from modules.agent_loop import agent_loop, TOOLS, AgentStatus
 from modules.llm_client import chat as llm_chat, LLM_MODEL_PATH, LLM_NUM_CTX
+import modules.agent_sessions as sessions
 
 router = APIRouter(
     prefix="/chat",
@@ -132,6 +135,44 @@ async def agent_status(log_tail: int = Query(default=30, ge=1, le=200)):
 @router.delete("/agent/logs")
 async def agent_clear_logs():
     agent_loop.clear_logs()
+    return {"ok": True}
+
+
+# ===== Agent sessions =====
+
+@router.get("/agent/sessions", response_model=list[AgentSessionSummary])
+async def list_sessions():
+    return sessions.list_all()
+
+
+@router.get("/agent/sessions/{session_id}", response_model=AgentSessionDetail)
+async def get_session(session_id: str):
+    s = sessions.get(session_id)
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다.")
+    return s
+
+
+@router.post("/agent/sessions/{session_id}/resume", response_model=AgentStatusResponse)
+async def resume_session(session_id: str):
+    s = sessions.get(session_id)
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다.")
+    try:
+        agent_loop.start(
+            objective=s["objective"],
+            system_prompt=s["system_prompt"] or DEFAULT_SYSTEM_PROMPT,
+            initial_messages=s["messages"],
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    return AgentStatusResponse(**agent_loop.get_status())
+
+
+@router.delete("/agent/sessions/{session_id}")
+async def delete_session(session_id: str):
+    if not sessions.delete(session_id):
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다.")
     return {"ok": True}
 
 

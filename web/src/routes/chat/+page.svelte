@@ -1,5 +1,6 @@
 <script>
-	import { sendChatMessage, agentStart, agentStop, agentStatus, agentClearLogs } from '$lib/api/chat.js';
+	import { sendChatMessage, agentStart, agentStop, agentStatus, agentClearLogs,
+		listSessions, getSession, resumeSession, deleteSession } from '$lib/api/chat.js';
 	import { onMount, onDestroy, tick } from 'svelte';
 
 	// ===== Tab state =====
@@ -36,6 +37,12 @@
 	let showSystemPrompt = $state(false);
 
 	let pollInterval = null;
+
+	// ===== Session state =====
+	let sessionList = $state([]);
+	let expandedSession = $state(null); // { id, logs, objective, status, ... }
+	let sessionsOpen = $state(false);
+	let sessionError = $state('');
 
 	// ===== Helpers =====
 	function now() {
@@ -130,6 +137,7 @@
 			scrollLogsToBottom();
 			if (agentData?.status === 'idle' || agentData?.status === 'error') {
 				stopPolling();
+				fetchSessions();
 			}
 		}, 2000);
 	}
@@ -176,6 +184,60 @@
 		}
 	}
 
+	// ===== Session actions =====
+	async function fetchSessions() {
+		try {
+			sessionList = await listSessions();
+			sessionError = '';
+		} catch (err) {
+			sessionError = err.message;
+		}
+	}
+
+	async function handleExpandSession(session) {
+		if (expandedSession?.id === session.id) {
+			expandedSession = null;
+			return;
+		}
+		try {
+			expandedSession = await getSession(session.id);
+		} catch (err) {
+			sessionError = err.message;
+		}
+	}
+
+	async function handleResumeSession(session) {
+		try {
+			agentData = await resumeSession(session.id);
+			startPolling();
+			sessionsOpen = false;
+		} catch (err) {
+			sessionError = err.message;
+		}
+	}
+
+	async function handleDeleteSession(session) {
+		try {
+			await deleteSession(session.id);
+			if (expandedSession?.id === session.id) expandedSession = null;
+			await fetchSessions();
+		} catch (err) {
+			sessionError = err.message;
+		}
+	}
+
+	function sessionStatusColor(s) {
+		if (s === 'running') return 'green';
+		if (s === 'stopping') return 'orange';
+		if (s === 'error') return 'red';
+		return 'gray';
+	}
+
+	function formatDate(iso) {
+		if (!iso) return '';
+		return new Date(iso).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+	}
+
 	// ===== Lifecycle =====
 	onMount(() => {
 		const storedCtx = localStorage.getItem('chat_ctx_idx');
@@ -187,6 +249,7 @@
 		}
 		inputEl?.focus();
 		fetchAgentStatus();
+		fetchSessions();
 	});
 
 	onDestroy(() => stopPolling());
@@ -382,6 +445,58 @@
 				{/if}
 				{#if agentData?.error}
 					<div class="error-message">🔴 에이전트 오류: {agentData.error}</div>
+				{/if}
+			</div>
+
+			<!-- Session history -->
+			<div class="sessions-panel">
+				<button class="sessions-toggle" onclick={() => { sessionsOpen = !sessionsOpen; if (sessionsOpen) fetchSessions(); }}>
+					{sessionsOpen ? '▲' : '▼'} 세션 히스토리
+					{#if sessionList.length > 0}
+						<span class="session-count">{sessionList.length}</span>
+					{/if}
+				</button>
+
+				{#if sessionsOpen}
+					{#if sessionError}
+						<div class="error-message" style="margin: 0.4rem 0;">⚠️ {sessionError}</div>
+					{/if}
+					{#if sessionList.length === 0}
+						<div class="sessions-empty">저장된 세션이 없습니다.</div>
+					{:else}
+						<div class="sessions-list">
+							{#each sessionList as s}
+								<div class="session-row" class:expanded={expandedSession?.id === s.id}>
+									<div class="session-summary" onclick={() => handleExpandSession(s)}>
+										<span class="session-status-dot" style="background: {sessionStatusColor(s.status)}"></span>
+										<span class="session-date">{formatDate(s.started_at)}</span>
+										<span class="session-obj">{s.objective.slice(0, 60)}{s.objective.length > 60 ? '…' : ''}</span>
+										<span class="session-iter">iter {s.iteration}</span>
+										<div class="session-actions" onclick={(e) => e.stopPropagation()}>
+											<button class="sess-btn resume" onclick={() => handleResumeSession(s)} disabled={agentData?.status === 'running'}>▶ 재개</button>
+											<button class="sess-btn del" onclick={() => handleDeleteSession(s)}>🗑</button>
+										</div>
+									</div>
+
+									{#if expandedSession?.id === s.id}
+										<div class="session-logs">
+											{#each expandedSession.logs as entry}
+												<div class="log-entry {logLevelClass(entry.level)}">
+													<span class="log-time">{formatTime(entry.timestamp)}</span>
+													<span class="log-iter">#{entry.iteration}</span>
+													<span class="log-level">{entry.level}</span>
+													<span class="log-msg">{entry.message}</span>
+												</div>
+											{/each}
+											{#if expandedSession.logs.length === 0}
+												<div class="log-empty">로그가 없습니다.</div>
+											{/if}
+										</div>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					{/if}
 				{/if}
 			</div>
 
@@ -778,6 +893,99 @@
 
 	.clear-btn-sm { background: var(--color-surface, #f0f0f0); color: var(--color-text-secondary, #666); border: 1px solid var(--color-border, #ddd); }
 	.clear-btn-sm:hover { background: #fee2e2; color: #b91c1c; }
+
+	/* Sessions panel */
+	.sessions-panel {
+		flex-shrink: 0;
+		border: 1px solid var(--color-border, #ddd);
+		border-radius: 10px;
+		overflow: hidden;
+	}
+
+	.sessions-toggle {
+		width: 100%;
+		padding: 0.45rem 0.75rem;
+		background: var(--color-surface, #f5f5f5);
+		border: none;
+		cursor: pointer;
+		font-size: 0.82rem;
+		font-weight: 600;
+		text-align: left;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		color: var(--color-text, #333);
+	}
+
+	.sessions-toggle:hover { background: var(--color-hover, #e5e7eb); }
+
+	.session-count {
+		background: var(--color-primary, #6366f1);
+		color: white;
+		border-radius: 99px;
+		font-size: 0.7rem;
+		padding: 0.05rem 0.45rem;
+		font-weight: 700;
+	}
+
+	.sessions-empty {
+		padding: 0.6rem 0.75rem;
+		font-size: 0.82rem;
+		color: var(--color-text-secondary, #aaa);
+	}
+
+	.sessions-list { display: flex; flex-direction: column; }
+
+	.session-row { border-top: 1px solid var(--color-border, #eee); }
+
+	.session-summary {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.4rem 0.75rem;
+		cursor: pointer;
+		font-size: 0.8rem;
+		flex-wrap: nowrap;
+	}
+
+	.session-summary:hover { background: var(--color-hover, rgba(0,0,0,0.03)); }
+
+	.session-status-dot {
+		width: 7px; height: 7px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	.session-date { color: var(--color-text-secondary, #888); flex-shrink: 0; font-size: 0.75rem; }
+	.session-obj { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.session-iter { color: var(--color-text-secondary, #aaa); font-size: 0.72rem; flex-shrink: 0; }
+
+	.session-actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
+
+	.sess-btn {
+		padding: 0.2rem 0.5rem;
+		border-radius: 6px;
+		border: 1px solid var(--color-border, #ddd);
+		font-size: 0.75rem;
+		cursor: pointer;
+		background: transparent;
+		color: var(--color-text, #333);
+	}
+
+	.sess-btn.resume { color: #16a34a; border-color: #bbf7d0; }
+	.sess-btn.resume:hover:not(:disabled) { background: #dcfce7; }
+	.sess-btn.resume:disabled { opacity: 0.4; cursor: not-allowed; }
+	.sess-btn.del:hover { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+
+	.session-logs {
+		max-height: 200px;
+		overflow-y: auto;
+		border-top: 1px solid var(--color-border, #eee);
+		padding: 0.25rem 0;
+		font-family: 'Menlo', 'Consolas', monospace;
+		font-size: 0.75rem;
+		background: var(--color-surface, #fafafa);
+	}
 
 	/* Log panel */
 	.log-panel {

@@ -12,6 +12,7 @@ from typing import Optional, Any
 
 from modules.workspace_tools import execute_tool_call
 from modules.llm_client import chat as llm_chat
+import modules.agent_sessions as sessions
 
 MAX_ITERATIONS = 50
 
@@ -309,21 +310,27 @@ class AgentLoop:
         self.iteration = 0
         self.error: Optional[str] = None
         self._stop_event = asyncio.Event()
+        self.session_id: Optional[str] = None
+        self._messages: list = []  # 세션 재개를 위한 메시지 히스토리
 
     def _log(self, level: str, message: str):
         entry = LogEntry(level, message, self.iteration)
         self.logs.append(entry)
         print(f"[Agent][{level}][iter={self.iteration}] {message}")
 
-    async def _run(self, objective: str, system_prompt: str):
+    async def _run(self, objective: str, system_prompt: str, initial_messages: list = None):
         self._stop_event.clear()
 
-        messages: list[dict[str, Any]] = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": objective})
-
-        self._log("INFO", f"Objective: {objective[:200]}")
+        if initial_messages:
+            messages: list[dict[str, Any]] = list(initial_messages)
+            messages.append({"role": "user", "content": "이전 작업에서 이어서 계속 진행해줘."})
+            self._log("INFO", f"[재개] {objective[:200]}")
+        else:
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": objective})
+            self._log("INFO", f"Objective: {objective[:200]}")
 
         try:
             while not self._stop_event.is_set():
@@ -369,6 +376,7 @@ class AgentLoop:
 
                     messages.append({"role": "tool", "content": result_str})
 
+                self._messages = messages  # 항상 최신 상태 유지
                 await asyncio.sleep(0)  # yield to event loop
 
         except asyncio.CancelledError:
@@ -377,20 +385,34 @@ class AgentLoop:
             self.status = AgentStatus.ERROR
             self.error = str(exc)
             self._log("ERROR", f"Unhandled exception: {exc}")
-            return
+        finally:
+            if self.status != AgentStatus.ERROR:
+                self.status = AgentStatus.IDLE
+            self._log("INFO", "Agent loop finished")
+            if self.session_id:
+                sessions.save(
+                    self.session_id,
+                    status=self.status,
+                    iteration=self.iteration,
+                    error=self.error,
+                    messages=self._messages,
+                    logs=[e.to_dict() for e in self.logs],
+                )
 
-        if self.status != AgentStatus.ERROR:
-            self.status = AgentStatus.IDLE
-        self._log("INFO", "Agent loop finished")
-
-    def start(self, objective: str, system_prompt: str) -> None:
+    def start(self, objective: str, system_prompt: str,
+              initial_messages: list = None) -> None:
         if self.status == AgentStatus.RUNNING:
             raise ValueError("에이전트 루프가 이미 실행 중입니다.")
         self.status = AgentStatus.RUNNING
         self.current_objective = objective
         self.iteration = 0
         self.error = None
-        self._task = asyncio.create_task(self._run(objective, system_prompt))
+        self._messages = list(initial_messages) if initial_messages else []
+        self.session_id = sessions.create(objective, system_prompt)
+        self.logs.clear()
+        self._task = asyncio.create_task(
+            self._run(objective, system_prompt, initial_messages)
+        )
 
     def stop(self) -> None:
         if self.status != AgentStatus.RUNNING:
@@ -405,6 +427,7 @@ class AgentLoop:
             "current_objective": self.current_objective,
             "iteration": self.iteration,
             "error": self.error,
+            "session_id": self.session_id,
             "logs": [e.to_dict() for e in list(self.logs)[-log_tail:]],
             "total_logs": len(self.logs),
         }

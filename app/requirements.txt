@@ -8,4 +8,4 @@ google-auth-oauthlib
 icalendar
 requests
 apscheduler
-anthropic
+llama-cpp-python

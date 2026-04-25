@@ -1,15 +1,41 @@
 <script>
-	import { sendChatMessage } from '$lib/api/chat.js';
-	import { onMount, tick } from 'svelte';
+	import { sendChatMessage, agentStart, agentStop, agentStatus, agentClearLogs } from '$lib/api/chat.js';
+	import { onMount, onDestroy, tick } from 'svelte';
 
-	// ===== State =====
+	// ===== Tab state =====
+	let activeTab = $state('agent');
+
+	// ===== Context size stepper =====
+	const CTX_SIZES = [8192, 16384, 32768, 65536];
+	let ctxIdx = $state(0);
+	let ctxSize = $derived(CTX_SIZES[ctxIdx]);
+
+	function ctxLabel(n) {
+		return `${n / 1024}K`;
+	}
+	function ctxUp() { if (ctxIdx < CTX_SIZES.length - 1) ctxIdx++; }
+	function ctxDown() { if (ctxIdx > 0) ctxIdx--; }
+
+	// ===== Chat state =====
 	/** @type {Array<{role: 'user'|'assistant', content: string, timestamp: string}>} */
 	let messages = $state([]);
 	let inputText = $state('');
-	let isLoading = $state(false);
-	let error = $state('');
+	let chatLoading = $state(false);
+	let chatError = $state('');
 	let messagesEndEl = $state(null);
 	let inputEl = $state(null);
+
+	// ===== Agent state =====
+	let agentObjective = $state('');
+	let agentSystemPrompt = $state('');
+	let agentModel = $state('');
+	let agentData = $state(null); // AgentStatusResponse
+	let agentPolling = $state(false);
+	let agentError = $state('');
+	let logContainerEl = $state(null);
+	let showSystemPrompt = $state(false);
+
+	let pollInterval = null;
 
 	// ===== Helpers =====
 	function now() {
@@ -18,44 +44,56 @@
 
 	async function scrollToBottom() {
 		await tick();
-		if (messagesEndEl) {
-			messagesEndEl.scrollIntoView({ behavior: 'smooth' });
-		}
+		messagesEndEl?.scrollIntoView({ behavior: 'smooth' });
 	}
 
-	// ===== Actions =====
+	function scrollLogsToBottom() {
+		tick().then(() => {
+			if (logContainerEl) logContainerEl.scrollTop = logContainerEl.scrollHeight;
+		});
+	}
+
+	function formatTime(isoString) {
+		if (!isoString) return '';
+		return new Date(isoString).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+	}
+
+	function statusColor(s) {
+		if (s === 'running') return 'green';
+		if (s === 'stopping') return 'orange';
+		if (s === 'error') return 'red';
+		return 'gray';
+	}
+
+	function logLevelClass(level) {
+		if (level === 'ERROR') return 'log-error';
+		if (level === 'WARN') return 'log-warn';
+		if (level === 'TOOL') return 'log-tool';
+		if (level === 'RESULT') return 'log-result';
+		if (level === 'THINK') return 'log-think';
+		if (level === 'MODEL') return 'log-model';
+		return 'log-info';
+	}
+
+	// ===== Chat actions =====
 	async function handleSubmit() {
 		const text = inputText.trim();
-		if (!text || isLoading) return;
+		if (!text || chatLoading) return;
 
-		// 사용자 메시지 추가
 		messages = [...messages, { role: 'user', content: text, timestamp: now() }];
 		inputText = '';
-		isLoading = true;
-		error = '';
+		chatLoading = true;
+		chatError = '';
 		await scrollToBottom();
 
 		try {
-			// 히스토리는 마지막 메시지 제외한 전체 (방금 추가한 user 메시지 제외)
-			const history = messages.slice(0, -1).map((m) => ({
-				role: m.role,
-				content: m.content
-			}));
-
-			const response = await sendChatMessage(text, history);
-
-			messages = [
-				...messages,
-				{
-					role: 'assistant',
-					content: response.message,
-					timestamp: response.timestamp ?? now()
-				}
-			];
+			const history = messages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
+			const response = await sendChatMessage(text, history, null, ctxSize);
+			messages = [...messages, { role: 'assistant', content: response.message, timestamp: response.timestamp ?? now() }];
 		} catch (err) {
-			error = err.message ?? '알 수 없는 오류가 발생했습니다.';
+			chatError = err.message ?? '알 수 없는 오류가 발생했습니다.';
 		} finally {
-			isLoading = false;
+			chatLoading = false;
 			await scrollToBottom();
 			await tick();
 			inputEl?.focus();
@@ -63,7 +101,6 @@
 	}
 
 	function handleKeydown(e) {
-		// Shift+Enter: 줄바꿈, Enter: 전송
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
 			handleSubmit();
@@ -72,124 +109,373 @@
 
 	function clearChat() {
 		messages = [];
-		error = '';
+		chatError = '';
 	}
 
-	function formatTime(isoString) {
-		if (!isoString) return '';
-		return new Date(isoString).toLocaleTimeString('ko-KR', {
-			hour: '2-digit',
-			minute: '2-digit'
-		});
+	// ===== Agent actions =====
+	async function fetchAgentStatus() {
+		try {
+			agentData = await agentStatus(50);
+			agentError = '';
+		} catch (err) {
+			agentError = err.message;
+		}
 	}
 
+	function startPolling() {
+		if (pollInterval) return;
+		agentPolling = true;
+		pollInterval = setInterval(async () => {
+			await fetchAgentStatus();
+			scrollLogsToBottom();
+			if (agentData?.status === 'idle' || agentData?.status === 'error') {
+				stopPolling();
+			}
+		}, 2000);
+	}
+
+	function stopPolling() {
+		if (pollInterval) {
+			clearInterval(pollInterval);
+			pollInterval = null;
+		}
+		agentPolling = false;
+	}
+
+	async function handleAgentStart() {
+		const obj = agentObjective.trim();
+		if (!obj) return;
+		agentError = '';
+		try {
+			agentData = await agentStart(
+				obj,
+				agentSystemPrompt.trim() || null,
+				agentModel.trim() || null
+			);
+			startPolling();
+			scrollLogsToBottom();
+		} catch (err) {
+			agentError = err.message;
+		}
+	}
+
+	async function handleAgentStop() {
+		try {
+			agentData = await agentStop();
+		} catch (err) {
+			agentError = err.message;
+		}
+	}
+
+	async function handleClearLogs() {
+		try {
+			await agentClearLogs();
+			await fetchAgentStatus();
+		} catch (err) {
+			agentError = err.message;
+		}
+	}
+
+	// ===== Lifecycle =====
 	onMount(() => {
-		// localStorage에서 기존 대화 불러오기
+		const storedCtx = localStorage.getItem('chat_ctx_idx');
+		if (storedCtx !== null) ctxIdx = Math.min(parseInt(storedCtx) || 0, CTX_SIZES.length - 1);
+
 		const stored = localStorage.getItem('chat_history');
 		if (stored) {
-			try {
-				messages = JSON.parse(stored);
-				scrollToBottom();
-			} catch (e) {
-				console.error('채팅 기록 복원 실패', e);
-			}
+			try { messages = JSON.parse(stored); scrollToBottom(); } catch {}
 		}
-
-		// 처음 마운트 시 입력창 포커스
 		inputEl?.focus();
+		fetchAgentStatus();
 	});
 
-	// messages 배열이 변경될 때마다 자동으로 localStorage에 저장
+	onDestroy(() => stopPolling());
+
 	$effect(() => {
 		localStorage.setItem('chat_history', JSON.stringify(messages));
 	});
+
+	$effect(() => {
+		localStorage.setItem('chat_ctx_idx', ctxIdx.toString());
+	});
+
+	$effect(() => {
+		if (agentData?.status === 'running' && !pollInterval) startPolling();
+	});
 </script>
 
-<div class="chat-page">
-	<div class="chat-header">
-		<h1>💬 Chat</h1>
-		<p class="subtitle">Gemini AI와 대화하세요</p>
-		{#if messages.length > 0}
-			<button class="clear-btn" onclick={clearChat}>대화 초기화</button>
-		{/if}
-	</div>
-
-	<!-- 메시지 영역 -->
-	<div class="chat-messages">
-		{#if messages.length === 0}
-			<div class="empty-state">
-				<span class="empty-icon">🤖</span>
-				<p>메시지를 입력해 대화를 시작하세요.</p>
-			</div>
-		{:else}
-			{#each messages as msg (msg.timestamp + msg.role)}
-				<div class="message {msg.role}">
-					<div class="bubble">
-						<p class="content">{msg.content}</p>
-						<span class="timestamp">{formatTime(msg.timestamp)}</span>
-					</div>
-				</div>
-			{/each}
-
-			{#if isLoading}
-				<div class="message assistant">
-					<div class="bubble loading">
-						<span class="dot"></span>
-						<span class="dot"></span>
-						<span class="dot"></span>
-					</div>
-				</div>
-			{/if}
-		{/if}
-
-		{#if error}
-			<div class="error-message">⚠️ {error}</div>
-		{/if}
-
-		<div bind:this={messagesEndEl}></div>
-	</div>
-
-	<!-- 입력 영역 -->
-	<div class="chat-input-area">
-		<textarea
-			class="chat-input"
-			placeholder="메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)"
-			bind:value={inputText}
-			bind:this={inputEl}
-			onkeydown={handleKeydown}
-			disabled={isLoading}
-			rows="1"
-		></textarea>
-		<button
-			class="send-btn"
-			onclick={handleSubmit}
-			disabled={isLoading || !inputText.trim()}
-			aria-label="전송"
-		>
-			{#if isLoading}
-				<span class="spinner"></span>
-			{:else}
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<line x1="22" y1="2" x2="11" y2="13"></line>
-					<polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-				</svg>
+<div class="page">
+	<!-- Tab bar -->
+	<div class="tab-bar">
+		<button class="tab-btn" class:active={activeTab === 'chat'} onclick={() => (activeTab = 'chat')}>
+			💬 채팅
+		</button>
+		<button class="tab-btn" class:active={activeTab === 'agent'} onclick={() => (activeTab = 'agent')}>
+			🤖 에이전트
+			{#if agentData?.status === 'running'}
+				<span class="pulse-dot"></span>
 			{/if}
 		</button>
 	</div>
+
+	<!-- ===== CHAT TAB ===== -->
+	{#if activeTab === 'chat'}
+		<div class="chat-page">
+			<div class="chat-header">
+				<h1>💬 Chat</h1>
+				<p class="subtitle">qwen3.6 AI와 대화하세요</p>
+				<div class="ctx-stepper">
+					<button class="ctx-btn" onclick={ctxDown} disabled={ctxIdx === 0}>‹</button>
+					<span class="ctx-label">{ctxLabel(ctxSize)}</span>
+					<button class="ctx-btn" onclick={ctxUp} disabled={ctxIdx === CTX_SIZES.length - 1}>›</button>
+				</div>
+				{#if messages.length > 0}
+					<button class="clear-btn" onclick={clearChat}>대화 초기화</button>
+				{/if}
+			</div>
+
+			<div class="chat-messages">
+				{#if messages.length === 0}
+					<div class="empty-state">
+						<span class="empty-icon">🤖</span>
+						<p>메시지를 입력해 대화를 시작하세요.</p>
+					</div>
+				{:else}
+					{#each messages as msg (msg.timestamp + msg.role)}
+						<div class="message {msg.role}">
+							<div class="bubble">
+								<p class="content">{msg.content}</p>
+								<span class="timestamp">{formatTime(msg.timestamp)}</span>
+							</div>
+						</div>
+					{/each}
+					{#if chatLoading}
+						<div class="message assistant">
+							<div class="bubble loading">
+								<span class="dot"></span><span class="dot"></span><span class="dot"></span>
+							</div>
+						</div>
+					{/if}
+				{/if}
+				{#if chatError}
+					<div class="error-message">⚠️ {chatError}</div>
+				{/if}
+				<div bind:this={messagesEndEl}></div>
+			</div>
+
+			<div class="chat-input-area">
+				<textarea
+					class="chat-input"
+					placeholder="메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)"
+					bind:value={inputText}
+					bind:this={inputEl}
+					onkeydown={handleKeydown}
+					disabled={chatLoading}
+					rows="1"
+				></textarea>
+				<button class="send-btn" onclick={handleSubmit} disabled={chatLoading || !inputText.trim()}>
+					{#if chatLoading}
+						<span class="spinner"></span>
+					{:else}
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<line x1="22" y1="2" x2="11" y2="13"></line>
+							<polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+						</svg>
+					{/if}
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	<!-- ===== AGENT TAB ===== -->
+	{#if activeTab === 'agent'}
+		<div class="agent-page">
+			<div class="agent-header">
+				<h1>🤖 에이전트 루프</h1>
+				<p class="subtitle">자율 에이전트를 시작하고 제어하세요</p>
+				<div class="ctx-stepper">
+					<button class="ctx-btn" onclick={ctxDown} disabled={ctxIdx === 0}>‹</button>
+					<span class="ctx-label">{ctxLabel(ctxSize)}</span>
+					<button class="ctx-btn" onclick={ctxUp} disabled={ctxIdx === CTX_SIZES.length - 1}>›</button>
+				</div>
+			</div>
+
+			<!-- Status bar -->
+			{#if agentData}
+				<div class="status-bar">
+					<span class="status-badge" style="--badge-color: {statusColor(agentData.status)}">
+						{agentData.status}
+					</span>
+					{#if agentData.current_objective}
+						<span class="objective-label">목표: {agentData.current_objective.slice(0, 80)}{agentData.current_objective.length > 80 ? '…' : ''}</span>
+					{/if}
+					{#if agentData.iteration > 0}
+						<span class="iter-badge">iter {agentData.iteration}</span>
+					{/if}
+					{#if agentPolling}
+						<span class="polling-indicator">⟳ 실시간 갱신 중</span>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- Controls -->
+			<div class="agent-controls">
+				<div class="control-row">
+					<textarea
+						class="objective-input"
+						placeholder="에이전트 목표를 입력하세요 (예: workspace 내 Python 파일 목록을 조사하고 요약해줘)"
+						bind:value={agentObjective}
+						rows="3"
+						disabled={agentData?.status === 'running'}
+					></textarea>
+				</div>
+
+				<div class="toggle-row">
+					<button class="toggle-btn" onclick={() => (showSystemPrompt = !showSystemPrompt)}>
+						{showSystemPrompt ? '▲' : '▼'} 시스템 프롬프트 / 모델 설정
+					</button>
+				</div>
+
+				{#if showSystemPrompt}
+					<div class="advanced-row">
+						<textarea
+							class="system-input"
+							placeholder="시스템 프롬프트 (비워두면 기본값 사용)"
+							bind:value={agentSystemPrompt}
+							rows="3"
+							disabled={agentData?.status === 'running'}
+						></textarea>
+						<input
+							class="model-input"
+							type="text"
+							placeholder="모델명 (비워두면 OLLAMA_MODEL_CHAT 사용, 예: qwen3:6b)"
+							bind:value={agentModel}
+							disabled={agentData?.status === 'running'}
+						/>
+					</div>
+				{/if}
+
+				<div class="btn-row">
+					{#if agentData?.status !== 'running'}
+						<button
+							class="action-btn start-btn"
+							onclick={handleAgentStart}
+							disabled={!agentObjective.trim()}
+						>
+							▶ 시작
+						</button>
+					{:else}
+						<button class="action-btn stop-btn" onclick={handleAgentStop}>
+							■ 중지
+						</button>
+					{/if}
+					<button class="action-btn refresh-btn" onclick={fetchAgentStatus}>
+						⟳ 새로고침
+					</button>
+					<button class="action-btn clear-btn-sm" onclick={handleClearLogs}>
+						🗑 로그 초기화
+					</button>
+				</div>
+
+				{#if agentError}
+					<div class="error-message">⚠️ {agentError}</div>
+				{/if}
+				{#if agentData?.error}
+					<div class="error-message">🔴 에이전트 오류: {agentData.error}</div>
+				{/if}
+			</div>
+
+			<!-- Log viewer -->
+			<div class="log-panel">
+				<div class="log-header">
+					<span>로그</span>
+					{#if agentData}
+						<span class="log-count">{agentData.total_logs}개 중 최근 {agentData.logs?.length ?? 0}개</span>
+					{/if}
+				</div>
+				<div class="log-container" bind:this={logContainerEl}>
+					{#if !agentData?.logs?.length}
+						<div class="log-empty">로그가 없습니다. 에이전트를 시작하면 여기에 표시됩니다.</div>
+					{:else}
+						{#each agentData.logs as entry}
+							<div class="log-entry {logLevelClass(entry.level)}">
+								<span class="log-time">{formatTime(entry.timestamp)}</span>
+								<span class="log-iter">#{entry.iteration}</span>
+								<span class="log-level">{entry.level}</span>
+								<span class="log-msg">{entry.message}</span>
+							</div>
+						{/each}
+					{/if}
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
-	.chat-page {
+	.page {
 		display: flex;
 		flex-direction: column;
 		height: calc(100vh - 64px);
-		max-width: 800px;
+		max-width: 900px;
 		margin: 0 auto;
-		padding: 1rem;
-		gap: 1rem;
+		padding: 0.75rem 1rem 1rem;
+		gap: 0;
 	}
 
-	/* Header */
+	/* Tab bar */
+	.tab-bar {
+		display: flex;
+		gap: 0.25rem;
+		border-bottom: 1px solid var(--color-border, #ddd);
+		margin-bottom: 0.75rem;
+		flex-shrink: 0;
+	}
+
+	.tab-btn {
+		padding: 0.5rem 1.2rem;
+		border: none;
+		background: transparent;
+		cursor: pointer;
+		font-size: 0.9rem;
+		color: var(--color-text-secondary, #888);
+		border-bottom: 2px solid transparent;
+		margin-bottom: -1px;
+		transition: color 0.15s, border-color 0.15s;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		position: relative;
+	}
+
+	.tab-btn.active {
+		color: var(--color-primary, #6366f1);
+		border-bottom-color: var(--color-primary, #6366f1);
+		font-weight: 600;
+	}
+
+	.pulse-dot {
+		width: 8px;
+		height: 8px;
+		background: #22c55e;
+		border-radius: 50%;
+		animation: pulse 1.5s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		0%, 100% { opacity: 1; transform: scale(1); }
+		50% { opacity: 0.5; transform: scale(0.85); }
+	}
+
+	/* ===== CHAT ===== */
+	.chat-page {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		gap: 0.75rem;
+		min-height: 0;
+	}
+
 	.chat-header {
 		display: flex;
 		align-items: center;
@@ -197,42 +483,68 @@
 		flex-shrink: 0;
 	}
 
-	.chat-header h1 {
-		font-size: 1.5rem;
-		font-weight: 700;
-		margin: 0;
+	.chat-header h1 { font-size: 1.4rem; font-weight: 700; margin: 0; }
+
+	.subtitle { margin: 0; color: var(--color-text-secondary, #888); font-size: 0.85rem; }
+
+	.ctx-stepper {
+		display: flex;
+		align-items: center;
+		gap: 0.15rem;
+		margin-left: auto;
+		background: var(--color-surface, #f5f5f5);
+		border: 1px solid var(--color-border, #ddd);
+		border-radius: 8px;
+		padding: 0.1rem 0.2rem;
 	}
 
-	.subtitle {
-		margin: 0;
+	.ctx-btn {
+		width: 22px;
+		height: 22px;
+		border: none;
+		background: transparent;
+		cursor: pointer;
+		font-size: 1rem;
 		color: var(--color-text-secondary, #888);
-		font-size: 0.9rem;
+		border-radius: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		line-height: 1;
+	}
+
+	.ctx-btn:hover:not(:disabled) { background: var(--color-hover, #e5e7eb); color: var(--color-text, #222); }
+	.ctx-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+	.ctx-label {
+		font-size: 0.78rem;
+		font-weight: 600;
+		color: var(--color-primary, #6366f1);
+		min-width: 2.8rem;
+		text-align: center;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.clear-btn {
-		margin-left: auto;
-		padding: 0.35rem 0.9rem;
+		padding: 0.3rem 0.8rem;
 		border: 1px solid var(--color-border, #ddd);
 		border-radius: 8px;
 		background: transparent;
 		cursor: pointer;
-		font-size: 0.85rem;
+		font-size: 0.8rem;
 		color: var(--color-text-secondary, #888);
-		transition: background 0.15s;
 	}
 
-	.clear-btn:hover {
-		background: var(--color-hover, #f0f0f0);
-	}
+	.clear-btn:hover { background: var(--color-hover, #f0f0f0); }
 
-	/* Messages */
 	.chat-messages {
 		flex: 1;
 		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
-		padding: 0.5rem 0;
+		gap: 0.6rem;
+		padding: 0.25rem 0;
+		min-height: 0;
 	}
 
 	.empty-state {
@@ -245,26 +557,16 @@
 		color: var(--color-text-secondary, #aaa);
 	}
 
-	.empty-icon {
-		font-size: 3rem;
-	}
+	.empty-icon { font-size: 2.5rem; }
 
-	.message {
-		display: flex;
-	}
-
-	.message.user {
-		justify-content: flex-end;
-	}
-
-	.message.assistant {
-		justify-content: flex-start;
-	}
+	.message { display: flex; }
+	.message.user { justify-content: flex-end; }
+	.message.assistant { justify-content: flex-start; }
 
 	.bubble {
-		max-width: 70%;
-		padding: 0.75rem 1rem;
-		border-radius: 16px;
+		max-width: 72%;
+		padding: 0.65rem 0.9rem;
+		border-radius: 14px;
 		position: relative;
 	}
 
@@ -280,33 +582,13 @@
 		border-bottom-left-radius: 4px;
 	}
 
-	.content {
-		margin: 0;
-		white-space: pre-wrap;
-		word-break: break-word;
-		line-height: 1.5;
-		font-size: 0.95rem;
-	}
+	.content { margin: 0; white-space: pre-wrap; word-break: break-word; line-height: 1.5; font-size: 0.9rem; }
+	.timestamp { display: block; font-size: 0.68rem; margin-top: 0.25rem; opacity: 0.6; text-align: right; }
 
-	.timestamp {
-		display: block;
-		font-size: 0.7rem;
-		margin-top: 0.3rem;
-		opacity: 0.65;
-		text-align: right;
-	}
-
-	/* Loading dots */
-	.bubble.loading {
-		display: flex;
-		gap: 0.35rem;
-		align-items: center;
-		padding: 0.9rem 1.1rem;
-	}
+	.bubble.loading { display: flex; gap: 0.3rem; align-items: center; padding: 0.8rem 1rem; }
 
 	.dot {
-		width: 8px;
-		height: 8px;
+		width: 7px; height: 7px;
 		border-radius: 50%;
 		background: var(--color-text-secondary, #999);
 		animation: bounce 1.2s infinite;
@@ -320,51 +602,38 @@
 		40% { transform: scale(1.2); opacity: 1; }
 	}
 
-	/* Error */
 	.error-message {
-		padding: 0.75rem 1rem;
+		padding: 0.6rem 0.9rem;
 		background: #fee2e2;
 		color: #b91c1c;
-		border-radius: 10px;
-		font-size: 0.9rem;
+		border-radius: 8px;
+		font-size: 0.85rem;
 	}
 
-	/* Input area */
-	.chat-input-area {
-		display: flex;
-		gap: 0.5rem;
-		align-items: flex-end;
-		flex-shrink: 0;
-	}
+	.chat-input-area { display: flex; gap: 0.5rem; align-items: flex-end; flex-shrink: 0; }
 
 	.chat-input {
 		flex: 1;
-		padding: 0.75rem 1rem;
+		padding: 0.7rem 0.9rem;
 		border: 1px solid var(--color-border, #ddd);
 		border-radius: 12px;
 		resize: none;
-		font-size: 0.95rem;
+		font-size: 0.9rem;
 		font-family: inherit;
 		background: var(--color-surface, #fff);
 		color: var(--color-text, #222);
 		outline: none;
-		max-height: 160px;
+		max-height: 140px;
 		overflow-y: auto;
 		transition: border-color 0.15s;
 		field-sizing: content;
 	}
 
-	.chat-input:focus {
-		border-color: var(--color-primary, #6366f1);
-	}
-
-	.chat-input:disabled {
-		opacity: 0.6;
-	}
+	.chat-input:focus { border-color: var(--color-primary, #6366f1); }
+	.chat-input:disabled { opacity: 0.6; }
 
 	.send-btn {
-		width: 44px;
-		height: 44px;
+		width: 42px; height: 42px;
 		border-radius: 12px;
 		border: none;
 		background: var(--color-primary, #6366f1);
@@ -377,25 +646,211 @@
 		flex-shrink: 0;
 	}
 
-	.send-btn:hover:not(:disabled) {
-		background: var(--color-primary-hover, #4f46e5);
-	}
-
-	.send-btn:disabled {
-		opacity: 0.45;
-		cursor: not-allowed;
-	}
+	.send-btn:hover:not(:disabled) { background: var(--color-primary-hover, #4f46e5); }
+	.send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 	.spinner {
-		width: 18px;
-		height: 18px;
-		border: 2px solid rgba(255, 255, 255, 0.4);
+		width: 16px; height: 16px;
+		border: 2px solid rgba(255,255,255,0.4);
 		border-top-color: white;
 		border-radius: 50%;
 		animation: spin 0.7s linear infinite;
 	}
 
-	@keyframes spin {
-		to { transform: rotate(360deg); }
+	@keyframes spin { to { transform: rotate(360deg); } }
+
+	/* ===== AGENT ===== */
+	.agent-page {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		gap: 0.75rem;
+		min-height: 0;
 	}
+
+	.agent-header {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		flex-shrink: 0;
+	}
+
+	.agent-header h1 { font-size: 1.4rem; font-weight: 700; margin: 0; }
+
+	.status-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem 0.75rem;
+		background: var(--color-surface, #f5f5f5);
+		border-radius: 10px;
+		font-size: 0.85rem;
+		flex-wrap: wrap;
+		flex-shrink: 0;
+	}
+
+	.status-badge {
+		padding: 0.2rem 0.65rem;
+		border-radius: 99px;
+		font-weight: 600;
+		font-size: 0.78rem;
+		background: color-mix(in srgb, var(--badge-color) 15%, transparent);
+		color: var(--badge-color);
+		border: 1px solid color-mix(in srgb, var(--badge-color) 40%, transparent);
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+	}
+
+	.objective-label { color: var(--color-text-secondary, #888); font-size: 0.82rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.iter-badge { padding: 0.15rem 0.5rem; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-size: 0.78rem; font-weight: 600; }
+	.polling-indicator { color: #22c55e; font-size: 0.8rem; animation: pulse 1.5s infinite; }
+
+	.agent-controls { display: flex; flex-direction: column; gap: 0.5rem; flex-shrink: 0; }
+
+	.control-row, .advanced-row { display: flex; flex-direction: column; gap: 0.4rem; }
+
+	.objective-input, .system-input {
+		width: 100%;
+		padding: 0.65rem 0.85rem;
+		border: 1px solid var(--color-border, #ddd);
+		border-radius: 10px;
+		resize: vertical;
+		font-size: 0.88rem;
+		font-family: inherit;
+		background: var(--color-surface, #fff);
+		color: var(--color-text, #222);
+		outline: none;
+		transition: border-color 0.15s;
+		box-sizing: border-box;
+	}
+
+	.objective-input:focus, .system-input:focus { border-color: var(--color-primary, #6366f1); }
+	.objective-input:disabled, .system-input:disabled, .model-input:disabled { opacity: 0.6; }
+
+	.model-input {
+		width: 100%;
+		padding: 0.55rem 0.85rem;
+		border: 1px solid var(--color-border, #ddd);
+		border-radius: 10px;
+		font-size: 0.88rem;
+		font-family: inherit;
+		background: var(--color-surface, #fff);
+		color: var(--color-text, #222);
+		outline: none;
+		box-sizing: border-box;
+	}
+
+	.toggle-row { display: flex; }
+
+	.toggle-btn {
+		background: none;
+		border: none;
+		color: var(--color-text-secondary, #888);
+		font-size: 0.82rem;
+		cursor: pointer;
+		padding: 0.25rem 0;
+	}
+
+	.toggle-btn:hover { color: var(--color-text, #222); }
+
+	.btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+	.action-btn {
+		padding: 0.5rem 1.1rem;
+		border-radius: 9px;
+		border: none;
+		cursor: pointer;
+		font-size: 0.88rem;
+		font-weight: 600;
+		transition: opacity 0.15s, background 0.15s;
+	}
+
+	.action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+	.start-btn { background: #22c55e; color: white; }
+	.start-btn:hover:not(:disabled) { background: #16a34a; }
+
+	.stop-btn { background: #ef4444; color: white; }
+	.stop-btn:hover { background: #dc2626; }
+
+	.refresh-btn { background: var(--color-surface, #f0f0f0); color: var(--color-text, #333); border: 1px solid var(--color-border, #ddd); }
+	.refresh-btn:hover { background: var(--color-hover, #e5e7eb); }
+
+	.clear-btn-sm { background: var(--color-surface, #f0f0f0); color: var(--color-text-secondary, #666); border: 1px solid var(--color-border, #ddd); }
+	.clear-btn-sm:hover { background: #fee2e2; color: #b91c1c; }
+
+	/* Log panel */
+	.log-panel {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		border: 1px solid var(--color-border, #ddd);
+		border-radius: 10px;
+		overflow: hidden;
+		min-height: 0;
+	}
+
+	.log-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.4rem 0.75rem;
+		background: var(--color-surface, #f5f5f5);
+		border-bottom: 1px solid var(--color-border, #ddd);
+		font-size: 0.82rem;
+		font-weight: 600;
+		flex-shrink: 0;
+	}
+
+	.log-count { color: var(--color-text-secondary, #888); font-weight: 400; }
+
+	.log-container {
+		flex: 1;
+		overflow-y: auto;
+		padding: 0.4rem 0;
+		font-family: 'Menlo', 'Consolas', monospace;
+		font-size: 0.78rem;
+		line-height: 1.45;
+	}
+
+	.log-empty { padding: 1rem; color: var(--color-text-secondary, #aaa); text-align: center; font-family: inherit; }
+
+	.log-entry {
+		display: flex;
+		gap: 0.5rem;
+		padding: 0.15rem 0.75rem;
+		border-bottom: 1px solid transparent;
+		align-items: baseline;
+	}
+
+	.log-entry:hover { background: var(--color-hover, rgba(0,0,0,0.03)); }
+
+	.log-time { color: #94a3b8; flex-shrink: 0; font-size: 0.72rem; }
+	.log-iter { color: #94a3b8; flex-shrink: 0; min-width: 2rem; }
+
+	.log-level {
+		flex-shrink: 0;
+		min-width: 4.5rem;
+		font-weight: 700;
+		font-size: 0.72rem;
+		padding: 0.05rem 0.35rem;
+		border-radius: 4px;
+		text-align: center;
+	}
+
+	.log-msg { color: var(--color-text, #222); word-break: break-all; }
+
+	.log-info .log-level { background: #f1f5f9; color: #475569; }
+	.log-model .log-level { background: #ede9fe; color: #7c3aed; }
+	.log-tool .log-level { background: #fef3c7; color: #d97706; }
+	.log-result .log-level { background: #dcfce7; color: #15803d; }
+	.log-think .log-level { background: #e0f2fe; color: #0369a1; }
+	.log-warn .log-level { background: #fef9c3; color: #a16207; }
+	.log-error .log-level { background: #fee2e2; color: #b91c1c; }
+
+	.log-model .log-msg { color: #7c3aed; }
+	.log-tool .log-msg { color: #d97706; }
+	.log-result .log-msg { color: #15803d; }
+	.log-think .log-msg { color: #0369a1; font-style: italic; }
+	.log-error .log-msg { color: #b91c1c; }
 </style>

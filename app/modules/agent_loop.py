@@ -16,6 +16,7 @@ from modules.llm_client import chat as llm_chat
 MAX_ITERATIONS = 50
 
 TOOLS = [
+    # ── 파일시스템 ──
     {
         "type": "function",
         "function": {
@@ -24,10 +25,7 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "조회할 상대 경로. 기본값: 루트"
-                    }
+                    "path": {"type": "string", "description": "조회할 상대 경로. 기본값: 루트"}
                 },
                 "required": []
             }
@@ -41,10 +39,7 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "읽을 파일의 상대 경로"
-                    }
+                    "path": {"type": "string", "description": "읽을 파일의 상대 경로"}
                 },
                 "required": ["path"]
             }
@@ -79,7 +74,204 @@ TOOLS = [
                 "required": ["pattern"]
             }
         }
-    }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_in_files",
+            "description": "파일 내용에서 텍스트 패턴을 grep으로 검색합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pattern": {"type": "string", "description": "검색할 텍스트 또는 정규식"},
+                    "directory": {"type": "string", "description": "검색 시작 디렉토리. 기본값: 루트"},
+                    "file_pattern": {"type": "string", "description": "파일 필터 (예: '*.py'). 기본값: '*'"}
+                },
+                "required": ["pattern"]
+            }
+        }
+    },
+    # ── 실행 ──
+    {
+        "type": "function",
+        "function": {
+            "name": "run_command",
+            "description": "워크스페이스 디렉토리에서 쉘 명령어를 실행합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "실행할 쉘 명령어"},
+                    "timeout": {"type": "integer", "description": "타임아웃(초). 기본값: 30"}
+                },
+                "required": ["command"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_python",
+            "description": "Python 코드를 실행하고 stdout/stderr를 반환합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string", "description": "실행할 Python 코드"},
+                    "timeout": {"type": "integer", "description": "타임아웃(초). 기본값: 30"}
+                },
+                "required": ["code"]
+            }
+        }
+    },
+    # ── Git ──
+    {
+        "type": "function",
+        "function": {
+            "name": "git_status",
+            "description": "git status를 확인합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "확인할 디렉토리. 기본값: 워크스페이스 루트"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "git_diff",
+            "description": "git diff로 변경사항을 확인합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "특정 파일 경로 (선택)"},
+                    "staged": {"type": "boolean", "description": "staged 변경사항만 보기. 기본값: false"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "git_log",
+            "description": "git 커밋 히스토리를 조회합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "max_count": {"type": "integer", "description": "조회할 커밋 수. 기본값: 10"},
+                    "path": {"type": "string", "description": "특정 파일 경로 (선택)"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "git_commit",
+            "description": "파일을 스테이징하고 커밋합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message": {"type": "string", "description": "커밋 메시지"},
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "커밋할 파일 목록. 비워두면 전체(git add .)"}
+                },
+                "required": ["message"]
+            }
+        }
+    },
+    # ── 웹 ──
+    {
+        "type": "function",
+        "function": {
+            "name": "fetch_webpage",
+            "description": "URL에서 웹페이지 내용을 텍스트로 가져옵니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "가져올 웹페이지 URL"}
+                },
+                "required": ["url"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_web",
+            "description": "DuckDuckGo로 웹 검색을 수행합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "검색 쿼리"},
+                    "max_results": {"type": "integer", "description": "최대 결과 수. 기본값: 5"}
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    # ── 데이터베이스 ──
+    {
+        "type": "function",
+        "function": {
+            "name": "query_sqlite",
+            "description": "워크스페이스 내 SQLite DB에 SQL 쿼리를 실행합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "db_path": {"type": "string", "description": "워크스페이스 내 .db 파일 경로"},
+                    "sql": {"type": "string", "description": "실행할 SQL 쿼리"}
+                },
+                "required": ["db_path", "sql"]
+            }
+        }
+    },
+    # ── 메모리 ──
+    {
+        "type": "function",
+        "function": {
+            "name": "remember",
+            "description": "에이전트 장기 메모리에 정보를 저장합니다. 세션이 끝나도 유지됩니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string", "description": "저장할 키 (예: 'project_structure')"},
+                    "value": {"type": "string", "description": "저장할 내용"}
+                },
+                "required": ["key", "value"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "recall",
+            "description": "에이전트 장기 메모리에서 정보를 불러옵니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string", "description": "조회할 키. 비워두면 전체 메모리 반환"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "forget",
+            "description": "에이전트 장기 메모리에서 특정 항목을 삭제합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string", "description": "삭제할 키"}
+                },
+                "required": ["key"]
+            }
+        }
+    },
 ]
 
 

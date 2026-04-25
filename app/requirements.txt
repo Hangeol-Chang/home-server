@@ -9,3 +9,5 @@ icalendar
 requests
 apscheduler
 llama-cpp-python
+beautifulsoup4
+duckduckgo_search

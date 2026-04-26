@@ -28,9 +28,16 @@ def _conn() -> sqlite3.Connection:
             started_at  TEXT NOT NULL,
             finished_at TEXT,
             messages    TEXT DEFAULT '[]',
-            logs        TEXT DEFAULT '[]'
+            logs        TEXT DEFAULT '[]',
+            summary     TEXT
         )
     """)
+    # 기존 DB에 summary 컬럼이 없으면 추가
+    try:
+        conn.execute("ALTER TABLE agent_sessions ADD COLUMN summary TEXT")
+        conn.commit()
+    except Exception:
+        pass
     conn.commit()
     return conn
 
@@ -47,18 +54,19 @@ def create(objective: str, system_prompt: Optional[str]) -> str:
 
 
 def save(session_id: str, status: str, iteration: int, error: Optional[str],
-         messages: list, logs: list) -> None:
+         messages: list, logs: list, summary: Optional[str] = None) -> None:
     """실행 완료 후 세션 전체 상태를 저장합니다."""
     with _conn() as conn:
         conn.execute(
             """UPDATE agent_sessions
-               SET status=?, iteration=?, error=?, finished_at=?, messages=?, logs=?
+               SET status=?, iteration=?, error=?, finished_at=?, messages=?, logs=?, summary=?
                WHERE id=?""",
             (
                 status, iteration, error,
                 datetime.now().isoformat(),
                 json.dumps(messages, ensure_ascii=False),
                 json.dumps(logs, ensure_ascii=False),
+                summary,
                 session_id,
             ),
         )
@@ -68,7 +76,7 @@ def list_all(limit: int = 50) -> list[dict]:
     """세션 목록을 최신순으로 반환합니다 (messages/logs 제외)."""
     conn = _conn()
     rows = conn.execute(
-        """SELECT id, objective, status, iteration, error, started_at, finished_at
+        """SELECT id, objective, status, iteration, error, started_at, finished_at, summary
            FROM agent_sessions ORDER BY started_at DESC LIMIT ?""",
         (limit,),
     ).fetchall()

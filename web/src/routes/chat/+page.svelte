@@ -79,6 +79,7 @@
 		if (level === 'RESULT') return 'log-result';
 		if (level === 'THINK') return 'log-think';
 		if (level === 'MODEL') return 'log-model';
+		if (level === 'SUMMARY') return 'log-summary';
 		return 'log-info';
 	}
 
@@ -479,6 +480,12 @@
 									</div>
 
 									{#if expandedSession?.id === s.id}
+										{#if expandedSession.summary}
+											<div class="session-summary-box">
+												<strong>📋 요약</strong>
+												<p>{expandedSession.summary}</p>
+											</div>
+										{/if}
 										<div class="session-logs">
 											{#each expandedSession.logs as entry}
 												<div class="log-entry {logLevelClass(entry.level)}">
@@ -499,6 +506,14 @@
 					{/if}
 				{/if}
 			</div>
+
+			<!-- Summary -->
+			{#if agentData?.summary}
+				<div class="summary-panel">
+					<div class="summary-header">📋 결과 요약</div>
+					<p class="summary-body">{agentData.summary}</p>
+				</div>
+			{/if}
 
 			<!-- Log viewer -->
 			<div class="log-panel">
@@ -988,6 +1003,51 @@
 	}
 
 	/* Log panel */
+	.summary-panel {
+		flex-shrink: 0;
+		border: 1px solid #a5b4fc;
+		border-radius: 10px;
+		background: #eef2ff;
+		padding: 0.6rem 0.9rem;
+	}
+
+	.summary-header {
+		font-size: 0.82rem;
+		font-weight: 700;
+		color: #4f46e5;
+		margin-bottom: 0.35rem;
+	}
+
+	.summary-body {
+		font-size: 0.88rem;
+		line-height: 1.6;
+		color: #1e1b4b;
+		white-space: pre-wrap;
+		margin: 0;
+	}
+
+	.session-summary-box {
+		padding: 0.5rem 0.75rem;
+		background: #eef2ff;
+		border-left: 3px solid #6366f1;
+		margin: 0.4rem 0;
+		border-radius: 0 6px 6px 0;
+		font-size: 0.83rem;
+	}
+
+	.session-summary-box strong {
+		display: block;
+		color: #4f46e5;
+		margin-bottom: 0.2rem;
+	}
+
+	.session-summary-box p {
+		margin: 0;
+		color: #374151;
+		line-height: 1.5;
+		white-space: pre-wrap;
+	}
+
 	.log-panel {
 		flex: 1;
 		display: flex;
@@ -1061,4 +1121,6 @@
 	.log-result .log-msg { color: #15803d; }
 	.log-think .log-msg { color: #0369a1; font-style: italic; }
 	.log-error .log-msg { color: #b91c1c; }
+	.log-summary .log-level { background: #e0e7ff; color: #4338ca; }
+	.log-summary .log-msg { color: #4338ca; font-weight: 600; }
 </style>

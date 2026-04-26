@@ -55,6 +55,7 @@ class AgentStatusResponse(BaseModel):
     iteration: int = 0
     error: Optional[str] = None
     session_id: Optional[str] = None
+    summary: Optional[str] = None
     logs: List[Any] = Field(default_factory=list)
     total_logs: int = 0
 
@@ -67,6 +68,7 @@ class AgentSessionSummary(BaseModel):
     error: Optional[str] = None
     started_at: str
     finished_at: Optional[str] = None
+    summary: Optional[str] = None
 
 
 class AgentSessionDetail(AgentSessionSummary):

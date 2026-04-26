@@ -18,6 +18,8 @@ LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", "16384"))
 LLM_N_THREADS = int(os.getenv("LLM_N_THREADS", str(os.cpu_count() or 4)))
 LLM_N_GPU_LAYERS = int(os.getenv("LLM_N_GPU_LAYERS", "0"))
 
+_CTX_STEPS = [8192, 16384, 32768, 65536, 131072]
+
 _llm = None
 _lock = threading.Lock()
 
@@ -26,15 +28,19 @@ _TOOL_SECTION = """\
 
 # Tools
 
-You may call one or more functions to assist with the user query.
+You have access to the following tools. You MUST use them to take actions.
+CRITICAL RULES:
+- NEVER just describe what you plan to do. ALWAYS call the tool immediately.
+- Only stop calling tools when the task is fully and completely finished.
+- After each tool result, decide your next action and call the next tool right away.
 
 <tools>
 {tools_json}
 </tools>
 
-For each function call, return a JSON object inside <tool_call> tags:
+To call a tool, output EXACTLY this format (valid JSON inside the tags):
 <tool_call>
-{{"name": "function_name", "arguments": {{"key": "value"}}}}
+{{"name": "tool_name", "arguments": {{"key": "value"}}}}
 </tool_call>"""
 
 
@@ -53,6 +59,32 @@ def load_model():
     )
     print("[LLM] Model ready.")
     return _llm
+
+
+def _expand_ctx() -> bool:
+    """n_ctx를 다음 단계로 늘리고 모델을 재로드합니다. _lock 내부에서만 호출. 확장 불가면 False 반환."""
+    global _llm, LLM_NUM_CTX
+    next_ctx = next((s for s in _CTX_STEPS if s > LLM_NUM_CTX), None)
+    if next_ctx is None:
+        return False
+    old = LLM_NUM_CTX
+    LLM_NUM_CTX = next_ctx
+    print(f"[LLM] Context overflow → 자동 확장: {old} → {LLM_NUM_CTX}")
+    _llm = None
+    load_model()
+    return True
+
+
+def _trim_messages(msgs: list) -> list:
+    """오래된 메시지를 제거해 컨텍스트를 줄입니다. 시스템 메시지는 항상 보존."""
+    start = 1 if msgs and msgs[0]["role"] == "system" else 0
+    body = msgs[start:]
+    if len(body) <= 2:
+        raise RuntimeError("컨텍스트가 꽉 찼고 더 이상 메시지를 줄일 수 없습니다.")
+    drop = max(2, len(body) // 4)
+    trimmed = msgs[:start] + body[drop:]
+    print(f"[LLM] 최대 컨텍스트 도달 → 오래된 메시지 {drop}개 제거 ({len(msgs)} → {len(trimmed)}개)")
+    return trimmed
 
 
 def _inject_tools(messages: list, tools: list) -> list:
@@ -146,11 +178,17 @@ def _parse_response(raw: dict, had_tools: bool) -> ChatResponse:
 
 def _do_inference(messages: list, tools: Optional[list]) -> tuple[dict, bool]:
     with _lock:
-        llm = load_model()
-        # tools는 llama-cpp에 넘기지 않고 시스템 프롬프트에 직접 주입
+        load_model()
         msgs = _inject_tools(messages, tools) if tools else messages
-        raw = llm.create_chat_completion(messages=msgs)
-        return raw, bool(tools)
+        while True:
+            try:
+                raw = _llm.create_chat_completion(messages=msgs)
+                return raw, bool(tools)
+            except ValueError as e:
+                if "exceed context window" not in str(e):
+                    raise
+                if not _expand_ctx():
+                    msgs = _trim_messages(msgs)  # 최대 크기 도달 시 오래된 메시지 제거
 
 
 def chat_sync(messages: list, tools: Optional[list] = None) -> ChatResponse:

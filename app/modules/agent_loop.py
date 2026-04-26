@@ -311,7 +311,8 @@ class AgentLoop:
         self.error: Optional[str] = None
         self._stop_event = asyncio.Event()
         self.session_id: Optional[str] = None
-        self._messages: list = []  # 세션 재개를 위한 메시지 히스토리
+        self._messages: list = []
+        self.summary: Optional[str] = None
 
     def _log(self, level: str, message: str):
         entry = LogEntry(level, message, self.iteration)
@@ -327,10 +328,20 @@ class AgentLoop:
             self._log("INFO", f"[재개] {objective[:200]}")
         else:
             messages = []
-            if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
+            # 목표를 시스템 프롬프트에 항상 포함시켜 반복적으로 상기
+            goal_anchor = (
+                f"## 현재 목표\n{objective}\n\n"
+                "위 목표를 완수하는 것이 최우선입니다. "
+                "도구를 사용해 단계적으로 목표를 달성하세요. "
+                "목표와 무관한 작업(다른 파일 분석 등)은 하지 마세요."
+            )
+            base_system = (system_prompt + "\n\n" + goal_anchor) if system_prompt else goal_anchor
+            messages.append({"role": "system", "content": base_system})
             messages.append({"role": "user", "content": objective})
             self._log("INFO", f"Objective: {objective[:200]}")
+
+        no_tool_retries = 0
+        MAX_NO_TOOL_RETRIES = 3
 
         try:
             while not self._stop_event.is_set():
@@ -345,13 +356,14 @@ class AgentLoop:
                 msg = response.message
                 raw_content: str = msg.content or ""
 
-                # Strip <think>...</think> blocks (Qwen3 thinking tokens)
+                # Strip <think>...</think> blocks and orphan </think> tags (Qwen3 thinking tokens)
                 visible_content = raw_content
                 if "<think>" in raw_content:
                     think_parts = re.findall(r"<think>(.*?)</think>", raw_content, re.DOTALL)
                     if think_parts:
                         self._log("THINK", think_parts[-1].strip()[:300])
-                    visible_content = re.sub(r"<think>.*?</think>", "", raw_content, flags=re.DOTALL).strip()
+                    visible_content = re.sub(r"<think>.*?</think>", "", raw_content, flags=re.DOTALL)
+                visible_content = re.sub(r"</think>", "", visible_content).strip()
 
                 if visible_content:
                     self._log("MODEL", visible_content[:400])
@@ -360,9 +372,22 @@ class AgentLoop:
 
                 if not tool_calls:
                     messages.append({"role": "assistant", "content": raw_content})
-                    self._log("INFO", "No tool calls — agent loop complete")
+                    if no_tool_retries < MAX_NO_TOOL_RETRIES:
+                        no_tool_retries += 1
+                        self._log("WARN", f"No tool calls (retry {no_tool_retries}/{MAX_NO_TOOL_RETRIES}) — prompting model to use tools")
+                        messages.append({
+                            "role": "user",
+                            "content": (
+                                f"목표: {objective}\n\n"
+                                "설명하거나 계획하는 대신 즉시 <tool_call> 형식으로 도구를 호출하세요. "
+                                "목표와 무관한 분석은 하지 말고 목표 달성에 필요한 도구만 호출하세요."
+                            )
+                        })
+                        continue
+                    self._log("INFO", "No tool calls after retries — agent loop complete")
                     break
 
+                no_tool_retries = 0
                 messages.append({"role": "assistant", "content": raw_content})
 
                 for tc in tool_calls:
@@ -385,8 +410,29 @@ class AgentLoop:
             self.status = AgentStatus.ERROR
             self.error = str(exc)
             self._log("ERROR", f"Unhandled exception: {exc}")
+        else:
+            # 루프가 정상 종료됐을 때만 요약 생성
+            if self._messages and self.status != AgentStatus.STOPPING:
+                try:
+                    self._log("INFO", "결과 요약 생성 중...")
+                    summary_messages = list(self._messages) + [{
+                        "role": "user",
+                        "content": (
+                            "지금까지 수행한 작업을 간결하게 요약해줘. "
+                            "무엇을 했고 어떤 결과가 나왔는지, 중요한 발견이나 변경사항 위주로 "
+                            "3~5문장 이내로 정리해줘. 도구 호출 과정은 생략하고 최종 결과만."
+                        )
+                    }]
+                    summary_resp = await llm_chat(summary_messages)
+                    raw_summary = summary_resp.message.content or ""
+                    # thinking 토큰 제거
+                    self.summary = re.sub(r"<think>.*?</think>", "", raw_summary, flags=re.DOTALL)
+                    self.summary = re.sub(r"</think>", "", self.summary).strip()
+                    self._log("SUMMARY", self.summary[:300])
+                except Exception as e:
+                    self._log("WARN", f"요약 생성 실패: {e}")
         finally:
-            if self.status != AgentStatus.ERROR:
+            if self.status not in (AgentStatus.ERROR,):
                 self.status = AgentStatus.IDLE
             self._log("INFO", "Agent loop finished")
             if self.session_id:
@@ -397,6 +443,7 @@ class AgentLoop:
                     error=self.error,
                     messages=self._messages,
                     logs=[e.to_dict() for e in self.logs],
+                    summary=self.summary,
                 )
 
     def start(self, objective: str, system_prompt: str,
@@ -407,6 +454,7 @@ class AgentLoop:
         self.current_objective = objective
         self.iteration = 0
         self.error = None
+        self.summary = None
         self._messages = list(initial_messages) if initial_messages else []
         self.session_id = sessions.create(objective, system_prompt)
         self.logs.clear()
@@ -428,6 +476,7 @@ class AgentLoop:
             "iteration": self.iteration,
             "error": self.error,
             "session_id": self.session_id,
+            "summary": self.summary,
             "logs": [e.to_dict() for e in list(self.logs)[-log_tail:]],
             "total_logs": len(self.logs),
         }

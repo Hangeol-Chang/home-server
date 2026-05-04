@@ -36,11 +36,13 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "read_file",
-            "description": "워크스페이스 내 파일의 내용을 읽습니다.",
+            "description": "워크스페이스 내 파일의 내용을 읽습니다. start_line/end_line으로 범위를 지정할 수 있습니다.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string", "description": "읽을 파일의 상대 경로"}
+                    "path": {"type": "string", "description": "읽을 파일의 상대 경로"},
+                    "start_line": {"type": "integer", "description": "읽기 시작 줄 번호 (1-indexed, 선택)"},
+                    "end_line": {"type": "integer", "description": "읽기 끝 줄 번호 (1-indexed, 포함, 선택)"}
                 },
                 "required": ["path"]
             }
@@ -50,7 +52,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "write_file",
-            "description": "워크스페이스 내 파일에 내용을 씁니다. 없으면 생성, 있으면 덮어씁니다.",
+            "description": "파일 전체를 새 내용으로 씁니다. 없으면 생성, 있으면 덮어씁니다. 긴 파일은 append_file로 나눠서 쓰세요.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -58,6 +60,53 @@ TOOLS = [
                     "content": {"type": "string", "description": "파일에 쓸 전체 내용"}
                 },
                 "required": ["path", "content"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "patch_file",
+            "description": "파일에서 old_str를 찾아 new_str로 교체합니다. 정확히 1곳만 일치해야 합니다. 파일 일부를 수정할 때 사용하세요.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "수정할 파일의 상대 경로"},
+                    "old_str": {"type": "string", "description": "파일에서 찾을 기존 문자열 (공백/줄바꿈 포함 정확히 일치)"},
+                    "new_str": {"type": "string", "description": "교체할 새 문자열"}
+                },
+                "required": ["path", "old_str", "new_str"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "append_file",
+            "description": "파일 끝에 내용을 추가합니다. 긴 파일을 여러 번 나눠 쓸 때 유용합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "추가할 파일의 상대 경로"},
+                    "content": {"type": "string", "description": "파일 끝에 추가할 내용"}
+                },
+                "required": ["path", "content"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_lines",
+            "description": "파일에서 지정한 줄 범위를 삭제합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "수정할 파일의 상대 경로"},
+                    "start_line": {"type": "integer", "description": "삭제 시작 줄 번호 (1-indexed)"},
+                    "end_line": {"type": "integer", "description": "삭제 끝 줄 번호 (1-indexed, 포함)"}
+                },
+                "required": ["path", "start_line", "end_line"]
             }
         }
     },

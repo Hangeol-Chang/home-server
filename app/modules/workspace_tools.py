@@ -14,7 +14,7 @@ from typing import Any
 WORKSPACE_PATH = Path(os.getenv("WORKSPACE_PATH", "/home/pi/code-server/src")).resolve()
 MEMORY_PATH = Path.home() / ".agent_memory.json"
 
-MAX_OUTPUT = 4000  # 도구 결과 최대 문자 수
+MAX_OUTPUT = 8000  # 도구 결과 최대 문자 수
 
 
 # ── 경로 보안 ──────────────────────────────────────────────
@@ -54,7 +54,7 @@ def list_directory(path: str = "") -> dict[str, Any]:
         return {"error": f"디렉토리 조회 실패: {e}"}
 
 
-def read_file(path: str) -> dict[str, Any]:
+def read_file(path: str, start_line: int = None, end_line: int = None) -> dict[str, Any]:
     try:
         target = _safe_path(path)
         if not target.exists():
@@ -62,10 +62,23 @@ def read_file(path: str) -> dict[str, Any]:
         if not target.is_file():
             return {"error": f"파일이 아닙니다: {path}"}
         size = target.stat().st_size
-        if size > 200 * 1024:
-            return {"error": f"파일이 너무 큽니다 ({size} bytes, 최대 200KB)"}
+        if size > 1024 * 1024:
+            return {"error": f"파일이 너무 큽니다 ({size} bytes, 최대 1MB). start_line/end_line으로 범위를 지정해주세요."}
         content = target.read_text(encoding="utf-8", errors="replace")
-        return {"path": str(target.relative_to(WORKSPACE_PATH)), "content": content, "size": size, "lines": content.count("\n") + 1}
+        all_lines = content.splitlines(keepends=True)
+        total = len(all_lines)
+        if start_line is not None or end_line is not None:
+            s = max(0, (start_line or 1) - 1)
+            e = min(total, end_line or total)
+            sliced = all_lines[s:e]
+            return {
+                "path": str(target.relative_to(WORKSPACE_PATH)),
+                "content": "".join(sliced),
+                "start_line": s + 1,
+                "end_line": s + len(sliced),
+                "total_lines": total,
+            }
+        return {"path": str(target.relative_to(WORKSPACE_PATH)), "content": content, "size": size, "lines": total}
     except ValueError as e:
         return {"error": str(e)}
     except Exception as e:
@@ -82,6 +95,59 @@ def write_file(path: str, content: str) -> dict[str, Any]:
         return {"error": str(e)}
     except Exception as e:
         return {"error": f"파일 쓰기 실패: {e}"}
+
+
+def patch_file(path: str, old_str: str, new_str: str) -> dict[str, Any]:
+    """파일에서 old_str를 찾아 new_str로 교체합니다. 정확히 1곳만 일치해야 합니다."""
+    try:
+        target = _safe_path(path)
+        if not target.exists():
+            return {"error": f"파일이 존재하지 않습니다: {path}"}
+        content = target.read_text(encoding="utf-8", errors="replace")
+        count = content.count(old_str)
+        if count == 0:
+            return {"error": "old_str를 파일에서 찾을 수 없습니다. 공백/줄바꿈을 포함해 정확히 일치해야 합니다."}
+        if count > 1:
+            return {"error": f"old_str가 {count}곳에서 발견되었습니다. 주변 문맥을 더 포함해 유일하게 지정해주세요."}
+        new_content = content.replace(old_str, new_str, 1)
+        target.write_text(new_content, encoding="utf-8")
+        return {"path": str(target.relative_to(WORKSPACE_PATH)), "success": True, "lines": new_content.count("\n") + 1}
+    except ValueError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": f"파일 수정 실패: {e}"}
+
+
+def append_file(path: str, content: str) -> dict[str, Any]:
+    """파일 끝에 내용을 추가합니다. 파일이 없으면 생성합니다."""
+    try:
+        target = _safe_path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("a", encoding="utf-8") as f:
+            f.write(content)
+        return {"path": str(target.relative_to(WORKSPACE_PATH)), "success": True, "appended_bytes": len(content.encode())}
+    except ValueError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": f"파일 추가 실패: {e}"}
+
+
+def delete_lines(path: str, start_line: int, end_line: int) -> dict[str, Any]:
+    """파일에서 start_line~end_line 범위의 줄을 삭제합니다 (1-indexed, 양 끝 포함)."""
+    try:
+        target = _safe_path(path)
+        if not target.exists():
+            return {"error": f"파일이 존재하지 않습니다: {path}"}
+        lines = target.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
+        s, e = max(0, start_line - 1), min(len(lines), end_line)
+        removed = e - s
+        new_lines = lines[:s] + lines[e:]
+        target.write_text("".join(new_lines), encoding="utf-8")
+        return {"path": str(target.relative_to(WORKSPACE_PATH)), "success": True, "removed_lines": removed, "total_lines": len(new_lines)}
+    except ValueError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": f"줄 삭제 실패: {e}"}
 
 
 def find_files(pattern: str, directory: str = "") -> dict[str, Any]:
@@ -315,6 +381,9 @@ TOOL_FUNCTIONS: dict[str, Any] = {
     "list_directory":  lambda a: list_directory(**a),
     "read_file":       lambda a: read_file(**a),
     "write_file":      lambda a: write_file(**a),
+    "patch_file":      lambda a: patch_file(**a),
+    "append_file":     lambda a: append_file(**a),
+    "delete_lines":    lambda a: delete_lines(**a),
     "find_files":      lambda a: find_files(**a),
     "search_in_files": lambda a: search_in_files(**a),
     # 실행

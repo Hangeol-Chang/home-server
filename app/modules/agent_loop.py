@@ -10,7 +10,7 @@ from collections import deque
 from enum import Enum
 from typing import Optional, Any
 
-from modules.workspace_tools import execute_tool_call
+from modules.workspace_tools import execute_tool_call, get_user_tools_schema
 from modules.llm_client import chat as llm_chat
 import modules.agent_sessions as sessions
 
@@ -322,7 +322,25 @@ TOOLS = [
             }
         }
     },
+    # ── 사용자 정의 툴 관리 ──
+    {
+        "type": "function",
+        "function": {
+            "name": "reload_user_tools",
+            "description": (
+                "user_tools.py를 즉시 재로드합니다. "
+                "새 툴 코드를 user_tools.py에 작성한 뒤 반드시 이 툴을 호출해야 새 툴을 사용할 수 있습니다. "
+                "user_tools.py 경로: app/modules/user_tools.py (WORKSPACE_PATH 기준: home-server/app/modules/user_tools.py)"
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []}
+        }
+    },
 ]
+
+
+def _get_tools() -> list:
+    """빌트인 툴 + user_tools.py에 정의된 사용자 툴을 합쳐 반환합니다."""
+    return TOOLS + get_user_tools_schema()
 
 
 class AgentStatus(str, Enum):
@@ -401,7 +419,7 @@ class AgentLoop:
 
                 self._log("INFO", f"Calling model (iter {self.iteration})")
 
-                response = await llm_chat(messages, tools=TOOLS)
+                response = await llm_chat(messages, tools=_get_tools())
                 msg = response.message
                 raw_content: str = msg.content or ""
 

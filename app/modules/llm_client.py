@@ -28,20 +28,36 @@ _TOOL_SECTION = """\
 
 # Tools
 
-You have access to the following tools. You MUST use them to take actions.
-CRITICAL RULES:
-- NEVER just describe what you plan to do. ALWAYS call the tool immediately.
-- Only stop calling tools when the task is fully and completely finished.
-- After each tool result, decide your next action and call the next tool right away.
+You MUST call tools to act. NEVER describe plans — always call the tool immediately.
+Only stop when the task is fully complete.
 
-<tools>
-{tools_json}
-</tools>
+Available tools:
+{tools_compact}
 
-To call a tool, output EXACTLY this format (valid JSON inside the tags):
+Call format (output this exactly):
 <tool_call>
 {{"name": "tool_name", "arguments": {{"key": "value"}}}}
 </tool_call>"""
+
+
+def _compact_tools(tools: list) -> str:
+    """툴 목록을 간결한 텍스트 형식으로 변환합니다 (JSON schema 대비 ~80% 토큰 절약)."""
+    lines = []
+    for t in tools:
+        fn = t["function"]
+        name = fn["name"]
+        desc = fn.get("description", "")
+        props = fn.get("parameters", {}).get("properties", {})
+        required = set(fn.get("parameters", {}).get("required", []))
+        params = []
+        for k, v in props.items():
+            typ = v.get("type", "string")
+            opt = "" if k in required else "?"
+            pdesc = v.get("description", "")
+            params.append(f"{k}{opt}:{typ}({pdesc})")
+        sig = f"{name}({', '.join(params)})"
+        lines.append(f"{sig} — {desc}")
+    return "\n".join(lines)
 
 
 def load_model():
@@ -89,9 +105,7 @@ def _trim_messages(msgs: list) -> list:
 
 def _inject_tools(messages: list, tools: list) -> list:
     """시스템 메시지에 tool 정의를 Qwen3 형식으로 추가합니다."""
-    section = _TOOL_SECTION.format(
-        tools_json=json.dumps(tools, ensure_ascii=False, indent=2)
-    )
+    section = _TOOL_SECTION.format(tools_compact=_compact_tools(tools))
     result = list(messages)
     for i, msg in enumerate(result):
         if msg["role"] == "system":
@@ -180,15 +194,18 @@ def _do_inference(messages: list, tools: Optional[list]) -> tuple[dict, bool]:
     with _lock:
         load_model()
         msgs = _inject_tools(messages, tools) if tools else messages
+        # 출력 토큰을 컨텍스트의 절반까지 보장 (최소 4096)
+        max_tokens = max(4096, LLM_NUM_CTX // 2)
         while True:
             try:
-                raw = _llm.create_chat_completion(messages=msgs)
+                raw = _llm.create_chat_completion(messages=msgs, max_tokens=max_tokens)
                 return raw, bool(tools)
             except ValueError as e:
                 if "exceed context window" not in str(e):
                     raise
                 if not _expand_ctx():
-                    msgs = _trim_messages(msgs)  # 최대 크기 도달 시 오래된 메시지 제거
+                    msgs = _trim_messages(msgs)
+                max_tokens = max(4096, LLM_NUM_CTX // 2)  # 컨텍스트 확장 시 재계산
 
 
 def chat_sync(messages: list, tools: Optional[list] = None) -> ChatResponse:

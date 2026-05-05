@@ -35,13 +35,14 @@
 	let agentError = $state('');
 	let logContainerEl = $state(null);
 	let showSystemPrompt = $state(false);
+	let sidebarOpen = $state(true);
 
 	let pollInterval = null;
 
 	// ===== Session state =====
 	let sessionList = $state([]);
-	let expandedSession = $state(null); // { id, logs, objective, status, ... }
-	let sessionsOpen = $state(false);
+	let selectedSessionId = $state(null);   // null = 새 에이전트 뷰
+	let selectedSessionDetail = $state(null); // 선택된 세션의 전체 데이터
 	let sessionError = $state('');
 
 	// ===== Helpers =====
@@ -195,23 +196,27 @@
 		}
 	}
 
-	async function handleExpandSession(session) {
-		if (expandedSession?.id === session.id) {
-			expandedSession = null;
-			return;
-		}
+	async function handleSelectSession(session) {
+		selectedSessionId = session.id;
 		try {
-			expandedSession = await getSession(session.id);
+			selectedSessionDetail = await getSession(session.id);
+			sessionError = '';
 		} catch (err) {
 			sessionError = err.message;
 		}
 	}
 
+	function handleNewAgent() {
+		selectedSessionId = null;
+		selectedSessionDetail = null;
+	}
+
 	async function handleResumeSession(session) {
 		try {
 			agentData = await resumeSession(session.id);
+			selectedSessionId = null;
+			selectedSessionDetail = null;
 			startPolling();
-			sessionsOpen = false;
 		} catch (err) {
 			sessionError = err.message;
 		}
@@ -220,7 +225,10 @@
 	async function handleDeleteSession(session) {
 		try {
 			await deleteSession(session.id);
-			if (expandedSession?.id === session.id) expandedSession = null;
+			if (selectedSessionId === session.id) {
+				selectedSessionId = null;
+				selectedSessionDetail = null;
+			}
 			await fetchSessions();
 		} catch (err) {
 			sessionError = err.message;
@@ -354,189 +362,207 @@
 	<!-- ===== AGENT TAB ===== -->
 	{#if activeTab === 'agent'}
 		<div class="agent-page">
-			<div class="agent-header">
-				<h1>🤖 에이전트 루프</h1>
-				<p class="subtitle">자율 에이전트를 시작하고 제어하세요</p>
-				<div class="ctx-stepper">
-					<button class="ctx-btn" onclick={ctxDown} disabled={ctxIdx === 0}>‹</button>
-					<span class="ctx-label">{ctxLabel(ctxSize)}</span>
-					<button class="ctx-btn" onclick={ctxUp} disabled={ctxIdx === CTX_SIZES.length - 1}>›</button>
-				</div>
-			</div>
 
-			<!-- Status bar -->
-			{#if agentData}
-				<div class="status-bar">
-					<span class="status-badge" style="--badge-color: {statusColor(agentData.status)}">
-						{agentData.status}
-					</span>
-					{#if agentData.current_objective}
-						<span class="objective-label">목표: {agentData.current_objective.slice(0, 80)}{agentData.current_objective.length > 80 ? '…' : ''}</span>
-					{/if}
-					{#if agentData.iteration > 0}
-						<span class="iter-badge">iter {agentData.iteration}</span>
-					{/if}
-					{#if agentPolling}
-						<span class="polling-indicator">⟳ 실시간 갱신 중</span>
-					{/if}
-				</div>
-			{/if}
+			<!-- ── 왼쪽 세션 사이드바 ── -->
+			<div class="session-sidebar" class:collapsed={!sidebarOpen}>
+				<button
+					class="new-agent-btn"
+					class:active={selectedSessionId === null}
+					onclick={handleNewAgent}
+				>
+					＋ 새 에이전트
+				</button>
 
-			<!-- Controls -->
-			<div class="agent-controls">
-				<div class="control-row">
-					<textarea
-						class="objective-input"
-						placeholder="에이전트 목표를 입력하세요 (예: workspace 내 Python 파일 목록을 조사하고 요약해줘)"
-						bind:value={agentObjective}
-						rows="3"
-						disabled={agentData?.status === 'running'}
-					></textarea>
-				</div>
-
-				<div class="toggle-row">
-					<button class="toggle-btn" onclick={() => (showSystemPrompt = !showSystemPrompt)}>
-						{showSystemPrompt ? '▲' : '▼'} 시스템 프롬프트 / 모델 설정
-					</button>
-				</div>
-
-				{#if showSystemPrompt}
-					<div class="advanced-row">
-						<textarea
-							class="system-input"
-							placeholder="시스템 프롬프트 (비워두면 기본값 사용)"
-							bind:value={agentSystemPrompt}
-							rows="3"
-							disabled={agentData?.status === 'running'}
-						></textarea>
-						<input
-							class="model-input"
-							type="text"
-							placeholder="모델명 (비워두면 OLLAMA_MODEL_CHAT 사용, 예: qwen3:6b)"
-							bind:value={agentModel}
-							disabled={agentData?.status === 'running'}
-						/>
+				{#if agentData?.status === 'running'}
+					<div
+						class="sidebar-item live"
+						class:active={selectedSessionId === null}
+						onclick={handleNewAgent}
+					>
+						<span class="pulse-dot"></span>
+						<div class="sidebar-item-body">
+							<div class="sidebar-obj">{agentData.current_objective?.slice(0, 45) || '실행 중...'}</div>
+							<div class="sidebar-meta">iter {agentData.iteration} · 실행 중</div>
+						</div>
 					</div>
 				{/if}
 
-				<div class="btn-row">
-					{#if agentData?.status !== 'running'}
-						<button
-							class="action-btn start-btn"
-							onclick={handleAgentStart}
-							disabled={!agentObjective.trim()}
-						>
-							▶ 시작
-						</button>
-					{:else}
-						<button class="action-btn stop-btn" onclick={handleAgentStop}>
-							■ 중지
-						</button>
-					{/if}
-					<button class="action-btn refresh-btn" onclick={fetchAgentStatus}>
-						⟳ 새로고침
-					</button>
-					<button class="action-btn clear-btn-sm" onclick={handleClearLogs}>
-						🗑 로그 초기화
-					</button>
-				</div>
-
-				{#if agentError}
-					<div class="error-message">⚠️ {agentError}</div>
-				{/if}
-				{#if agentData?.error}
-					<div class="error-message">🔴 에이전트 오류: {agentData.error}</div>
-				{/if}
-			</div>
-
-			<!-- Session history -->
-			<div class="sessions-panel">
-				<button class="sessions-toggle" onclick={() => { sessionsOpen = !sessionsOpen; if (sessionsOpen) fetchSessions(); }}>
-					{sessionsOpen ? '▲' : '▼'} 세션 히스토리
-					{#if sessionList.length > 0}
-						<span class="session-count">{sessionList.length}</span>
-					{/if}
-				</button>
-
-				{#if sessionsOpen}
+				<div class="sidebar-list">
 					{#if sessionError}
-						<div class="error-message" style="margin: 0.4rem 0;">⚠️ {sessionError}</div>
+						<div class="sidebar-error">⚠️ {sessionError}</div>
 					{/if}
 					{#if sessionList.length === 0}
-						<div class="sessions-empty">저장된 세션이 없습니다.</div>
+						<div class="sidebar-empty">저장된 세션이 없습니다.</div>
 					{:else}
-						<div class="sessions-list">
-							{#each sessionList as s}
-								<div class="session-row" class:expanded={expandedSession?.id === s.id}>
-									<div class="session-summary" onclick={() => handleExpandSession(s)}>
-										<span class="session-status-dot" style="background: {sessionStatusColor(s.status)}"></span>
-										<span class="session-date">{formatDate(s.started_at)}</span>
-										<span class="session-obj">{s.objective.slice(0, 60)}{s.objective.length > 60 ? '…' : ''}</span>
-										<span class="session-iter">iter {s.iteration}</span>
-										<div class="session-actions" onclick={(e) => e.stopPropagation()}>
-											<button class="sess-btn resume" onclick={() => handleResumeSession(s)} disabled={agentData?.status === 'running'}>▶ 재개</button>
-											<button class="sess-btn del" onclick={() => handleDeleteSession(s)}>🗑</button>
-										</div>
-									</div>
-
-									{#if expandedSession?.id === s.id}
-										{#if expandedSession.summary}
-											<div class="session-summary-box">
-												<strong>📋 요약</strong>
-												<p>{expandedSession.summary}</p>
-											</div>
-										{/if}
-										<div class="session-logs">
-											{#each expandedSession.logs as entry}
-												<div class="log-entry {logLevelClass(entry.level)}">
-													<span class="log-time">{formatTime(entry.timestamp)}</span>
-													<span class="log-iter">#{entry.iteration}</span>
-													<span class="log-level">{entry.level}</span>
-													<span class="log-msg">{entry.message}</span>
-												</div>
-											{/each}
-											{#if expandedSession.logs.length === 0}
-												<div class="log-empty">로그가 없습니다.</div>
-											{/if}
-										</div>
-									{/if}
+						{#each sessionList as s}
+							<div
+								class="sidebar-item"
+								class:active={selectedSessionId === s.id}
+								onclick={() => handleSelectSession(s)}
+							>
+								<span class="sidebar-dot" style="background:{sessionStatusColor(s.status)}"></span>
+								<div class="sidebar-item-body">
+									<div class="sidebar-obj">{s.objective.slice(0, 45)}{s.objective.length > 45 ? '…' : ''}</div>
+									<div class="sidebar-meta">{formatDate(s.started_at)} · iter {s.iteration}</div>
 								</div>
-							{/each}
-						</div>
-					{/if}
-				{/if}
-			</div>
-
-			<!-- Summary -->
-			{#if agentData?.summary}
-				<div class="summary-panel">
-					<div class="summary-header">📋 결과 요약</div>
-					<p class="summary-body">{agentData.summary}</p>
-				</div>
-			{/if}
-
-			<!-- Log viewer -->
-			<div class="log-panel">
-				<div class="log-header">
-					<span>로그</span>
-					{#if agentData}
-						<span class="log-count">{agentData.total_logs}개 중 최근 {agentData.logs?.length ?? 0}개</span>
-					{/if}
-				</div>
-				<div class="log-container" bind:this={logContainerEl}>
-					{#if !agentData?.logs?.length}
-						<div class="log-empty">로그가 없습니다. 에이전트를 시작하면 여기에 표시됩니다.</div>
-					{:else}
-						{#each agentData.logs as entry}
-							<div class="log-entry {logLevelClass(entry.level)}">
-								<span class="log-time">{formatTime(entry.timestamp)}</span>
-								<span class="log-iter">#{entry.iteration}</span>
-								<span class="log-level">{entry.level}</span>
-								<span class="log-msg">{entry.message}</span>
+								<button
+									class="sidebar-del-btn"
+									onclick={(e) => { e.stopPropagation(); handleDeleteSession(s); }}
+									title="삭제"
+								>×</button>
 							</div>
 						{/each}
 					{/if}
 				</div>
+			</div>
+
+			<!-- ── 오른쪽 메인 패널 ── -->
+			<div class="agent-main">
+
+				{#if selectedSessionId === null}
+					<!-- 새 에이전트 / 실시간 뷰 -->
+					<div class="main-header">
+						<button class="hamburger-btn" onclick={() => (sidebarOpen = !sidebarOpen)} title={sidebarOpen ? '사이드바 닫기' : '사이드바 열기'}>
+							<span></span><span></span><span></span>
+						</button>
+						<h1>🤖 에이전트</h1>
+						<div class="ctx-stepper">
+							<button class="ctx-btn" onclick={ctxDown} disabled={ctxIdx === 0}>‹</button>
+							<span class="ctx-label">{ctxLabel(ctxSize)}</span>
+							<button class="ctx-btn" onclick={ctxUp} disabled={ctxIdx === CTX_SIZES.length - 1}>›</button>
+						</div>
+					</div>
+
+					{#if agentData?.status === 'running'}
+						<div class="running-bar">
+							<span class="status-badge" style="--badge-color: green">running</span>
+							<span class="iter-badge">iter {agentData.iteration}</span>
+							{#if agentPolling}<span class="polling-indicator">⟳</span>{/if}
+							<span class="running-obj">{agentData.current_objective?.slice(0, 120)}</span>
+							<button class="action-btn stop-btn" onclick={handleAgentStop}>■ 중지</button>
+						</div>
+					{:else}
+						<div class="agent-controls">
+							<textarea
+								class="objective-input"
+								placeholder="에이전트 목표를 입력하세요 (예: workspace 내 Python 파일 목록을 조사하고 요약해줘)"
+								bind:value={agentObjective}
+								rows="3"
+							></textarea>
+
+							<button class="toggle-btn" onclick={() => (showSystemPrompt = !showSystemPrompt)}>
+								{showSystemPrompt ? '▲' : '▼'} 시스템 프롬프트
+							</button>
+
+							{#if showSystemPrompt}
+								<textarea
+									class="system-input"
+									placeholder="시스템 프롬프트 (비워두면 기본값 사용)"
+									bind:value={agentSystemPrompt}
+									rows="3"
+								></textarea>
+							{/if}
+
+							<div class="btn-row">
+								<button class="action-btn start-btn" onclick={handleAgentStart} disabled={!agentObjective.trim()}>
+									▶ 시작
+								</button>
+								<button class="action-btn refresh-btn" onclick={fetchAgentStatus}>⟳</button>
+								<button class="action-btn clear-btn-sm" onclick={handleClearLogs}>🗑 로그 초기화</button>
+							</div>
+
+							{#if agentError}
+								<div class="error-message">⚠️ {agentError}</div>
+							{/if}
+							{#if agentData?.error}
+								<div class="error-message">🔴 {agentData.error}</div>
+							{/if}
+						</div>
+					{/if}
+
+					{#if agentData?.summary}
+						<div class="summary-panel">
+							<div class="summary-header">📋 결과 요약</div>
+							<p class="summary-body">{agentData.summary}</p>
+						</div>
+					{/if}
+
+					<div class="log-panel">
+						<div class="log-header">
+							<span>실시간 로그</span>
+							{#if agentData}
+								<span class="log-count">{agentData.total_logs}개 중 최근 {agentData.logs?.length ?? 0}개</span>
+							{/if}
+						</div>
+						<div class="log-container" bind:this={logContainerEl}>
+							{#if !agentData?.logs?.length}
+								<div class="log-empty">에이전트를 시작하면 로그가 여기에 표시됩니다.</div>
+							{:else}
+								{#each agentData.logs as entry}
+									<div class="log-entry {logLevelClass(entry.level)}">
+										<span class="log-time">{formatTime(entry.timestamp)}</span>
+										<span class="log-iter">#{entry.iteration}</span>
+										<span class="log-level">{entry.level}</span>
+										<span class="log-msg">{entry.message}</span>
+									</div>
+								{/each}
+							{/if}
+						</div>
+					</div>
+
+				{:else}
+					<!-- 과거 세션 상세 뷰 -->
+					{#if selectedSessionDetail}
+						<div class="detail-header">
+							<button class="hamburger-btn" onclick={() => (sidebarOpen = !sidebarOpen)} title={sidebarOpen ? '사이드바 닫기' : '사이드바 열기'}>
+								<span></span><span></span><span></span>
+							</button>
+							<div class="detail-header-body">
+								<div class="detail-objective">{selectedSessionDetail.objective}</div>
+								<div class="detail-meta">
+									{formatDate(selectedSessionDetail.started_at)}
+									· iter {selectedSessionDetail.iteration}
+									<span class="status-badge" style="--badge-color:{sessionStatusColor(selectedSessionDetail.status)}">{selectedSessionDetail.status}</span>
+								</div>
+							</div>
+							<button
+								class="action-btn start-btn"
+								onclick={() => handleResumeSession(selectedSessionDetail)}
+								disabled={agentData?.status === 'running'}
+							>▶ 이어서 시작</button>
+						</div>
+
+						{#if selectedSessionDetail.summary}
+							<div class="summary-panel">
+								<div class="summary-header">📋 결과 요약</div>
+								<p class="summary-body">{selectedSessionDetail.summary}</p>
+							</div>
+						{/if}
+
+						<div class="log-panel">
+							<div class="log-header">
+								<span>세션 로그</span>
+								<span class="log-count">{selectedSessionDetail.logs.length}개</span>
+							</div>
+							<div class="log-container">
+								{#each selectedSessionDetail.logs as entry}
+									<div class="log-entry {logLevelClass(entry.level)}">
+										<span class="log-time">{formatTime(entry.timestamp)}</span>
+										<span class="log-iter">#{entry.iteration}</span>
+										<span class="log-level">{entry.level}</span>
+										<span class="log-msg">{entry.message}</span>
+									</div>
+								{/each}
+								{#if selectedSessionDetail.logs.length === 0}
+									<div class="log-empty">로그가 없습니다.</div>
+								{/if}
+							</div>
+						</div>
+					{:else}
+						<div class="log-empty" style="padding:2rem">세션을 불러오는 중...</div>
+					{/if}
+				{/if}
+
 			</div>
 		</div>
 	{/if}
@@ -547,10 +573,11 @@
 		display: flex;
 		flex-direction: column;
 		height: calc(100vh - 64px);
-		max-width: 900px;
+		max-width: 960px;
 		margin: 0 auto;
 		padding: 0.75rem 1rem 1rem;
 		gap: 0;
+		overflow: hidden;
 	}
 
 	/* Tab bar */
@@ -789,55 +816,235 @@
 
 	@keyframes spin { to { transform: rotate(360deg); } }
 
-	/* ===== AGENT ===== */
+	/* ===== AGENT — 2-column layout ===== */
 	.agent-page {
 		display: flex;
-		flex-direction: column;
 		flex: 1;
-		gap: 0.75rem;
 		min-height: 0;
+		overflow: hidden;
+		gap: 0;
+		margin: 0 -1rem -1rem;
+		border-top: 1px solid var(--color-border, #ddd);
 	}
 
-	.agent-header {
+	/* ── 왼쪽 사이드바 ── */
+	.session-sidebar {
+		width: 240px;
+		flex-shrink: 0;
 		display: flex;
-		align-items: center;
-		gap: 1rem;
+		flex-direction: column;
+		border-right: 1px solid var(--color-border, #ddd);
+		background: var(--color-surface, #f9f9f9);
+		overflow: hidden;
+		transition: width 0.2s ease, border-width 0.2s ease;
+	}
+
+	.session-sidebar.collapsed {
+		width: 0;
+		border-right-width: 0;
+	}
+
+	.new-agent-btn {
+		margin: 0.6rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 8px;
+		border: 1.5px dashed var(--color-border, #ccc);
+		background: transparent;
+		cursor: pointer;
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: var(--color-primary, #6366f1);
+		text-align: left;
+		transition: background 0.15s, border-color 0.15s;
 		flex-shrink: 0;
 	}
 
-	.agent-header h1 { font-size: 1.4rem; font-weight: 700; margin: 0; }
+	.new-agent-btn:hover, .new-agent-btn.active {
+		background: #eef2ff;
+		border-color: var(--color-primary, #6366f1);
+	}
 
-	.status-bar {
+	.sidebar-list {
+		flex: 1;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.sidebar-item {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.5rem;
+		padding: 0.55rem 0.7rem;
+		cursor: pointer;
+		border-bottom: 1px solid var(--color-border, #eee);
+		position: relative;
+		transition: background 0.12s;
+	}
+
+	.sidebar-item:hover { background: var(--color-hover, rgba(0,0,0,0.04)); }
+
+	.sidebar-item.active {
+		background: #eef2ff;
+		border-left: 3px solid var(--color-primary, #6366f1);
+	}
+
+	.sidebar-item.live { border-left: 3px solid #22c55e; background: #f0fdf4; }
+	.sidebar-item.live.active { background: #dcfce7; }
+
+	.sidebar-dot {
+		width: 7px; height: 7px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		margin-top: 0.3rem;
+	}
+
+	.sidebar-item-body { flex: 1; min-width: 0; }
+
+	.sidebar-obj {
+		font-size: 0.82rem;
+		font-weight: 500;
+		color: var(--color-text, #222);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.sidebar-meta {
+		font-size: 0.72rem;
+		color: var(--color-text-secondary, #888);
+		margin-top: 0.1rem;
+	}
+
+	.sidebar-del-btn {
+		flex-shrink: 0;
+		width: 18px; height: 18px;
+		border: none;
+		background: transparent;
+		color: var(--color-text-secondary, #aaa);
+		cursor: pointer;
+		font-size: 1rem;
+		line-height: 1;
+		border-radius: 4px;
+		opacity: 0;
+		transition: opacity 0.15s, color 0.15s;
+		padding: 0;
+		display: flex; align-items: center; justify-content: center;
+	}
+
+	.sidebar-item:hover .sidebar-del-btn { opacity: 1; }
+	.sidebar-del-btn:hover { color: #ef4444; background: #fee2e2; }
+
+	.sidebar-empty {
+		padding: 1rem 0.75rem;
+		font-size: 0.82rem;
+		color: var(--color-text-secondary, #aaa);
+		text-align: center;
+	}
+
+	.sidebar-error {
+		padding: 0.5rem 0.75rem;
+		font-size: 0.78rem;
+		color: #b91c1c;
+	}
+
+	/* ── 오른쪽 메인 ── */
+	.agent-main {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+		min-height: 0;
+		padding: 0.75rem 1rem;
+		gap: 0.65rem;
+		overflow: hidden;
+	}
+
+	.main-header {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
+		flex-shrink: 0;
+	}
+
+	.main-header h1 { font-size: 1.3rem; font-weight: 700; margin: 0; }
+
+	/* 햄버거 버튼 */
+	.hamburger-btn {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 4px;
+		width: 32px;
+		height: 32px;
+		padding: 5px;
+		border: none;
+		background: transparent;
+		cursor: pointer;
+		border-radius: 6px;
+		flex-shrink: 0;
+	}
+
+	.hamburger-btn span {
+		display: block;
+		height: 2px;
+		background: var(--color-text-secondary, #666);
+		border-radius: 2px;
+		transition: background 0.15s;
+	}
+
+	.hamburger-btn:hover { background: var(--color-hover, #f0f0f0); }
+	.hamburger-btn:hover span { background: var(--color-text, #222); }
+
+	.running-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
 		padding: 0.5rem 0.75rem;
-		background: var(--color-surface, #f5f5f5);
+		background: #f0fdf4;
+		border: 1px solid #bbf7d0;
 		border-radius: 10px;
 		font-size: 0.85rem;
-		flex-wrap: wrap;
 		flex-shrink: 0;
+		flex-wrap: wrap;
+	}
+
+	.running-obj {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: var(--color-text-secondary, #555);
+		font-size: 0.82rem;
 	}
 
 	.status-badge {
-		padding: 0.2rem 0.65rem;
+		padding: 0.15rem 0.6rem;
 		border-radius: 99px;
-		font-weight: 600;
-		font-size: 0.78rem;
+		font-weight: 700;
+		font-size: 0.72rem;
 		background: color-mix(in srgb, var(--badge-color) 15%, transparent);
 		color: var(--badge-color);
 		border: 1px solid color-mix(in srgb, var(--badge-color) 40%, transparent);
 		text-transform: uppercase;
-		letter-spacing: 0.03em;
+		letter-spacing: 0.04em;
+		flex-shrink: 0;
 	}
 
-	.objective-label { color: var(--color-text-secondary, #888); font-size: 0.82rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	.iter-badge { padding: 0.15rem 0.5rem; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-size: 0.78rem; font-weight: 600; }
-	.polling-indicator { color: #22c55e; font-size: 0.8rem; animation: pulse 1.5s infinite; }
+	.iter-badge {
+		padding: 0.15rem 0.5rem;
+		background: #e0e7ff;
+		color: #4338ca;
+		border-radius: 6px;
+		font-size: 0.78rem;
+		font-weight: 600;
+		flex-shrink: 0;
+	}
 
-	.agent-controls { display: flex; flex-direction: column; gap: 0.5rem; flex-shrink: 0; }
+	.polling-indicator { color: #22c55e; font-size: 0.82rem; flex-shrink: 0; animation: pulse 1.5s infinite; }
 
-	.control-row, .advanced-row { display: flex; flex-direction: column; gap: 0.4rem; }
+	.agent-controls { display: flex; flex-direction: column; gap: 0.45rem; flex-shrink: 0; }
 
 	.objective-input, .system-input {
 		width: 100%;
@@ -855,22 +1062,6 @@
 	}
 
 	.objective-input:focus, .system-input:focus { border-color: var(--color-primary, #6366f1); }
-	.objective-input:disabled, .system-input:disabled, .model-input:disabled { opacity: 0.6; }
-
-	.model-input {
-		width: 100%;
-		padding: 0.55rem 0.85rem;
-		border: 1px solid var(--color-border, #ddd);
-		border-radius: 10px;
-		font-size: 0.88rem;
-		font-family: inherit;
-		background: var(--color-surface, #fff);
-		color: var(--color-text, #222);
-		outline: none;
-		box-sizing: border-box;
-	}
-
-	.toggle-row { display: flex; }
 
 	.toggle-btn {
 		background: none;
@@ -878,7 +1069,8 @@
 		color: var(--color-text-secondary, #888);
 		font-size: 0.82rem;
 		cursor: pointer;
-		padding: 0.25rem 0;
+		padding: 0.1rem 0;
+		text-align: left;
 	}
 
 	.toggle-btn:hover { color: var(--color-text, #222); }
@@ -886,125 +1078,64 @@
 	.btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
 	.action-btn {
-		padding: 0.5rem 1.1rem;
-		border-radius: 9px;
+		padding: 0.45rem 1rem;
+		border-radius: 8px;
 		border: none;
 		cursor: pointer;
-		font-size: 0.88rem;
+		font-size: 0.85rem;
 		font-weight: 600;
 		transition: opacity 0.15s, background 0.15s;
 	}
 
-	.action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
+	.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 	.start-btn { background: #22c55e; color: white; }
 	.start-btn:hover:not(:disabled) { background: #16a34a; }
-
 	.stop-btn { background: #ef4444; color: white; }
-	.stop-btn:hover { background: #dc2626; }
-
+	.stop-btn:hover:not(:disabled) { background: #dc2626; }
 	.refresh-btn { background: var(--color-surface, #f0f0f0); color: var(--color-text, #333); border: 1px solid var(--color-border, #ddd); }
 	.refresh-btn:hover { background: var(--color-hover, #e5e7eb); }
-
 	.clear-btn-sm { background: var(--color-surface, #f0f0f0); color: var(--color-text-secondary, #666); border: 1px solid var(--color-border, #ddd); }
 	.clear-btn-sm:hover { background: #fee2e2; color: #b91c1c; }
 
-	/* Sessions panel */
-	.sessions-panel {
+	/* 세션 상세 헤더 */
+	.detail-header {
 		flex-shrink: 0;
-		border: 1px solid var(--color-border, #ddd);
-		border-radius: 10px;
-		overflow: hidden;
-	}
-
-	.sessions-toggle {
-		width: 100%;
-		padding: 0.45rem 0.75rem;
-		background: var(--color-surface, #f5f5f5);
-		border: none;
-		cursor: pointer;
-		font-size: 0.82rem;
-		font-weight: 600;
-		text-align: left;
 		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		color: var(--color-text, #333);
+		flex-direction: row;
+		align-items: flex-start;
+		gap: 0.6rem;
+		padding-bottom: 0.65rem;
+		border-bottom: 1px solid var(--color-border, #eee);
 	}
 
-	.sessions-toggle:hover { background: var(--color-hover, #e5e7eb); }
+	.detail-header-body {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
 
-	.session-count {
-		background: var(--color-primary, #6366f1);
-		color: white;
-		border-radius: 99px;
-		font-size: 0.7rem;
-		padding: 0.05rem 0.45rem;
+	.detail-objective {
+		font-size: 1rem;
 		font-weight: 700;
+		color: var(--color-text, #111);
+		line-height: 1.4;
 	}
 
-	.sessions-empty {
-		padding: 0.6rem 0.75rem;
-		font-size: 0.82rem;
-		color: var(--color-text-secondary, #aaa);
-	}
-
-	.sessions-list { display: flex; flex-direction: column; }
-
-	.session-row { border-top: 1px solid var(--color-border, #eee); }
-
-	.session-summary {
+	.detail-meta {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding: 0.4rem 0.75rem;
-		cursor: pointer;
 		font-size: 0.8rem;
-		flex-wrap: nowrap;
+		color: var(--color-text-secondary, #888);
 	}
 
-	.session-summary:hover { background: var(--color-hover, rgba(0,0,0,0.03)); }
-
-	.session-status-dot {
-		width: 7px; height: 7px;
-		border-radius: 50%;
-		flex-shrink: 0;
-	}
-
-	.session-date { color: var(--color-text-secondary, #888); flex-shrink: 0; font-size: 0.75rem; }
-	.session-obj { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	.session-iter { color: var(--color-text-secondary, #aaa); font-size: 0.72rem; flex-shrink: 0; }
-
-	.session-actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
-
-	.sess-btn {
-		padding: 0.2rem 0.5rem;
-		border-radius: 6px;
-		border: 1px solid var(--color-border, #ddd);
-		font-size: 0.75rem;
-		cursor: pointer;
-		background: transparent;
-		color: var(--color-text, #333);
-	}
-
-	.sess-btn.resume { color: #16a34a; border-color: #bbf7d0; }
-	.sess-btn.resume:hover:not(:disabled) { background: #dcfce7; }
-	.sess-btn.resume:disabled { opacity: 0.4; cursor: not-allowed; }
-	.sess-btn.del:hover { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
-
-	.session-logs {
-		max-height: 200px;
-		overflow-y: auto;
-		border-top: 1px solid var(--color-border, #eee);
-		padding: 0.25rem 0;
-		font-family: 'Menlo', 'Consolas', monospace;
-		font-size: 0.75rem;
-		background: var(--color-surface, #fafafa);
-	}
-
-	/* Log panel */
+	/* 요약 패널 */
 	.summary-panel {
 		flex-shrink: 0;
+		max-height: 180px;
+		overflow-y: auto;
 		border: 1px solid #a5b4fc;
 		border-radius: 10px;
 		background: #eef2ff;
@@ -1012,42 +1143,21 @@
 	}
 
 	.summary-header {
-		font-size: 0.82rem;
+		font-size: 0.8rem;
 		font-weight: 700;
 		color: #4f46e5;
-		margin-bottom: 0.35rem;
+		margin-bottom: 0.3rem;
 	}
 
 	.summary-body {
-		font-size: 0.88rem;
+		font-size: 0.86rem;
 		line-height: 1.6;
 		color: #1e1b4b;
 		white-space: pre-wrap;
 		margin: 0;
 	}
 
-	.session-summary-box {
-		padding: 0.5rem 0.75rem;
-		background: #eef2ff;
-		border-left: 3px solid #6366f1;
-		margin: 0.4rem 0;
-		border-radius: 0 6px 6px 0;
-		font-size: 0.83rem;
-	}
-
-	.session-summary-box strong {
-		display: block;
-		color: #4f46e5;
-		margin-bottom: 0.2rem;
-	}
-
-	.session-summary-box p {
-		margin: 0;
-		color: #374151;
-		line-height: 1.5;
-		white-space: pre-wrap;
-	}
-
+	/* 로그 패널 */
 	.log-panel {
 		flex: 1;
 		display: flex;

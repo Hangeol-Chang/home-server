@@ -3,6 +3,8 @@
 모든 파일 경로 접근은 WORKSPACE_PATH 내부로 샌드박싱됩니다.
 """
 
+import importlib
+import importlib.util
 import os
 import json
 import sqlite3
@@ -13,8 +15,43 @@ from typing import Any
 
 WORKSPACE_PATH = Path(os.getenv("WORKSPACE_PATH", "/home/pi/code-server/src")).resolve()
 MEMORY_PATH = Path.home() / ".agent_memory.json"
+USER_TOOLS_PATH = Path(__file__).parent / "user_tools.py"
 
 MAX_OUTPUT = 8000  # 도구 결과 최대 문자 수
+
+
+# ── 사용자 정의 툴 동적 로딩 ──────────────────────────────────
+
+def _load_user_module():
+    """user_tools.py를 매번 새로 임포트합니다 (캐시 무시)."""
+    if not USER_TOOLS_PATH.exists():
+        return None
+    spec = importlib.util.spec_from_file_location("user_tools_dynamic", USER_TOOLS_PATH)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def get_user_tool_functions() -> dict:
+    mod = _load_user_module()
+    return getattr(mod, "USER_TOOL_FUNCTIONS", {}) if mod else {}
+
+
+def get_user_tools_schema() -> list:
+    mod = _load_user_module()
+    return getattr(mod, "USER_TOOLS", []) if mod else []
+
+
+def reload_user_tools() -> dict[str, Any]:
+    """user_tools.py를 즉시 재로드합니다. 새 툴을 작성한 뒤 호출하세요."""
+    try:
+        mod = _load_user_module()
+        fns = getattr(mod, "USER_TOOL_FUNCTIONS", {}) if mod else {}
+        tools = getattr(mod, "USER_TOOLS", []) if mod else []
+        return {"ok": True, "loaded_tools": list(fns.keys()), "total": len(fns),
+                "message": f"user_tools.py 재로드 완료. 등록된 툴: {list(fns.keys())}"}
+    except Exception as e:
+        return {"error": f"user_tools.py 로드 실패: {e}"}
 
 
 # ── 경로 보안 ──────────────────────────────────────────────
@@ -403,14 +440,25 @@ TOOL_FUNCTIONS: dict[str, Any] = {
     "remember":        lambda a: remember(**a),
     "recall":          lambda a: recall(**a),
     "forget":          lambda a: forget(**a),
+    # 사용자 정의 툴 관리
+    "reload_user_tools": lambda a: reload_user_tools(),
 }
 
 
 def execute_tool_call(name: str, args: dict) -> dict:
+    # 빌트인 툴 먼저 확인
     fn = TOOL_FUNCTIONS.get(name)
-    if not fn:
-        return {"error": f"알 수 없는 도구: {name}"}
-    try:
-        return fn(args)
-    except Exception as e:
-        return {"error": f"도구 실행 오류: {e}"}
+    if fn:
+        try:
+            return fn(args)
+        except Exception as e:
+            return {"error": f"도구 실행 오류: {e}"}
+    # user_tools.py에서 동적으로 로드된 툴 확인
+    user_fns = get_user_tool_functions()
+    fn = user_fns.get(name)
+    if fn:
+        try:
+            return fn(args)
+        except Exception as e:
+            return {"error": f"사용자 정의 도구 실행 오류: {e}"}
+    return {"error": f"알 수 없는 도구: '{name}'. reload_user_tools를 호출했는지 확인하세요."}

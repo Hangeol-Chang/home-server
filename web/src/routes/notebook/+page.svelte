@@ -164,7 +164,7 @@
 				: selectedFile.path;
 
 			const commitMessage = isCreating
-				? `Create ${fullFileName}`
+				? `Create ${path}`
 				: `Update ${selectedFile.name}`;
 
 			await saveNote(path, editContent, commitMessage);

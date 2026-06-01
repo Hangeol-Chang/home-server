@@ -105,6 +105,8 @@ if [ ! -d "node_modules" ]; then
 fi
 
 # Web 서버 시작 (백그라운드)
+# Node.js 18+의 undici fetch가 IPv6를 먼저 시도해 실패하는 문제 방지
+export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--dns-result-order=ipv4first"
 echo -e "${GREEN}Starting Web Server ($NPM_CMD run dev -- --host 0.0.0.0 --port 5173)...${NC}"
 nohup "$NPM_CMD" run dev -- --host 0.0.0.0 --port 5173 > "$PROJECT_ROOT/logs/web.log" 2>&1 &
 WEB_PID=$!

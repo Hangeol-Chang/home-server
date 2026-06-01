@@ -1,3 +1,8 @@
+// Node.js 24의 undici가 IPv6 ENETUNREACH에서 IPv4로 fallback하지 못하는 버그 우회
+// 이 서버 환경은 IPv4만 외부 연결 가능하므로 IPv4-only dispatcher를 전역 설정
+import { setGlobalDispatcher, Agent } from 'undici';
+setGlobalDispatcher(new Agent({ connect: { family: 4 } }));
+
 import { SvelteKitAuth } from '@auth/sveltekit';
 import Google from '@auth/core/providers/google';
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AUTH_SECRET } from '$env/static/private';

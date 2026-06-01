@@ -1,5 +1,6 @@
 <script>
 	import TransactionForm from '$lib/components/asset-manager/TransactionForm.svelte';
+	import LLMReportGenerator from '$lib/components/asset-manager/LLMReportGenerator.svelte';
 	import MonthlyReport from '$lib/components/asset-manager/MonthlyReport.svelte';
 	import StatisticsChart from '$lib/components/asset-manager/StatisticsChart.svelte';
 	import TransactionList from '$lib/components/asset-manager/TransactionList.svelte';
@@ -124,6 +125,9 @@
 
 	<!-- 거래 등록 폼 -->
 	<TransactionForm bind:isOpen={isFormOpen} initialTransaction={editTransaction} onSuccess={handleTransactionSuccess} />
+
+	<!-- AI 재무 리포트 생성 -->
+	<LLMReportGenerator />
 
 	<!-- 월간 리포트 -->
 	<MonthlyReport style="border: 1px solid var(--border-color); margin-bottom: 32px; padding: 24px;" />

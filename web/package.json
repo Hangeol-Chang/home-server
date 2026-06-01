@@ -31,6 +31,7 @@
 		"@auth/core": "^0.41.0",
 		"@auth/sveltekit": "^1.11.0",
 		"@toast-ui/editor": "^3.2.2",
-		"chart.js": "^4.5.1"
+		"chart.js": "^4.5.1",
+		"undici": "^8.3.0"
 	}
 }

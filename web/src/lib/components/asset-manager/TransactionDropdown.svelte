@@ -303,4 +303,21 @@
 	.cell-amount {
 		font-size: 1.1rem;
 	}
+
+	@media (max-width: 480px) {
+		.transaction-dropdown {
+			width: 98%;
+			max-height: calc(100dvh - 20px);
+			top: 10px;
+			transform: translate(-50%, 0);
+		}
+
+		.dropdown-header {
+			padding: 8px 12px;
+		}
+
+		.dropdown-content {
+			padding: 10px 12px;
+		}
+	}
 </style>

@@ -395,4 +395,19 @@
         opacity: 0.6;
         cursor: not-allowed;
     }
+
+    @media (max-width: 480px) {
+        .modal-header {
+            padding: 10px 12px;
+        }
+
+        .modal-body {
+            padding: 10px 12px;
+        }
+
+        .modal-actions {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+    }
 </style>

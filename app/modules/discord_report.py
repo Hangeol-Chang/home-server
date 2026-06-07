@@ -74,6 +74,7 @@ def _send_discord_chunked(webhook_url: str, content: str, username: str = "AI �
 # ── LLM 리포트 생성 ────────────────────────────────────────────────────────
 
 def _call_llm(prompt: str, period_label: str) -> str:
+    import re
     from modules.llm_client import chat_sync
     messages = [
         {
@@ -87,7 +88,10 @@ def _call_llm(prompt: str, period_label: str) -> str:
     ]
     print(f"[Report] Requesting {period_label} report from LLM...")
     result = chat_sync(messages)
-    return result.message.content or ""
+    content = result.message.content or ""
+    # Qwen3 사고 과정(<think>...</think>) 제거
+    content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+    return content
 
 
 def generate_monthly_report(year: int, month: int, send_discord: bool = True) -> str:

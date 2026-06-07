@@ -465,7 +465,8 @@
 	.field-hint {
 		font-size: 0.78rem;
 		color: var(--text-tertiary);
-		white-space: nowrap;
+		white-space: normal;
+		word-break: keep-all;
 	}
 
 	/* class-icon */

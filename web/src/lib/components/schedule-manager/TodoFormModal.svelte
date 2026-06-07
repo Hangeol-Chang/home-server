@@ -325,4 +325,18 @@
         padding-top: 8px;
         border-top: 1px solid var(--border-color);
     }
+
+    @media (max-width: 480px) {
+        .modal-header {
+            padding: 10px 12px;
+        }
+
+        .modal-body {
+            padding: 10px 12px;
+        }
+
+        .modal-actions {
+            gap: 8px;
+        }
+    }
 </style>

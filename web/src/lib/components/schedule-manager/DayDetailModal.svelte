@@ -351,4 +351,18 @@
         font-size: 0.9rem;
         padding: 20px;
     }
+
+    @media (max-width: 480px) {
+        .modal-container {
+            max-height: calc(100dvh - 16px);
+        }
+
+        .modal-header {
+            padding: 10px 12px;
+        }
+
+        .modal-body {
+            padding: 10px 12px;
+        }
+    }
 </style>

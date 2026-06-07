@@ -3,11 +3,13 @@
 	import { onMount, untrack } from 'svelte';
 	import { device } from '$lib/stores/device';
 
-	let { 
-		isOpen = $bindable(false), 
+	let {
+		isOpen = $bindable(false),
 		onSuccess = () => {},
+		onCancel = null,
 		initialDate = null,
 		initialTransaction = null,
+		standalone = false,
 	} = $props();
 
 	// 거래 분류: 1=지출, 2=수익, 3=저축
@@ -116,7 +118,7 @@
 
 	// 거래 폼 열릴 때 초기화
 	$effect(() => {
-		if (isOpen) {
+		if (isOpen || standalone) {
 			untrack(() => {
 				const isFirstLoad = !formData.name;
 				if (initialTransaction && isFirstLoad) {
@@ -276,6 +278,10 @@
 	}
 
 	function handleCancel() {
+		if (onCancel) {
+			onCancel();
+			return;
+		}
 		resetForm();
 		error = '';
 		isOpen = false;
@@ -471,7 +477,9 @@
 	</form>
 {/snippet}	
 
-{#if isOpen}
+{#if standalone}
+	{@render formContent()}
+{:else if isOpen}
 	<div class="modal-overlay" onclick={handleCancel} role="presentation">
 		<div class="modal-container" class:mobile={$device.isMobile} class:tablet={$device.isTablet} onclick={(e) => e.stopPropagation()} role="presentation">
 			{@render formContent()}

@@ -29,3 +29,12 @@ export async function generateWeeklyReport(weekStart, weekEnd, sendDiscord = tru
 		send_discord: sendDiscord
 	});
 }
+
+/**
+ * @param {string} prompt
+ * @param {boolean} sendDiscord
+ * @returns {Promise<{content: string, status: string}>}
+ */
+export async function generateCustomReport(prompt, sendDiscord = true) {
+	return apiPost(`${API_BASE}/custom-report`, { prompt, send_discord: sendDiscord });
+}

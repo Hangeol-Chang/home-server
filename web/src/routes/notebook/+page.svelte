@@ -28,6 +28,8 @@
 	let editContent = $state('');
 	let newFileName = $state('');
 	let isSaving = $state(false);
+	let autoSaveStatus = $state(''); // '' | 'saving' | 'saved'
+	let autoSaveTimer = null;
 
 	// 숨김 파일 표시
 	let showHidden = $state(false);
@@ -88,7 +90,24 @@
 		currentPath = path;
 	}
 
+	async function autoSaveIfNeeded() {
+		if (!selectedFile || isCreating || editContent === fileContent) return;
+		autoSaveStatus = 'saving';
+		try {
+			await saveNote(selectedFile.path, editContent, `Update ${selectedFile.name}`);
+			fileContent = editContent;
+			autoSaveStatus = 'saved';
+			if (autoSaveTimer) clearTimeout(autoSaveTimer);
+			autoSaveTimer = setTimeout(() => { autoSaveStatus = ''; }, 2000);
+		} catch (err) {
+			console.error('Auto-save failed:', err);
+			autoSaveStatus = '';
+		}
+	}
+
 	async function handleFileSelect(file) {
+		await autoSaveIfNeeded();
+
 		loading = true;
 		error = '';
 		isCreating = false;
@@ -501,6 +520,11 @@
 							{#if !isCreating}
 								<span class="file-size">{formatFileSize(selectedFile.size || 0)}</span>
 							{/if}
+							{#if autoSaveStatus === 'saving'}
+								<span class="autosave-status saving">저장 중...</span>
+							{:else if autoSaveStatus === 'saved'}
+								<span class="autosave-status saved">✓ 자동 저장됨</span>
+							{/if}
 							<button class="btn-primary" onclick={handleSave} disabled={isSaving}>
 								{isSaving ? '저장 중...' : '💾 저장'}
 							</button>
@@ -870,6 +894,20 @@
 	.file-size {
 		font-size: 0.8rem;
 		color: var(--text-tertiary);
+	}
+
+	.autosave-status {
+		font-size: 0.8rem;
+		padding: 2px 8px;
+		border-radius: 4px;
+	}
+
+	.autosave-status.saving {
+		color: var(--text-tertiary);
+	}
+
+	.autosave-status.saved {
+		color: var(--color-impact-3);
 	}
 
 	.markdown-editor-wrapper {

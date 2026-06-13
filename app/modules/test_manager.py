@@ -51,6 +51,11 @@ class WeeklyReportRequest(BaseModel):
     send_discord: bool = True
 
 
+class CustomReportRequest(BaseModel):
+    prompt: str
+    send_discord: bool = True
+
+
 @router.post("/monthly-report")
 def trigger_monthly_report(req: MonthlyReportRequest = None):
     """
@@ -95,3 +100,18 @@ def trigger_weekly_report(req: WeeklyReportRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+
+@router.post("/custom-report")
+def trigger_custom_report(req: CustomReportRequest):
+    """사용자 정의 프롬프트로 재무 데이터를 분석합니다."""
+    from modules.discord_report import generate_custom_report
+
+    if not req.prompt.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="프롬프트를 입력해주세요.")
+
+    try:
+        content = generate_custom_report(req.prompt.strip(), send_discord=req.send_discord)
+        return {"content": content, "status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

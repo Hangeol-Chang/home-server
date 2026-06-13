@@ -1,5 +1,5 @@
 <script>
-	import { generateMonthlyReport, generateWeeklyReport } from '$lib/api/test.js';
+	import { generateMonthlyReport, generateWeeklyReport, generateCustomReport } from '$lib/api/test.js';
 
 	let mode = $state('monthly');
 
@@ -52,6 +52,10 @@
 		status = '';
 	}
 
+	// ── 커스텀 상태 ──
+	let customPrompt = $state('');
+	let customResult = $state('');
+
 	// ── 전송 상태 ──
 	let loading = $state(false);
 	let status  = $state(''); // '' | 'success' | 'error'
@@ -61,11 +65,16 @@
 		loading = true;
 		status  = '';
 		errorMsg = '';
+		customResult = '';
 		try {
 			if (mode === 'monthly') {
 				await generateMonthlyReport(reportYear, reportMonth, true);
-			} else {
+			} else if (mode === 'weekly') {
 				await generateWeeklyReport(fmt(weekRange.start), fmt(weekRange.end), true);
+			} else {
+				if (!customPrompt.trim()) { errorMsg = '분석 내용을 입력해주세요.'; status = 'error'; return; }
+				const res = await generateCustomReport(customPrompt.trim(), true);
+				customResult = res.content || '';
 			}
 			status = 'success';
 		} catch (e) {
@@ -83,38 +92,66 @@
 		<div class="mode-tabs">
 			<button class="mode-tab" class:active={mode === 'weekly'}  onclick={() => setMode('weekly')}>📅 주간</button>
 			<button class="mode-tab" class:active={mode === 'monthly'} onclick={() => setMode('monthly')}>📊 월간</button>
+			<button class="mode-tab" class:active={mode === 'custom'}  onclick={() => setMode('custom')}>✏️ 커스텀</button>
 		</div>
 	</div>
 
-	<div class="period-row">
-		{#if mode === 'monthly'}
-			<button class="nav-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-			</button>
-			<span class="period-label">{reportYear}년 {reportMonth}월</span>
-			<button class="nav-btn" onclick={() => changeMonth(1)} aria-label="다음 달">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-			</button>
-		{:else}
-			<button class="nav-btn" onclick={() => changeWeek(-1)} aria-label="이전 주">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-			</button>
-			<span class="period-label">{weekLabel(weekRange)}</span>
-			<button class="nav-btn" onclick={() => changeWeek(1)} aria-label="다음 주">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-			</button>
-		{/if}
-
-		<button class="generate-btn" onclick={generate} disabled={loading}>
-			{#if loading}
-				<span class="spinner"></span>생성 중…
+	{#if mode === 'custom'}
+		<div class="custom-area">
+			<textarea
+				class="custom-input"
+				bind:value={customPrompt}
+				placeholder="예: 최근 3달간 카페에 쓴 비용을 주 단위로 분석해줘"
+				rows="3"
+				onkeydown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) generate(); }}
+			></textarea>
+			<div class="custom-actions">
+				<span class="hint">Ctrl+Enter로 실행</span>
+				<button class="generate-btn" onclick={generate} disabled={loading || !customPrompt.trim()}>
+					{#if loading}
+						<span class="spinner"></span>분석 중…
+					{:else}
+						✨ 분석 & Discord 전송
+					{/if}
+				</button>
+			</div>
+		</div>
+	{:else}
+		<div class="period-row">
+			{#if mode === 'monthly'}
+				<button class="nav-btn" onclick={() => changeMonth(-1)} aria-label="이전 달">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+				</button>
+				<span class="period-label">{reportYear}년 {reportMonth}월</span>
+				<button class="nav-btn" onclick={() => changeMonth(1)} aria-label="다음 달">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+				</button>
 			{:else}
-				✨ Discord로 전송
+				<button class="nav-btn" onclick={() => changeWeek(-1)} aria-label="이전 주">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+				</button>
+				<span class="period-label">{weekLabel(weekRange)}</span>
+				<button class="nav-btn" onclick={() => changeWeek(1)} aria-label="다음 주">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+				</button>
 			{/if}
-		</button>
-	</div>
 
-	{#if status === 'success'}
+			<button class="generate-btn" onclick={generate} disabled={loading}>
+				{#if loading}
+					<span class="spinner"></span>생성 중…
+				{:else}
+					✨ Discord로 전송
+				{/if}
+			</button>
+		</div>
+	{/if}
+
+	{#if status === 'success' && mode === 'custom' && customResult}
+		<div class="custom-result">
+			<p class="result-label">📨 Discord로 전송된 내용</p>
+			<pre class="result-content">{customResult}</pre>
+		</div>
+	{:else if status === 'success'}
 		<p class="status-msg success">✅ Discord로 리포트를 전송했습니다.</p>
 	{:else if status === 'error'}
 		<p class="status-msg error">⚠️ {errorMsg}</p>
@@ -254,9 +291,82 @@
 		color: var(--text-danger, #f44336);
 	}
 
+	.custom-area {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.custom-input {
+		width: 100%;
+		padding: 10px 12px;
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
+		background: var(--bg-secondary);
+		color: var(--text-primary);
+		font-size: 0.9rem;
+		font-family: inherit;
+		resize: vertical;
+		box-sizing: border-box;
+		line-height: 1.5;
+		transition: border-color 0.15s;
+	}
+
+	.custom-input:focus {
+		outline: none;
+		border-color: var(--accent-color, #6366f1);
+	}
+
+	.custom-input::placeholder {
+		color: var(--text-tertiary);
+	}
+
+	.custom-actions {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 10px;
+	}
+
+	.hint {
+		font-size: 0.78rem;
+		color: var(--text-tertiary);
+	}
+
+	.custom-result {
+		margin-top: 12px;
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
+		overflow: hidden;
+	}
+
+	.result-label {
+		margin: 0;
+		padding: 6px 12px;
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: var(--text-secondary);
+		background: var(--bg-secondary);
+		border-bottom: 1px solid var(--border-color);
+	}
+
+	.result-content {
+		margin: 0;
+		padding: 12px;
+		font-size: 0.85rem;
+		color: var(--text-primary);
+		background: var(--bg-primary);
+		white-space: pre-wrap;
+		word-break: break-word;
+		font-family: inherit;
+		line-height: 1.6;
+	}
+
 	@media (max-width: 480px) {
 		.report-header { flex-direction: column; align-items: flex-start; }
 		.period-label { min-width: 110px; }
 		.generate-btn { margin-left: 0; width: 100%; justify-content: center; }
+		.custom-actions { flex-direction: column; align-items: stretch; }
+		.custom-actions .generate-btn { width: 100%; justify-content: center; }
 	}
 </style>

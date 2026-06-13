@@ -80,18 +80,26 @@ def _call_llm(prompt: str, period_label: str) -> str:
         {
             "role": "system",
             "content": (
-                "You are a friendly and professional financial advisor. "
-                "Always respond in Korean. Use markdown formatting and emojis appropriately."
+                "You are a concise financial advisor. "
+                "Respond ONLY with the final report in Korean. "
+                "Do NOT show reasoning, thinking steps, or draft process. "
+                "Output only the finished message."
             )
         },
-        {"role": "user", "content": prompt},
+        # /no_think: Qwen3 thinking 모드 비활성화
+        {"role": "user", "content": prompt + "\n/no_think"},
     ]
     print(f"[Report] Requesting {period_label} report from LLM...")
     result = chat_sync(messages)
     content = result.message.content or ""
-    # Qwen3 사고 과정(<think>...</think>) 제거
-    content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
-    return content
+    # <think>...</think> 제거 (태그가 있는 경우)
+    content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
+    # 태그 없이 사고 과정이 노출된 경우: 첫 번째 이모지 헤더 이전 텍스트 제거
+    # (실제 리포트는 항상 이모지로 시작하도록 프롬프트를 구성함)
+    emoji_header = re.search(r"(?m)^[📊📅💰📉📈🗓]", content)
+    if emoji_header:
+        content = content[emoji_header.start():]
+    return content.strip()
 
 
 def generate_monthly_report(year: int, month: int, send_discord: bool = True) -> str:
@@ -108,18 +116,18 @@ def generate_monthly_report(year: int, month: int, send_discord: bool = True) ->
         f"  - {c['name']}: {c['total']:,.0f}원" for c in stats["categories"]
     ) or "  (데이터 없음)"
 
-    prompt = f"""다음은 나의 {year}년 {month}월 재무 통계입니다.
-이 데이터를 바탕으로 친근하고 분석적인 월간 재무 리포트를 작성해 주세요.
-Discord 메시지로 볼 것이므로 마크다운과 이모지를 적절히 사용하고, 1500자 이내로 작성해 주세요.
+    prompt = f"""아래 데이터를 바탕으로 {year}년 {month}월 월간 지출 리포트를 Discord 메시지로 작성하세요.
 
-- 총 수익: {stats['earn_total']:,.0f}원
-- 총 지출: {stats['spend_total']:,.0f}원
-- 총 저축: {stats['save_total']:,.0f}원
-- 잔액: {stats['balance']:,.0f}원
-- 카테고리별 지출:
-{cats_text}
+작성 규칙:
+- 지출 항목만 다룰 것. 수입·저축·응원·격려 문구는 포함하지 말 것.
+- 총 지출액과 카테고리별 금액·비중을 명시할 것
+- 지출 패턴에서 눈에 띄는 점(비중이 큰 항목, 이례적 지출 등)을 간략히 분석할 것
+- 이모지와 마크다운 사용, 600자 이내
 
-인사말로 시작하고 응원의 말로 마무리해 주세요."""
+데이터:
+총 지출: {stats['spend_total']:,.0f}원
+카테고리별 지출:
+{cats_text}"""
 
     try:
         content = _call_llm(prompt, f"{year}-{month:02d} 월간")
@@ -151,18 +159,18 @@ def generate_weekly_report(week_start: str, week_end: str, send_discord: bool = 
         f"  - {c['name']}: {c['total']:,.0f}원" for c in stats["categories"]
     ) or "  (데이터 없음)"
 
-    prompt = f"""다음은 나의 {week_start} ~ {week_end} 주간 재무 통계입니다.
-이 데이터를 바탕으로 친근하고 분석적인 주간 재무 리포트를 작성해 주세요.
-Discord 메시지로 볼 것이므로 마크다운과 이모지를 적절히 사용하고, 1200자 이내로 작성해 주세요.
+    prompt = f"""아래 데이터를 바탕으로 {week_start}~{week_end} 주간 지출 리포트를 Discord 메시지로 작성하세요.
 
-- 총 수익: {stats['earn_total']:,.0f}원
-- 총 지출: {stats['spend_total']:,.0f}원
-- 총 저축: {stats['save_total']:,.0f}원
-- 잔액: {stats['balance']:,.0f}원
-- 카테고리별 지출:
-{cats_text}
+작성 규칙:
+- 지출 항목만 다룰 것. 수입·저축·응원·격려 문구는 포함하지 말 것.
+- 총 지출액과 카테고리별 금액·비중을 명시할 것
+- 지출 패턴에서 눈에 띄는 점(비중이 큰 항목, 이례적 지출 등)을 간략히 분석할 것
+- 이모지와 마크다운 사용, 400자 이내
 
-이번 주 소비 패턴을 간략히 분석하고 응원의 말로 마무리해 주세요."""
+데이터:
+총 지출: {stats['spend_total']:,.0f}원
+카테고리별 지출:
+{cats_text}"""
 
     try:
         content = _call_llm(prompt, f"{week_start}~{week_end} 주간")
@@ -180,6 +188,78 @@ Discord 메시지로 볼 것이므로 마크다운과 이모지를 적절히 사
                 print(f"[Report] Discord send error: {e}")
         else:
             print("[Report] DISCORD_WEBHOOK_URL not set, skipping Discord send.")
+
+    return content
+
+
+def generate_custom_report(user_prompt: str, send_discord: bool = True) -> str:
+    """사용자 정의 프롬프트로 최근 6개월 거래 데이터를 분석합니다."""
+    from datetime import date
+    import calendar as _calendar
+
+    today = date.today()
+    start_month = today.month - 6
+    start_year = today.year
+    if start_month <= 0:
+        start_month += 12
+        start_year -= 1
+    start_date = f"{start_year}-{start_month:02d}-01"
+    end_date = today.isoformat()
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT a.date, ac.name as class_name,
+                   ac_cat.display_name as category,
+                   COALESCE(ac_sub.name, '') as sub_category,
+                   a.name, a.cost
+            FROM assets a
+            JOIN asset_classes ac ON a.class_id = ac.id
+            JOIN asset_categories ac_cat ON a.category_id = ac_cat.id
+            LEFT JOIN asset_sub_categories ac_sub ON a.sub_category_id = ac_sub.id
+            WHERE a.date BETWEEN ? AND ?
+            ORDER BY a.date DESC
+            LIMIT 600
+        """, (start_date, end_date))
+        rows = cursor.fetchall()
+
+    if not rows:
+        return "⚠️ 분석할 거래 데이터가 없습니다."
+
+    type_label = {'spend': '지출', 'earn': '수입', 'save': '저축'}
+    lines = []
+    for r in rows:
+        r = dict(r)
+        sub = f">{r['sub_category']}" if r['sub_category'] else ""
+        lines.append(
+            f"{r['date']}|{type_label.get(r['class_name'], r['class_name'])}|"
+            f"{r['category']}{sub}|{r['name']}|{r['cost']:,.0f}원"
+        )
+    data_text = "\n".join(lines)
+
+    prompt = f"""아래는 {start_date} ~ {end_date} 거래 내역입니다. 이 데이터로 다음 요청을 분석해 주세요.
+
+요청: {user_prompt}
+
+거래 내역 (날짜|유형|카테고리|항목명|금액):
+{data_text}
+
+규칙: Discord 메시지 형식(마크다운+이모지), 한국어, 500자 이내"""
+
+    try:
+        content = _call_llm(prompt, "커스텀")
+    except Exception as e:
+        print(f"[Report] LLM Error: {e}")
+        content = f"⚠️ 분석 중 오류가 발생했습니다.\n```{e}```"
+
+    if send_discord:
+        webhook_url = os.getenv("DISCORD_WEBHOOK_URL", "").strip()
+        if webhook_url:
+            try:
+                _send_discord_chunked(webhook_url, content, username="AI 재무비서 (커스텀)")
+                print("[Report] Custom report sent to Discord.")
+            except Exception as e:
+                print(f"[Report] Discord send error: {e}")
 
     return content
 

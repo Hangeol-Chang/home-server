@@ -83,3 +83,22 @@ export async function deleteFolder(path) {
 export async function getVaultStats() {
 	return apiGet(`${API_BASE}/stats`);
 }
+
+// ===== Voice Transcribe =====
+export async function transcribeVoice(audioBlob) {
+	const formData = new FormData();
+	formData.append('audio', audioBlob, 'recording.webm');
+
+	const response = await fetch(`${API_BASE}/voice-transcribe`, {
+		method: 'POST',
+		body: formData,
+		credentials: 'include'
+	});
+
+	if (!response.ok) {
+		const err = await response.json().catch(() => ({ detail: response.statusText }));
+		throw new Error(err.detail || response.statusText);
+	}
+
+	return response.json();
+}

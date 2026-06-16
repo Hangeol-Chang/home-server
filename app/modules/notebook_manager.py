@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, status, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, status, Query, BackgroundTasks, File, UploadFile
 from typing import List, Optional
 from pathlib import Path
 import os
 import shutil
 import subprocess
+import threading
 from datetime import datetime
 from models.notebook import (
     FolderInfo, NoteInfo, NoteContent, TreeNode, SearchResult, SaveNoteRequest, CreateFolderRequest, MoveRequest, RenameRequest
@@ -18,6 +19,28 @@ router = APIRouter(
 
 # Obsidian vault 경로 설정
 VAULT_PATH = Path(__file__).parent.parent.parent / "obsidian-vault"
+
+# 음성 기록 폴더
+VOICE_RECORD_FOLDER = "voiceRecord"
+WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL", "base")
+_whisper_model = None
+_whisper_lock = threading.Lock()
+
+
+def get_whisper_model():
+    global _whisper_model
+    if _whisper_model is not None:
+        return _whisper_model
+    with _whisper_lock:
+        if _whisper_model is None:
+            try:
+                from faster_whisper import WhisperModel
+            except ImportError:
+                raise RuntimeError("faster-whisper가 설치되지 않았습니다. pip install faster-whisper 를 실행하세요.")
+            print(f"[Whisper] Loading model '{WHISPER_MODEL_SIZE}'...")
+            _whisper_model = WhisperModel(WHISPER_MODEL_SIZE, device="cpu", compute_type="int8")
+            print("[Whisper] Model ready.")
+    return _whisper_model
 
 def get_safe_path(relative_path: str = "") -> Path:
     """안전한 경로 반환 (경로 탐색 공격 방지)"""
@@ -640,31 +663,102 @@ def rename_item(request: RenameRequest):
 def create_folder(request: CreateFolderRequest):
     """폴더 생성 및 Git 자동 동기화"""
     target_path = get_safe_path(request.path)
-    
+
     if target_path.exists():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Folder already exists"
         )
-    
+
     try:
         # 폴더 생성
         target_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Git은 빈 폴더를 추적하지 않으므로 .gitkeep 파일 생성
         gitkeep_path = target_path / ".gitkeep"
         gitkeep_path.touch()
-        
+
         # Git 커밋 메시지 설정
         msg = request.commit_message or f"Create folder {request.path}"
-        
+
         # Git 동기화
         sync_vault_to_git(msg)
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
-    
+
     return {"status": "success", "path": request.path}
+
+
+@router.post("/voice-transcribe")
+async def voice_transcribe(audio: UploadFile = File(...)):
+    """음성 파일을 텍스트로 변환 후 voiceRecord 폴더에 MD + 원본 저장"""
+    now = datetime.now()
+    timestamp = now.strftime("%y%m%d_%H%M")
+
+    voice_folder = VAULT_PATH / VOICE_RECORD_FOLDER
+    voice_folder.mkdir(exist_ok=True)
+
+    # 오디오 확장자 결정
+    content_type = audio.content_type or ""
+    if "webm" in content_type:
+        ext = "webm"
+    elif "ogg" in content_type:
+        ext = "ogg"
+    elif "mp4" in content_type or "m4a" in content_type:
+        ext = "m4a"
+    elif "wav" in content_type:
+        ext = "wav"
+    else:
+        ext = "webm"
+
+    # 같은 분에 여러 녹음이 있을 경우 suffix 추가
+    base_name = timestamp
+    counter = 0
+    while (voice_folder / f"{base_name}.md").exists():
+        counter += 1
+        base_name = f"{timestamp}_{counter}"
+
+    audio_path = voice_folder / f"{base_name}.{ext}"
+    md_path = voice_folder / f"{base_name}.md"
+
+    # 오디오 파일 저장
+    try:
+        audio_data = await audio.read()
+        audio_path.write_bytes(audio_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"오디오 저장 실패: {e}")
+
+    # Whisper 변환
+    try:
+        model = get_whisper_model()
+        segments, info = model.transcribe(str(audio_path), beam_size=5)
+        text = " ".join(seg.text.strip() for seg in segments).strip()
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"음성 변환 실패: {e}")
+
+    # MD 파일 저장
+    md_content = (
+        f"# 음성 기록 {now.strftime('%Y-%m-%d %H:%M')}\n\n"
+        f"{text}\n"
+    )
+    md_path.write_text(md_content, encoding="utf-8")
+
+    rel_audio = str(audio_path.relative_to(VAULT_PATH)).replace("\\", "/")
+    rel_md = str(md_path.relative_to(VAULT_PATH)).replace("\\", "/")
+
+    sync_vault_to_git(f"Voice record {base_name}")
+
+    return {
+        "status": "success",
+        "timestamp": base_name,
+        "md_path": rel_md,
+        "audio_path": rel_audio,
+        "text": text,
+        "language": info.language,
+    }

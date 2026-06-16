@@ -1,5 +1,5 @@
 <script>
-	import { getFolders, getFiles, getFileContent, searchNotes, getVaultStats, saveNote, createFolder, pullRepository, deleteFile, deleteFolder, moveItem, renameItem } from '$lib/api/notebook.js';
+	import { getFolders, getFiles, getFileContent, searchNotes, getVaultStats, saveNote, createFolder, pullRepository, deleteFile, deleteFolder, moveItem, renameItem, transcribeVoice } from '$lib/api/notebook.js';
 	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
 	import FileTreeNode from '$lib/components/notebook/FileTreeNode.svelte';
@@ -378,6 +378,51 @@
 		if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
 		return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 	}
+
+	// ===== Voice Recording =====
+	let voiceState = $state('idle'); // 'idle' | 'recording' | 'processing'
+	let voiceError = $state('');
+	let mediaRecorder = null;
+	let audioChunks = [];
+
+	async function startRecording() {
+		voiceError = '';
+		try {
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+			audioChunks = [];
+			mediaRecorder = new MediaRecorder(stream);
+			mediaRecorder.ondataavailable = (e) => {
+				if (e.data.size > 0) audioChunks.push(e.data);
+			};
+			mediaRecorder.onstop = async () => {
+				stream.getTracks().forEach((t) => t.stop());
+				voiceState = 'processing';
+				const mimeType = mediaRecorder.mimeType || 'audio/webm';
+				const blob = new Blob(audioChunks, { type: mimeType });
+				try {
+					const result = await transcribeVoice(blob);
+					await loadRoot();
+					await loadStats();
+					await handleFileSelect({ path: result.md_path, name: result.md_path.split('/').pop(), size: 0 });
+					voiceState = 'idle';
+				} catch (err) {
+					voiceError = '변환 실패: ' + err.message;
+					voiceState = 'idle';
+				}
+			};
+			mediaRecorder.start();
+			voiceState = 'recording';
+		} catch (err) {
+			voiceError = '마이크 오류: ' + err.message;
+			voiceState = 'idle';
+		}
+	}
+
+	function stopRecording() {
+		if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+			mediaRecorder.stop();
+		}
+	}
 </script>
 
 <svelte:head>
@@ -427,7 +472,18 @@
 					title={showHidden ? '숨김 파일 숨기기' : '숨김 파일 표시'}
 					onclick={async () => { showHidden = !showHidden; await loadRoot(); }}
 				>👁</button>
+				{#if voiceState === 'idle'}
+					<button class="voice-btn" onclick={startRecording} title="음성 녹음 시작">🎙</button>
+				{:else if voiceState === 'recording'}
+					<span class="recording-indicator" title="녹음 중..."></span>
+					<button class="voice-btn recording" onclick={stopRecording} title="녹음 중지">⏹</button>
+				{:else if voiceState === 'processing'}
+					<span class="voice-processing" title="변환 중...">⏳</span>
+				{/if}
 			</div>
+			{#if voiceError}
+				<div class="voice-error">{voiceError}<button class="voice-error-close" onclick={() => voiceError = ''}>×</button></div>
+			{/if}
 
 			{#if viewMode === 'browse'}
 				<div
@@ -1044,6 +1100,80 @@
 		gap: 8px;
 		justify-content: flex-end;
 		margin-top: 12px;
+	}
+
+	/* Voice Recording */
+	.voice-btn {
+		flex: 0 0 auto !important;
+		padding: 4px 8px !important;
+		background: none;
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.9rem;
+		color: var(--text-tertiary);
+		transition: all 0.15s;
+	}
+
+	.voice-btn:hover {
+		border-color: var(--color-impact-3);
+		color: var(--color-impact-3);
+	}
+
+	.voice-btn.recording {
+		border-color: #e74c3c;
+		color: #e74c3c;
+	}
+
+	.voice-btn.recording:hover {
+		background: rgba(231, 76, 60, 0.1);
+	}
+
+	.recording-indicator {
+		display: inline-block;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: #e74c3c;
+		flex-shrink: 0;
+		animation: pulse-rec 1s ease-in-out infinite;
+	}
+
+	@keyframes pulse-rec {
+		0%, 100% { opacity: 1; transform: scale(1); }
+		50% { opacity: 0.4; transform: scale(0.8); }
+	}
+
+	.voice-processing {
+		flex: 0 0 auto;
+		font-size: 0.9rem;
+		animation: spin 1.2s linear infinite;
+		display: inline-block;
+	}
+
+	.voice-error {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 6px;
+		margin: 4px 8px;
+		padding: 6px 10px;
+		background: rgba(231, 76, 60, 0.1);
+		border: 1px solid rgba(231, 76, 60, 0.4);
+		border-radius: 4px;
+		font-size: 0.8rem;
+		color: var(--text-danger, #e74c3c);
+	}
+
+	.voice-error-close {
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: inherit;
+		font-size: 1rem;
+		padding: 0 2px;
+		line-height: 1;
+		flex-shrink: 0;
 	}
 
 	/* Responsive */

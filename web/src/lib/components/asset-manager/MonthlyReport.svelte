@@ -1,8 +1,8 @@
 <script>
 	import { getTransactions } from '$lib/api/asset-manager.js';
-	import { device } from '$lib/stores/device';
 	import { CHART_COLORS } from '$lib/constants.js';
 	import PieChart from './module/PieChart.svelte';
+	import SankeyDiagram from './SankeyDiagram.svelte';
 	import TransactionDropdown from './TransactionDropdown.svelte';
 	import TransactionForm from './TransactionForm.svelte';
     import BudgetManager from './BudgetManager.svelte';
@@ -24,6 +24,10 @@
 
 	let isFormOpen = $state(false);
 	let editTransaction = $state(null);
+	let slideIdx = $state(0);
+	let slide0H = $state(0);
+	let slide1H = $state(0);
+	const containerH = $derived(slideIdx === 0 ? slide0H : slide1H);
 
 	const circleRadius = 80; // 외부 원의 반지름
 
@@ -240,90 +244,112 @@
 			<button class="retry-btn" onclick={loadStatistics}>다시 시도</button>
 		</div>
 	{:else if transactions && chartData()}
-		<!-- 동심원 차트 -->
-		<div class="circular-chart-container">
-			<PieChart 
-				tierSegments={chartData().tierSegments} 
-				circumference={chartData().circumference} 
-				spend={chartData().spend}
-				{circleRadius}
-				onTierClick={handleTierClick}
-			/>
+		<!-- 슬라이드 탭 -->
+		<div class="slide-tabs">
+			<button class="slide-tab" class:active={slideIdx === 0} onclick={() => (slideIdx = 0)}>
+				pieChart
+			</button>
+			<button class="slide-tab" class:active={slideIdx === 1} onclick={() => (slideIdx = 1)}>
+				Sankey	
+			</button>
+		</div>
 
-			<!-- 범례 및 통계 테이블 -->
-			<div class="table-container">
-				<table class="data-table">
-					<tbody>
-						<tr class="row-earn">
-							<td class="cell-label">
-								<span class="cell-icon">💰</span>
-								<span>수익</span>
-								{#if chartData().usingDefault}
-									<span class="cell-badge">d</span>
-								{/if}
-							</td>
-							<td class="cell-amount text-right">
-								<span class="masked-container">
-									<span class="masked-value">{getMaskedCurrency(chartData().income)}</span>
-									<span class="real-value">{formatCurrency(chartData().income)}</span>
-								</span>
-							</td>
-							<td class="text-center">
-								<span class="cell-percent">100%</span>
-							</td>
-						</tr>
-						
-						<tr class="row-spend">
-							<td class="cell-label">
-								<span class="cell-icon">💸</span>
-								<span>지출</span>
-							</td>
-							<td class="cell-amount text-right">{formatCurrency(chartData().spend)}</td>
-							<td class="text-center">
-								<span class="cell-percent spend">{chartData().spendPercent}%</span>
-							</td>
-						</tr>
+		<!-- 슬라이드 컨테이너 -->
+		<div class="slide-container" style={containerH ? `height:${containerH}px` : ''}>
+			<div class="slide-track" style="left: {-slideIdx * 100}%">
+				<!-- Slide 0: 파이차트 + 통계 테이블 -->
+				<div class="slide" bind:clientHeight={slide0H}>
+					<div class="circular-chart-container">
+						<PieChart
+							tierSegments={chartData().tierSegments}
+							circumference={chartData().circumference}
+							spend={chartData().spend}
+							{circleRadius}
+							onTierClick={handleTierClick}
+						/>
 
-						<tr class="row-save">
-							<td class="cell-label">
-								<span class="cell-icon">🏦</span>
-								<span>저축</span>
-							</td>
-							<td class="cell-amount text-right">{formatCurrency(chartData().save)}</td>
-							<td class="text-center">
-								<span class="cell-percent save">{chartData().savePercent}%</span>
-							</td>
-						</tr>
+						<!-- 범례 및 통계 테이블 -->
+						<div class="table-container">
+							<table class="data-table">
+								<tbody>
+									<tr class="row-earn">
+										<td class="cell-label">
+											<span class="cell-icon">💰</span>
+											<span>수익</span>
+											{#if chartData().usingDefault}
+												<span class="cell-badge">d</span>
+											{/if}
+										</td>
+										<td class="cell-amount text-right">
+											<span class="masked-container">
+												<span class="masked-value">{getMaskedCurrency(chartData().income)}</span>
+												<span class="real-value">{formatCurrency(chartData().income)}</span>
+											</span>
+										</td>
+										<td class="text-center">
+											<span class="cell-percent">100%</span>
+										</td>
+									</tr>
 
-						<tr class="{chartData().balance >= 0 ? 'row-positive' : 'row-negative'}">
-							<td class="cell-label">
-								<span class="cell-icon">{chartData().balance >= 0 ? '📈' : '📉'}</span>
-								<span>잔액</span>
-							</td>
-							<td class="cell-amount text-right">
-								<span class="masked-container">
-									<span class="masked-value">{getMaskedCurrency(Math.abs(chartData().balance))}</span>
-									<span class="real-value">{formatCurrency(Math.abs(chartData().balance))}</span>
-								</span>
-							</td>
-							<td class="text-center">
-								<span class="cell-percent balance">{chartData().balancePercent}%</span>
-							</td>
-						</tr>
-					</tbody>
-				</table>
+									<tr class="row-spend">
+										<td class="cell-label">
+											<span class="cell-icon">💸</span>
+											<span>지출</span>
+										</td>
+										<td class="cell-amount text-right">{formatCurrency(chartData().spend)}</td>
+										<td class="text-center">
+											<span class="cell-percent spend">{chartData().spendPercent}%</span>
+										</td>
+									</tr>
+
+									<tr class="row-save">
+										<td class="cell-label">
+											<span class="cell-icon">🏦</span>
+											<span>저축</span>
+										</td>
+										<td class="cell-amount text-right">{formatCurrency(chartData().save)}</td>
+										<td class="text-center">
+											<span class="cell-percent save">{chartData().savePercent}%</span>
+										</td>
+									</tr>
+
+									<tr class="{chartData().balance >= 0 ? 'row-positive' : 'row-negative'}">
+										<td class="cell-label">
+											<span class="cell-icon">{chartData().balance >= 0 ? '📈' : '📉'}</span>
+											<span>잔액</span>
+										</td>
+										<td class="cell-amount text-right">
+											<span class="masked-container">
+												<span class="masked-value"
+													>{getMaskedCurrency(Math.abs(chartData().balance))}</span
+												>
+												<span class="real-value">{formatCurrency(Math.abs(chartData().balance))}</span>
+											</span>
+										</td>
+										<td class="text-center">
+											<span class="cell-percent balance">{chartData().balancePercent}%</span>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<BudgetManager
+						{year}
+						{month}
+						bind:transactions
+						style="border: transparent; padding: 0px;"
+					/>
+				</div>
+
+				<!-- Slide 1: Sankey 다이어그램 -->
+				<div class="slide" bind:clientHeight={slide1H}>
+					<SankeyDiagram {transactions} />
+				</div>
 			</div>
 		</div>
 	{/if}
-
-	<BudgetManager 
-		{year} 
-		{month} 
-		bind:transactions 
-		bind:loading 
-		bind:error 
-		style="border: transparent; padding: 0px;" 
-	/>
 
 	<TransactionDropdown 
 		bind:visible={isDropdownVisible}
@@ -343,6 +369,50 @@
 {/if}
 
 <style>
+	/* === 슬라이드 === */
+	.slide-tabs {
+		display: flex;
+		gap: 6px;
+		margin-bottom: 16px;
+	}
+
+	.slide-tab {
+		padding: 5px 14px;
+		border: 1px solid var(--border-color);
+		border-radius: 20px;
+		background: transparent;
+		color: var(--text-secondary);
+		font-size: 0.85rem;
+		cursor: pointer;
+		transition: all 0.2s;
+		font-family: Pretendard, sans-serif;
+	}
+
+	.slide-tab.active {
+		border-color: var(--text-primary);
+		color: var(--text-primary);
+		background: var(--bg-secondary);
+	}
+
+	.slide-container {
+		overflow: hidden;
+		transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.slide-track {
+		display: flex;
+		flex-wrap: nowrap;
+		width: 200%;
+		position: relative;
+		transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.slide {
+		width: 50%;
+		flex-shrink: 0;
+		min-width: 0;
+	}
+
 	/* 동심원 차트 컨테이너 */
 	.circular-chart-container {
 		display: grid;

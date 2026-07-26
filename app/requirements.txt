@@ -13,3 +13,4 @@ llama-cpp-python
 beautifulsoup4
 duckduckgo_search
 faster-whisper
+matplotlib

@@ -1,10 +1,18 @@
 import os
+import json
 import requests
 from datetime import datetime, date, timedelta
 import calendar
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from utils.database import get_db_connection
+
+
+def _prev_month(year: int, month: int) -> tuple:
+    """주어진 연/월의 이전 달을 반환합니다."""
+    if month == 1:
+        return year - 1, 12
+    return year, month - 1
 
 
 # ── 통계 헬퍼 ──────────────────────────────────────────────────────────────
@@ -71,6 +79,84 @@ def _send_discord_chunked(webhook_url: str, content: str, username: str = "AI �
         res.raise_for_status()
 
 
+def _send_discord_image(webhook_url: str, image_bytes: bytes, filename: str,
+                         content: str = "", username: str = "AI 재무비서"):
+    """생성된 이미지를 Discord에 첨부파일로 전송합니다."""
+    if not image_bytes:
+        return
+    payload = {"username": username, "content": content}
+    files = {"file": (filename, image_bytes, "image/png")}
+    res = requests.post(webhook_url, data={"payload_json": json.dumps(payload)}, files=files)
+    res.raise_for_status()
+
+
+# ── 카테고리별 지출 비교 차트 ───────────────────────────────────────────────
+
+def _setup_korean_font():
+    """설치된 한글 폰트가 있으면 matplotlib에 적용합니다 (없으면 기본 폰트로 진행)."""
+    import matplotlib.font_manager as fm
+    import matplotlib.pyplot as plt
+
+    candidates = ["NanumGothic", "Noto Sans CJK KR", "Noto Sans KR", "Malgun Gothic", "AppleGothic"]
+    available = {f.name for f in fm.fontManager.ttflist}
+    for name in candidates:
+        if name in available:
+            plt.rcParams["font.family"] = name
+            break
+    plt.rcParams["axes.unicode_minus"] = False
+
+
+def _generate_category_chart(this_map: dict, last_map: dict,
+                              year: int, month: int, prev_year: int, prev_month: int,
+                              top_n: int = 10):
+    """이번 달 vs 저번 달 카테고리별 지출 비교 막대그래프를 PNG bytes로 생성합니다."""
+    names = sorted(set(this_map) | set(last_map), key=lambda n: this_map.get(n, 0), reverse=True)[:top_n]
+    if not names:
+        return None
+    names = names[::-1]  # 그래프에서 위쪽에 지출 큰 항목이 오도록
+
+    import io
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    _setup_korean_font()
+
+    this_vals = [this_map.get(n, 0) for n in names]
+    last_vals = [last_map.get(n, 0) for n in names]
+
+    bar_h = 0.35
+    positions = range(len(names))
+
+    fig, ax = plt.subplots(figsize=(8, max(3, 0.5 * len(names) + 1.2)), dpi=150)
+    fig.patch.set_facecolor("#fcfcfb")
+    ax.set_facecolor("#fcfcfb")
+
+    ax.barh([p + bar_h / 2 for p in positions], this_vals, height=bar_h,
+            color="#2a78d6", label=f"{year}년 {month}월")
+    ax.barh([p - bar_h / 2 for p in positions], last_vals, height=bar_h,
+            color="#eb6834", label=f"{prev_year}년 {prev_month}월")
+
+    ax.set_yticks(list(positions))
+    ax.set_yticklabels(names, fontsize=10, color="#0b0b0b")
+    ax.set_xlabel("지출 금액 (원)", color="#52514e")
+    ax.tick_params(axis="x", colors="#52514e")
+    ax.xaxis.set_major_formatter(lambda x, _: f"{x:,.0f}")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#d8d7d0")
+    ax.spines["bottom"].set_color("#d8d7d0")
+    ax.set_title("카테고리별 지출 비교 (전월 대비)", color="#0b0b0b", fontsize=13, fontweight="bold", pad=12)
+    ax.legend(loc="lower right", frameon=False, fontsize=9)
+
+    fig.tight_layout()
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", facecolor=fig.get_facecolor())
+    plt.close(fig)
+    buf.seek(0)
+    return buf.getvalue()
+
+
 # ── LLM 리포트 생성 ────────────────────────────────────────────────────────
 
 def _call_llm(prompt: str, period_label: str) -> str:
@@ -86,14 +172,13 @@ def _call_llm(prompt: str, period_label: str) -> str:
                 "Output only the finished message."
             )
         },
-        # /no_think: Qwen3 thinking 모드 비활성화
-        {"role": "user", "content": prompt + "\n/no_think"},
+        {"role": "user", "content": prompt},
     ]
     print(f"[Report] Requesting {period_label} report from LLM...")
     result = chat_sync(messages)
     content = result.message.content or ""
-    # <think>...</think> 제거 (태그가 있는 경우)
-    content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
+    # thinking 채널 제거 (남아있는 경우 대비)
+    content = re.sub(r"<\|channel>.*?<channel\|>", "", content, flags=re.DOTALL)
     # 태그 없이 사고 과정이 노출된 경우: 첫 번째 이모지 헤더 이전 텍스트 제거
     # (실제 리포트는 항상 이모지로 시작하도록 프롬프트를 구성함)
     emoji_header = re.search(r"(?m)^[📊📅💰📉📈🗓]", content)
@@ -111,23 +196,45 @@ def generate_monthly_report(year: int, month: int, send_discord: bool = True) ->
     last_day = calendar.monthrange(year, month)[1]
     end = f"{year}-{month:02d}-{last_day:02d}"
 
+    prev_year, prev_month = _prev_month(year, month)
+    prev_last_day = calendar.monthrange(prev_year, prev_month)[1]
+    prev_start = f"{prev_year}-{prev_month:02d}-01"
+    prev_end = f"{prev_year}-{prev_month:02d}-{prev_last_day:02d}"
+
     stats = get_period_statistics(start, end)
+    prev_stats = get_period_statistics(prev_start, prev_end)
+
+    this_map = {c["name"]: c["total"] for c in stats["categories"]}
+    last_map = {c["name"]: c["total"] for c in prev_stats["categories"]}
+
     cats_text = "\n".join(
-        f"  - {c['name']}: {c['total']:,.0f}원" for c in stats["categories"]
+        f"  - {c['name']}: {c['total']:,.0f}원 (전월 {last_map.get(c['name'], 0):,.0f}원, "
+        f"증감 {c['total'] - last_map.get(c['name'], 0):+,.0f}원)"
+        for c in stats["categories"]
     ) or "  (데이터 없음)"
+
+    spend_diff = stats["spend_total"] - prev_stats["spend_total"]
+    spend_diff_pct = (spend_diff / prev_stats["spend_total"] * 100) if prev_stats["spend_total"] else None
+    comparison_text = f"전월({prev_year}년 {prev_month}월) 총 지출: {prev_stats['spend_total']:,.0f}원, 증감 {spend_diff:+,.0f}원"
+    if spend_diff_pct is not None:
+        comparison_text += f" ({spend_diff_pct:+.1f}%)"
 
     prompt = f"""아래 데이터를 바탕으로 {year}년 {month}월 월간 지출 리포트를 Discord 메시지로 작성하세요.
 
 작성 규칙:
 - 지출 항목만 다룰 것. 수입·저축·응원·격려 문구는 포함하지 말 것.
 - 총 지출액과 카테고리별 금액·비중을 명시할 것
+- 저번 달의 지출과 비교하여 증감 추이를 언급할 것
 - 지출 패턴에서 눈에 띄는 점(비중이 큰 항목, 이례적 지출 등)을 간략히 분석할 것
 - 이모지와 마크다운 사용, 600자 이내
 
 데이터:
 총 지출: {stats['spend_total']:,.0f}원
-카테고리별 지출:
-{cats_text}"""
+카테고리별 지출 (전월 대비):
+{cats_text}
+
+전월 비교:
+{comparison_text}"""
 
     try:
         content = _call_llm(prompt, f"{year}-{month:02d} 월간")
@@ -143,6 +250,17 @@ def generate_monthly_report(year: int, month: int, send_discord: bool = True) ->
                 print("[Report] Monthly report sent to Discord.")
             except Exception as e:
                 print(f"[Report] Discord send error: {e}")
+
+            try:
+                chart_bytes = _generate_category_chart(this_map, last_map, year, month, prev_year, prev_month)
+                if chart_bytes:
+                    _send_discord_image(
+                        webhook_url, chart_bytes,
+                        filename=f"spend_{year}{month:02d}.png"
+                    )
+                    print("[Report] Category chart sent to Discord.")
+            except Exception as e:
+                print(f"[Report] Chart generation/send error: {e}")
         else:
             print("[Report] DISCORD_WEBHOOK_URL not set, skipping Discord send.")
 

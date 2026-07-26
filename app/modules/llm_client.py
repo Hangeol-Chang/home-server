@@ -2,62 +2,33 @@
 llama-cpp-python LLM client (Ollama 대체).
 로컬 GGUF 파일을 로드하고 Ollama와 동일한 인터페이스를 제공합니다.
 
-Tool calling은 llama-cpp-python에 맡기지 않고, Qwen3 네이티브 형식
-(<tool_call>JSON</tool_call>)으로 시스템 프롬프트에 주입한 뒤 직접 파싱합니다.
+Tool calling은 GGUF에 내장된 Jinja 채팅 템플릿(Gemma4 네이티브 포맷)에
+그대로 맡깁니다. 단, llama-cpp-python은 이 템플릿의 tool_call 출력을
+구조화된 tool_calls로 파싱해주지 않으므로, 모델이 생성한 원문에서
+`<|tool_call>call:NAME{...}<tool_call|>` 블록을 직접 파싱합니다.
 """
 
 import os
 import asyncio
-import json
 import re
 import threading
 from typing import Optional
 
-LLM_MODEL_PATH = os.path.expanduser(os.getenv("LLM_MODEL_PATH", "~/qwen3.6-35b-a3b-ud-q3_k_xl.gguf"))
+LLM_MODEL_PATH = os.path.expanduser(os.getenv(
+    "LLM_MODEL_PATH",
+    "/usr/share/ollama/.ollama/models/blobs/sha256-1278394b693672ac2799eadc9a83fd98259a6a88a40acfb1dcaa6c6fc895a606",
+))
 LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", "16384"))
 LLM_N_THREADS = int(os.getenv("LLM_N_THREADS", str(os.cpu_count() or 4)))
 LLM_N_GPU_LAYERS = int(os.getenv("LLM_N_GPU_LAYERS", "0"))
 
 _CTX_STEPS = [8192, 16384, 32768, 65536, 131072]
 
+# 모델이 tool_call 이후 가짜 tool_response/다음 turn을 스스로 이어 생성(반복 환각)하는 것을 막는다.
+_STOP_SEQUENCES = ["<|tool_response>", "<|turn>"]
+
 _llm = None
 _lock = threading.Lock()
-
-# Qwen3 네이티브 tool calling 형식으로 시스템 프롬프트에 주입
-_TOOL_SECTION = """\
-
-# Tools
-
-You MUST call tools to act. NEVER describe plans — always call the tool immediately.
-Only stop when the task is fully complete.
-
-Available tools:
-{tools_compact}
-
-Call format (output this exactly):
-<tool_call>
-{{"name": "tool_name", "arguments": {{"key": "value"}}}}
-</tool_call>"""
-
-
-def _compact_tools(tools: list) -> str:
-    """툴 목록을 간결한 텍스트 형식으로 변환합니다 (JSON schema 대비 ~80% 토큰 절약)."""
-    lines = []
-    for t in tools:
-        fn = t["function"]
-        name = fn["name"]
-        desc = fn.get("description", "")
-        props = fn.get("parameters", {}).get("properties", {})
-        required = set(fn.get("parameters", {}).get("required", []))
-        params = []
-        for k, v in props.items():
-            typ = v.get("type", "string")
-            opt = "" if k in required else "?"
-            pdesc = v.get("description", "")
-            params.append(f"{k}{opt}:{typ}({pdesc})")
-        sig = f"{name}({', '.join(params)})"
-        lines.append(f"{sig} — {desc}")
-    return "\n".join(lines)
 
 
 def load_model():
@@ -103,34 +74,113 @@ def _trim_messages(msgs: list) -> list:
     return trimmed
 
 
-def _inject_tools(messages: list, tools: list) -> list:
-    """시스템 메시지에 tool 정의를 Qwen3 형식으로 추가합니다."""
-    section = _TOOL_SECTION.format(tools_compact=_compact_tools(tools))
-    result = list(messages)
-    for i, msg in enumerate(result):
-        if msg["role"] == "system":
-            result[i] = {**msg, "content": msg["content"] + section}
-            return result
-    # 시스템 메시지가 없으면 맨 앞에 추가
-    return [{"role": "system", "content": section.lstrip()}] + result
+# ── Gemma4 네이티브 tool_call 파싱 ──
+#
+# 채팅 템플릿이 인자를 표준 JSON이 아니라 자체 포맷으로 직렬화한다:
+#   call:NAME{key:<|"|>string_value<|"|>,key2:123,key3:[1,2],key4:{...}}
+# 문자열은 " 대신 <|"|> 로 감싸고, 키는 따옴표 없이 그대로 노출된다.
+
+_STR_DELIM = '<|"|>'
+_TOOL_CALL_START_RE = re.compile(r'<\|tool_call>call:([A-Za-z0-9_]+)')
+_TOOL_CALL_END = '<tool_call|>'
 
 
-_TOOL_CALL_RE = re.compile(r"<tool_call>\s*(.*?)\s*</tool_call>", re.DOTALL)
+def _skip_ws(s: str, i: int) -> int:
+    while i < len(s) and s[i] in ' \t\n\r':
+        i += 1
+    return i
+
+
+def _parse_gemma_string(s: str, i: int) -> tuple[str, int]:
+    i += len(_STR_DELIM)
+    end = s.index(_STR_DELIM, i)
+    return s[i:end], end + len(_STR_DELIM)
+
+
+def _parse_gemma_value(s: str, i: int):
+    i = _skip_ws(s, i)
+    if s.startswith(_STR_DELIM, i):
+        return _parse_gemma_string(s, i)
+    if s.startswith('true', i):
+        return True, i + 4
+    if s.startswith('false', i):
+        return False, i + 5
+    if s[i] == '[':
+        return _parse_gemma_array(s, i)
+    if s[i] == '{':
+        return _parse_gemma_object(s, i)
+    j = i
+    while j < len(s) and s[j] not in ',}]':
+        j += 1
+    token = s[i:j].strip()
+    try:
+        return int(token), j
+    except ValueError:
+        pass
+    try:
+        return float(token), j
+    except ValueError:
+        return token, j
+
+
+def _parse_gemma_array(s: str, i: int) -> tuple[list, int]:
+    i = _skip_ws(s, i + 1)
+    arr = []
+    if s[i] == ']':
+        return arr, i + 1
+    while True:
+        val, i = _parse_gemma_value(s, i)
+        arr.append(val)
+        i = _skip_ws(s, i)
+        if s[i] == ',':
+            i = _skip_ws(s, i + 1)
+            continue
+        break
+    return arr, i + 1
+
+
+def _parse_gemma_object(s: str, i: int) -> tuple[dict, int]:
+    i = _skip_ws(s, i + 1)
+    obj = {}
+    if s[i] == '}':
+        return obj, i + 1
+    while True:
+        i = _skip_ws(s, i)
+        colon = s.index(':', i)
+        key = s[i:colon].strip()
+        val, i = _parse_gemma_value(s, colon + 1)
+        obj[key] = val
+        i = _skip_ws(s, i)
+        if i < len(s) and s[i] == ',':
+            i = _skip_ws(s, i + 1)
+            continue
+        break
+    return obj, i + 1
 
 
 def _extract_tool_calls(content: str) -> tuple[str, list]:
-    """content에서 <tool_call>JSON</tool_call> 블록을 파싱합니다."""
+    """content에서 <|tool_call>call:NAME{...}<tool_call|> 블록을 파싱합니다."""
     tool_calls = []
-    for match in _TOOL_CALL_RE.finditer(content):
+    parts = []
+    cursor = 0
+    while True:
+        m = _TOOL_CALL_START_RE.search(content, cursor)
+        if not m:
+            parts.append(content[cursor:])
+            break
+        parts.append(content[cursor:m.start()])
+        name = m.group(1)
         try:
-            data = json.loads(match.group(1).strip())
-            name = data.get("name", "")
-            args = data.get("arguments") or {}
-            if name:
-                tool_calls.append(_ToolCall(name, args))
-        except (json.JSONDecodeError, AttributeError):
-            pass
-    clean = _TOOL_CALL_RE.sub("", content).strip()
+            args, after = _parse_gemma_object(content, m.end())
+            end = content.index(_TOOL_CALL_END, after)
+        except (ValueError, IndexError):
+            # 파싱 실패 시 이 블록은 건너뛰고 원문 그대로 남긴다
+            parts.append(content[m.start():m.end()])
+            cursor = m.end()
+            continue
+        tool_calls.append(_ToolCall(name, args))
+        cursor = end + len(_TOOL_CALL_END)
+    clean = "".join(parts).strip()
     return clean, tool_calls
 
 
@@ -170,9 +220,10 @@ def _parse_response(raw: dict, had_tools: bool) -> ChatResponse:
     msg = raw["choices"][0]["message"]
     content: str = msg.get("content") or ""
 
-    # llama-cpp가 tool_calls를 파싱했으면 그대로 사용
+    # llama-cpp가 tool_calls를 직접 파싱해주는 chat_format이면 그대로 사용
     raw_tcs = msg.get("tool_calls") or []
     if raw_tcs:
+        import json
         tool_calls = []
         for tc in raw_tcs:
             name = tc["function"]["name"]
@@ -181,7 +232,7 @@ def _parse_response(raw: dict, had_tools: bool) -> ChatResponse:
             tool_calls.append(_ToolCall(name, args))
         return ChatResponse(_Message(content, tool_calls))
 
-    # fallback: content에서 <tool_call> 블록 직접 파싱
+    # gemma4 네이티브 포맷: content 안의 <|tool_call>...<tool_call|> 직접 파싱
     if had_tools:
         content, tool_calls = _extract_tool_calls(content)
         if tool_calls:
@@ -193,18 +244,19 @@ def _parse_response(raw: dict, had_tools: bool) -> ChatResponse:
 def _do_inference(messages: list, tools: Optional[list]) -> tuple[dict, bool]:
     with _lock:
         load_model()
-        msgs = _inject_tools(messages, tools) if tools else messages
         # 출력 토큰을 컨텍스트의 절반까지 보장 (최소 4096)
         max_tokens = max(4096, LLM_NUM_CTX // 2)
         while True:
             try:
-                raw = _llm.create_chat_completion(messages=msgs, max_tokens=max_tokens)
+                raw = _llm.create_chat_completion(
+                    messages=messages, tools=tools, max_tokens=max_tokens, stop=_STOP_SEQUENCES
+                )
                 return raw, bool(tools)
             except ValueError as e:
                 if "exceed context window" not in str(e):
                     raise
                 if not _expand_ctx():
-                    msgs = _trim_messages(msgs)
+                    messages = _trim_messages(messages)
                 max_tokens = max(4096, LLM_NUM_CTX // 2)  # 컨텍스트 확장 시 재계산
 
 

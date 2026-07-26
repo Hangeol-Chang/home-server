@@ -423,14 +423,13 @@ class AgentLoop:
                 msg = response.message
                 raw_content: str = msg.content or ""
 
-                # Strip <think>...</think> blocks and orphan </think> tags (Qwen3 thinking tokens)
+                # Strip <|channel>thought...<channel|> blocks (Gemma4 thinking channel)
                 visible_content = raw_content
-                if "<think>" in raw_content:
-                    think_parts = re.findall(r"<think>(.*?)</think>", raw_content, re.DOTALL)
+                if "<|channel>" in raw_content:
+                    think_parts = re.findall(r"<\|channel>(.*?)<channel\|>", raw_content, re.DOTALL)
                     if think_parts:
                         self._log("THINK", think_parts[-1].strip()[:300])
-                    visible_content = re.sub(r"<think>.*?</think>", "", raw_content, flags=re.DOTALL)
-                visible_content = re.sub(r"</think>", "", visible_content).strip()
+                    visible_content = re.sub(r"<\|channel>.*?<channel\|>", "", raw_content, flags=re.DOTALL).strip()
 
                 if visible_content:
                     self._log("MODEL", visible_content[:400])
@@ -446,7 +445,7 @@ class AgentLoop:
                             "role": "user",
                             "content": (
                                 f"목표: {objective}\n\n"
-                                "설명하거나 계획하는 대신 즉시 <tool_call> 형식으로 도구를 호출하세요. "
+                                "설명하거나 계획하는 대신 즉시 제공된 도구를 호출하세요. "
                                 "목표와 무관한 분석은 하지 말고 목표 달성에 필요한 도구만 호출하세요."
                             )
                         })
@@ -492,9 +491,8 @@ class AgentLoop:
                     }]
                     summary_resp = await llm_chat(summary_messages)
                     raw_summary = summary_resp.message.content or ""
-                    # thinking 토큰 제거
-                    self.summary = re.sub(r"<think>.*?</think>", "", raw_summary, flags=re.DOTALL)
-                    self.summary = re.sub(r"</think>", "", self.summary).strip()
+                    # thinking 채널 제거
+                    self.summary = re.sub(r"<\|channel>.*?<channel\|>", "", raw_summary, flags=re.DOTALL).strip()
                     self._log("SUMMARY", self.summary[:300])
                 except Exception as e:
                     self._log("WARN", f"요약 생성 실패: {e}")

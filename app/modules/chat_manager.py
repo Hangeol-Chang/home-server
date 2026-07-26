@@ -37,7 +37,7 @@ DEFAULT_SYSTEM_PROMPT = (
 
 
 def _strip_thinking(text: str) -> str:
-    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+    return re.sub(r"<\|channel>.*?<channel\|>", "", text, flags=re.DOTALL).strip()
 
 
 def _truncate_history(messages: List[Dict[str, Any]], max_ctx: int) -> List[Dict[str, Any]]:

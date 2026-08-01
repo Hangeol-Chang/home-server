@@ -21,6 +21,8 @@ LLM_MODEL_PATH = os.path.expanduser(os.getenv(
 LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", "16384"))
 LLM_N_THREADS = int(os.getenv("LLM_N_THREADS", str(os.cpu_count() or 4)))
 LLM_N_GPU_LAYERS = int(os.getenv("LLM_N_GPU_LAYERS", "0"))
+# 마지막 사용 후 이 시간(초)이 지나면 모델을 언로드해 메모리를 반환한다. 0이면 언로드 안 함.
+LLM_IDLE_UNLOAD_SEC = float(os.getenv("LLM_IDLE_UNLOAD_SEC", "300"))
 
 _CTX_STEPS = [8192, 16384, 32768, 65536, 131072]
 
@@ -29,6 +31,7 @@ _STOP_SEQUENCES = ["<|tool_response>", "<|turn>"]
 
 _llm = None
 _lock = threading.Lock()
+_idle_timer: Optional[threading.Timer] = None
 
 
 def load_model():
@@ -46,6 +49,31 @@ def load_model():
     )
     print("[LLM] Model ready.")
     return _llm
+
+
+def unload_model():
+    """모델을 메모리에서 내린다. _lock 내부에서만 호출."""
+    global _llm
+    if _llm is not None:
+        print("[LLM] Idle timeout → unloading model.")
+        _llm = None
+
+
+def _reset_idle_timer():
+    """_lock 내부에서 호출. 마지막 추론 이후 LLM_IDLE_UNLOAD_SEC가 지나면 자동 언로드."""
+    global _idle_timer
+    if _idle_timer is not None:
+        _idle_timer.cancel()
+    if LLM_IDLE_UNLOAD_SEC <= 0:
+        return
+
+    def _fire():
+        with _lock:
+            unload_model()
+
+    _idle_timer = threading.Timer(LLM_IDLE_UNLOAD_SEC, _fire)
+    _idle_timer.daemon = True
+    _idle_timer.start()
 
 
 def _expand_ctx() -> bool:
@@ -243,6 +271,8 @@ def _parse_response(raw: dict, had_tools: bool) -> ChatResponse:
 
 def _do_inference(messages: list, tools: Optional[list]) -> tuple[dict, bool]:
     with _lock:
+        if _idle_timer is not None:
+            _idle_timer.cancel()
         load_model()
         # 출력 토큰을 컨텍스트의 절반까지 보장 (최소 4096)
         max_tokens = max(4096, LLM_NUM_CTX // 2)
@@ -251,6 +281,7 @@ def _do_inference(messages: list, tools: Optional[list]) -> tuple[dict, bool]:
                 raw = _llm.create_chat_completion(
                     messages=messages, tools=tools, max_tokens=max_tokens, stop=_STOP_SEQUENCES
                 )
+                _reset_idle_timer()
                 return raw, bool(tools)
             except ValueError as e:
                 if "exceed context window" not in str(e):
@@ -271,3 +302,17 @@ async def chat(messages: list, tools: Optional[list] = None) -> ChatResponse:
     loop = asyncio.get_running_loop()
     raw, had_tools = await loop.run_in_executor(None, _do_inference, messages, tools)
     return _parse_response(raw, had_tools)
+
+
+if __name__ == "__main__":
+    # 실제 GGUF 로드 없이 idle-unload 타이머 동작만 검증
+    import time
+
+    LLM_IDLE_UNLOAD_SEC = 0.2
+    _llm = object()  # 모델이 로드된 상태를 흉내
+    with _lock:
+        _reset_idle_timer()
+    assert _llm is not None, "타이머 등록 직후엔 아직 언로드되면 안 됨"
+    time.sleep(0.4)
+    assert _llm is None, "idle timeout 이후 모델이 언로드돼야 함"
+    print("[LLM] self-check OK: idle unload works")

@@ -9,6 +9,7 @@
 		{ name: 'Asset Manager', href: '/asset-manager', icon: '💰' },
 		{ name: 'Schedule', href: '/schedule-manager', icon: '📅' },
 		{ name: 'Notebook', href: '/notebook', icon: '📓' },
+		{ name: 'Projects', href: '/projects', icon: '🗂️' },
 		{ name: 'Chat', href: '/chat', icon: '💬' },
 		{ name: 'Google Drive', href: '/gdrive', icon: '☁️' },
 		{ name: 'System Test', href: '/test', icon: '🛠️' }

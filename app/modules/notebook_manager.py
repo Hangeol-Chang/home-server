@@ -440,31 +440,37 @@ def is_git_repo(path: Path) -> bool:
     return result.returncode == 0
 
 
+_git_sync_lock = threading.Lock()
+
+
 def sync_vault_to_git(commit_message: str):
     """Vault 변경사항을 Git에 커밋하고 푸시한 뒤 부모 레포 서브모듈 포인터도 갱신.
-    .git이 없는 환경(Mutagen sync 등)에서는 git 작업을 건너뜀."""
+    .git이 없는 환경(Mutagen sync 등)에서는 git 작업을 건너뜀.
+    동시 요청(예: 다이어그램에서 노드 여러 개를 빠르게 드래그)이 겹치면 git이
+    .git/index.lock 충돌로 실패하므로, 락으로 직렬화한다."""
     if not is_git_repo(VAULT_PATH):
         print(f"[notebook] .git 없음 — git sync 건너뜀 ({commit_message})")
         return
 
-    # 1. home-server 브랜치 보장
-    ensure_vault_branch()
+    with _git_sync_lock:
+        # 1. home-server 브랜치 보장
+        ensure_vault_branch()
 
-    # 2. 변경사항 확인
-    status_result = subprocess.run(
-        ["git", "status", "--porcelain"],
-        cwd=VAULT_PATH, capture_output=True, text=True
-    )
-    if not status_result.stdout.strip():
-        return
+        # 2. 변경사항 확인
+        status_result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=VAULT_PATH, capture_output=True, text=True
+        )
+        if not status_result.stdout.strip():
+            return
 
-    # 3. Add / Commit / Push (submodule)
-    run_git_command(["git", "add", "."])
-    run_git_command(["git", "commit", "-m", commit_message])
-    run_git_command(["git", "push", "--set-upstream", "origin", VAULT_BRANCH])
+        # 3. Add / Commit / Push (submodule)
+        run_git_command(["git", "add", "."])
+        run_git_command(["git", "commit", "-m", commit_message])
+        run_git_command(["git", "push", "--set-upstream", "origin", VAULT_BRANCH])
 
-    # 4. 부모 레포 서브모듈 포인터 갱신
-    update_parent_submodule_pointer(commit_message)
+        # 4. 부모 레포 서브모듈 포인터 갱신
+        update_parent_submodule_pointer(commit_message)
 
 @router.get("/git-status")
 def git_status():

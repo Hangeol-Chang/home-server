@@ -22,6 +22,7 @@ export const ENDPOINTS = {
 	assetManager: '/asset-manager',
 	scheduleManager: '/schedule-manager',
 	notebook: '/notebook',
+	projects: '/projects',
 	chat: '/chat',
 	gdrive: '/gdrive',
 		test: '/test',

@@ -72,6 +72,10 @@
 								<span>📓</span>
 								<span>노트북</span>
 							</a>
+							<a href="/projects" class="menu-dropdown-item">
+								<span>🗂️</span>
+								<span>프로젝트</span>
+							</a>
 							<a href="/chat" class="menu-dropdown-item">
 								<span>💬</span>
 								<span>채팅</span>

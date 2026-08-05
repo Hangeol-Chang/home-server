@@ -68,18 +68,6 @@ def parse_frontmatter(text: str) -> Tuple[Dict[str, str], str]:
     return meta, body
 
 
-def serialize_frontmatter(meta: Dict[str, str], body: str) -> str:
-    clean = {k: v for k, v in meta.items() if v}
-    if not clean:
-        return body
-    lines = ['---']
-    for k, v in clean.items():
-        lines.append(f'{k}: {v}')
-    lines.append('---')
-    lines.append('')
-    return '\n'.join(lines) + body
-
-
 def read_node_meta(file_path: Path) -> Dict[str, str]:
     try:
         text = file_path.read_text(encoding='utf-8')
@@ -271,7 +259,7 @@ def save_graph(request: SaveGraphRequest):
 
 @router.get("/node-content", response_model=NodeContent)
 def get_node_content(path: str = Query(..., description="파일 경로")):
-    """노드(md 파일)의 frontmatter/본문 분리 조회"""
+    """노드(md 파일) 원문 전체 조회 (frontmatter 포함, 에디터에서 그대로 편집)"""
     target_path = get_safe_path(path)
     if not target_path.exists() or not target_path.is_file():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
@@ -281,37 +269,18 @@ def get_node_content(path: str = Query(..., description="파일 경로")):
     except UnicodeDecodeError:
         text = target_path.read_text(encoding='cp949')
 
-    meta, body = parse_frontmatter(text)
-    return NodeContent(path=path, meta=meta, body=body)
+    return NodeContent(path=path, content=text)
 
 
 @router.post("/node")
 def save_node(request: SaveNodeRequest):
-    """노드 상태/기간/본문 저장 (frontmatter 갱신) 및 Git 자동 동기화"""
+    """노드(md 파일) 원문 전체 저장 (frontmatter 포함) 및 Git 자동 동기화"""
     target_path = get_safe_path(request.path)
     if not target_path.exists() or not target_path.is_file():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 
     try:
-        text = target_path.read_text(encoding='utf-8')
-    except UnicodeDecodeError:
-        text = target_path.read_text(encoding='cp949')
-
-    meta, body = parse_frontmatter(text)
-
-    if request.status is not None:
-        meta["status"] = request.status.value
-    if request.start_date is not None:
-        meta["start_date"] = request.start_date
-    if request.end_date is not None:
-        meta["end_date"] = request.end_date
-    if request.content is not None:
-        body = request.content
-
-    new_text = serialize_frontmatter(meta, body)
-
-    try:
-        target_path.write_text(new_text, encoding='utf-8')
+        target_path.write_text(request.content, encoding='utf-8')
         sync_vault_to_git(f"Update project {request.path}")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

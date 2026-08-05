@@ -64,13 +64,9 @@ class SaveGraphRequest(BaseModel):
 
 class SaveNodeRequest(BaseModel):
     path: str
-    status: Optional[ProjectStatus] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
-    content: Optional[str] = Field(None, description="frontmatter 제외 본문")
+    content: str = Field(..., description="frontmatter 포함 파일 전체 원문")
 
 
 class NodeContent(BaseModel):
     path: str
-    meta: Dict[str, str]
-    body: str
+    content: str = Field(..., description="frontmatter 포함 파일 전체 원문")

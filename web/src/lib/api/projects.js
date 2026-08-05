@@ -22,13 +22,13 @@ export async function saveGraph(folder, positions, edges) {
 	return apiPost(`${API_BASE}/graph`, { folder, positions, edges });
 }
 
-// ===== Node content (frontmatter + body) =====
+// ===== Node content (frontmatter 포함 원문 전체) =====
 export async function getNodeContent(path) {
 	return apiGet(`${API_BASE}/node-content`, { path });
 }
 
-export async function saveNode({ path, status, start_date, end_date, content }) {
-	return apiPost(`${API_BASE}/node`, { path, status, start_date, end_date, content });
+export async function saveNode({ path, content }) {
+	return apiPost(`${API_BASE}/node`, { path, content });
 }
 
 // ===== Folder (project) meta =====

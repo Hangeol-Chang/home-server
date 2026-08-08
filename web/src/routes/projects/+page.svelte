@@ -539,7 +539,7 @@
 					<input id="panel-end" type="date" bind:value={panelEnd} />
 				</div>
 			</div>
-			<p class="folder-panel-hint">폴더 노드는 상태/기간만 저장됩니다 ({panelNode.path}/.metadata).</p>
+			<p class="folder-panel-hint">폴더 노드는 상태/기간만 저장됩니다 ({panelNode.path}/README.md).</p>
 
 			<div class="side-panel-footer">
 				<button class="btn-primary" onclick={savePanel} disabled={panelSaving}>

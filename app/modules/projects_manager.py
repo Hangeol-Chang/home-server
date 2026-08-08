@@ -17,7 +17,7 @@ router = APIRouter(
 )
 
 GRAPH_FILE_NAME = ".graph.json"
-FOLDER_META_FILE_NAME = ".metadata"
+FOLDER_NOTE_FILE_NAME = "README.md"
 GRID_COLS = 4
 GRID_SPACING_X = 240
 GRID_SPACING_Y = 160
@@ -77,26 +77,20 @@ def read_node_meta(file_path: Path) -> Dict[str, str]:
     return meta
 
 
+def ensure_folder_note(dir_path: Path) -> Path:
+    """폴더의 공식 폴더노트(README.md)가 없으면 새로 만든다."""
+    note_path = dir_path / FOLDER_NOTE_FILE_NAME
+    if not note_path.exists():
+        note_path.write_text(f'# {dir_path.name}\n', encoding='utf-8')
+    return note_path
+
+
 def read_folder_meta(dir_path: Path) -> Dict[str, str]:
-    meta_file = dir_path / FOLDER_META_FILE_NAME
-    if not meta_file.exists():
-        return {}
-    try:
-        text = meta_file.read_text(encoding='utf-8')
-    except UnicodeDecodeError:
-        text = meta_file.read_text(encoding='cp949')
-    return parse_kv_lines(text.split('\n'))
+    return read_node_meta(ensure_folder_note(dir_path))
 
 
 def write_folder_meta(dir_path: Path, meta: Dict[str, str]):
-    clean = {k: v for k, v in meta.items() if v}
-    meta_file = dir_path / FOLDER_META_FILE_NAME
-    if not clean:
-        if meta_file.exists():
-            meta_file.unlink()
-        return
-    lines = [f'{k}: {v}' for k, v in clean.items()]
-    meta_file.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    write_node_frontmatter(ensure_folder_note(dir_path), meta)
 
 
 def parse_links(meta: Dict[str, str]) -> List[str]:
@@ -144,6 +138,8 @@ def build_tree(dir_path: Path, parent_id: str, nodes: List[dict], edges: List[di
         name = item.name
         if name.startswith('.') or name == 'node_modules':
             continue
+        if name == FOLDER_NOTE_FILE_NAME:
+            continue  # README.md는 부모 폴더 노드의 metadata로 취급, 별도 노드로 만들지 않는다
 
         rel_path = str(item.relative_to(VAULT_PATH)).replace('\\', '/')
 
@@ -337,7 +333,7 @@ def save_node(request: SaveNodeRequest):
 
 @router.post("/folder-meta")
 def save_folder_meta(request: FolderMetaRequest):
-    """폴더(프로젝트) 노드의 상태/기간을 그 폴더의 .metadata 파일에 저장"""
+    """폴더(프로젝트) 노드의 상태/기간을 그 폴더의 README.md frontmatter에 저장"""
     target_path = get_safe_path(request.path)
     if not target_path.exists() or not target_path.is_dir():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")

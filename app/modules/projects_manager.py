@@ -99,6 +99,32 @@ def write_folder_meta(dir_path: Path, meta: Dict[str, str]):
     meta_file.write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
 
+def parse_links(meta: Dict[str, str]) -> List[str]:
+    """meta의 links 값('a; b; c')을 경로 리스트로 파싱"""
+    return [p.strip() for p in meta.get("links", "").split(';') if p.strip()]
+
+
+def format_links(links: List[str]) -> str:
+    return '; '.join(links)
+
+
+def write_node_frontmatter(file_path: Path, updates: Dict[str, str]):
+    """md 파일 frontmatter 일부 키만 갱신 (본문은 그대로 유지)"""
+    try:
+        text = file_path.read_text(encoding='utf-8')
+    except UnicodeDecodeError:
+        text = file_path.read_text(encoding='cp949')
+    meta, body = parse_frontmatter(text)
+    meta.update(updates)
+    clean = {k: v for k, v in meta.items() if v}
+    if clean:
+        lines = ['---'] + [f'{k}: {v}' for k, v in clean.items()] + ['---', '']
+        new_text = '\n'.join(lines) + body
+    else:
+        new_text = body
+    file_path.write_text(new_text, encoding='utf-8')
+
+
 def status_or_default(meta: Dict[str, str]) -> str:
     value = meta.get("status", ProjectStatus.planned.value)
     if value not in ProjectStatus._value2member_map_:
@@ -143,13 +169,14 @@ def build_tree(dir_path: Path, parent_id: str, nodes: List[dict], edges: List[di
 
 
 def load_graph_layout(folder_path: Path) -> dict:
+    """노드 위치(positions)만 저장. 연결 정보는 각 노드의 metadata에 저장한다."""
     graph_file = folder_path / GRAPH_FILE_NAME
     if not graph_file.exists():
-        return {"positions": {}, "edges": []}
+        return {"positions": {}}
     try:
         return json.loads(graph_file.read_text(encoding='utf-8'))
     except (json.JSONDecodeError, UnicodeDecodeError):
-        return {"positions": {}, "edges": []}
+        return {"positions": {}}
 
 
 # ===== Endpoints =====
@@ -227,9 +254,10 @@ def get_graph(folder: str = Query(..., description="0_ 로 시작하는 최상�
         ))
 
     manual_edges = [
-        ProjectEdge(source=e["source"], target=e["target"], type="manual")
-        for e in layout.get("edges", [])
-        if e.get("source") in known_paths and e.get("target") in known_paths
+        ProjectEdge(source=n["path"], target=target, type="manual")
+        for n in raw_nodes
+        for target in parse_links(n["meta"])
+        if target in known_paths
     ]
     edges = [ProjectEdge(**e) for e in tree_edges] + manual_edges
 
@@ -238,18 +266,37 @@ def get_graph(folder: str = Query(..., description="0_ 로 시작하는 최상�
 
 @router.post("/graph")
 def save_graph(request: SaveGraphRequest):
-    """노드 위치 + 수동으로 추가한 연결 저장 및 Git 자동 동기화.
+    """노드 위치는 .graph.json에, 수동 연결은 각 소스 노드의 metadata(links)에 저장 및 Git 자동 동기화.
     (부모-자식 트리 연결은 폴더 구조에서 매번 자동 계산되므로 저장하지 않는다)"""
     folder_path = get_folder_path(request.folder)
 
-    layout = {
-        "positions": {path: pos.model_dump() for path, pos in request.positions.items()},
-        "edges": [{"source": e.source, "target": e.target} for e in request.edges if e.type == "manual"],
-    }
+    layout = {"positions": {path: pos.model_dump() for path, pos in request.positions.items()}}
 
-    graph_file = folder_path / GRAPH_FILE_NAME
+    links_by_source: Dict[str, List[str]] = {}
+    for e in request.edges:
+        if e.type == "manual":
+            links_by_source.setdefault(e.source, []).append(e.target)
+
+    raw_nodes: List[dict] = []
+    tree_edges: List[dict] = []
+    build_tree(folder_path, "", raw_nodes, tree_edges)
+
     try:
+        graph_file = folder_path / GRAPH_FILE_NAME
         graph_file.write_text(json.dumps(layout, ensure_ascii=False, indent=2), encoding='utf-8')
+
+        for n in raw_nodes:
+            new_links = links_by_source.get(n["path"], [])
+            if new_links == parse_links(n["meta"]):
+                continue
+            item_path = VAULT_PATH / n["path"]
+            if item_path.is_dir():
+                meta = read_folder_meta(item_path)
+                meta["links"] = format_links(new_links)
+                write_folder_meta(item_path, meta)
+            else:
+                write_node_frontmatter(item_path, {"links": format_links(new_links)})
+
         sync_vault_to_git(f"Update project graph ({request.folder})")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

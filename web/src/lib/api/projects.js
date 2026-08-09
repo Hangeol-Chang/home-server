@@ -35,3 +35,8 @@ export async function saveNode({ path, content }) {
 export async function saveFolderMeta({ path, status, start_date, end_date, hide }) {
 	return apiPost(`${API_BASE}/folder-meta`, { path, status, start_date, end_date, hide });
 }
+
+// ===== 새 파일/폴더 노드 생성 (parent_path 폴더 노드 아래, link_from 있으면 그 노드와 수동 연결) =====
+export async function createNode({ parent_path, name, type, link_from }) {
+	return apiPost(`${API_BASE}/create-node`, { parent_path, name, type, link_from });
+}

@@ -7,7 +7,8 @@
 		saveGraph,
 		getNodeContent,
 		saveNode,
-		saveFolderMeta
+		saveFolderMeta,
+		createNode
 	} from '$lib/api/projects.js';
 	import { pullRepository } from '$lib/api/notebook.js';
 	import TuiEditor from '$lib/components/notebook/TuiEditor.svelte';
@@ -24,6 +25,7 @@
 	const DRAG_THRESHOLD = 5;
 	const ZOOM_MIN = 0.4;
 	const ZOOM_MAX = 2.5;
+	const LONG_PRESS_MS = 550;
 
 	function statusInfo(value) {
 		return STATUS_OPTIONS.find((s) => s.value === value) || STATUS_OPTIONS[0];
@@ -47,15 +49,17 @@
 	let dragState = null;
 	let pinchState = null;
 	let panState = null;
+	let longPressTimer = null;
 
-	// 사이드패널: 'view' (메타데이터만) → 같은 노드 한번 더 클릭하면 'edit'
+	// 노드 하나: PC는 hover, 모바일은 첫 탭에서 이 경로의 메타데이터 툴팁을 보여준다
+	let metaNode = $state(null);
+
+	// 폴더 노드 우클릭(PC) / 꾹 누르기(모바일)로 뜨는 생성 메뉴
+	let contextMenu = $state(null); // { node, x, y }
+
+	// 사이드패널은 항상 편집 모드로 연다 (PC 클릭 / 모바일 두번째 탭)
 	let panelNode = $state(null);
-	let panelMode = $state('view');
-	let panelStatus = $state('planned');
-	let panelStart = $state('');
-	let panelEnd = $state('');
 	let panelBody = $state('');
-	let panelBodyLoaded = $state(false);
 	let panelSaving = $state(false);
 
 	$effect(() => {
@@ -156,18 +160,34 @@
 		e.preventDefault();
 		dragState = {
 			path: node.path,
+			pointerType: e.pointerType,
 			startX: e.clientX,
 			startY: e.clientY,
+			clientX: e.clientX,
+			clientY: e.clientY,
 			origX: node.x,
 			origY: node.y,
-			moved: false
+			moved: false,
+			longPress: false
 		};
 		window.addEventListener('pointermove', handlePointerMove);
 		window.addEventListener('pointerup', handlePointerUp);
+
+		if (e.pointerType === 'touch') {
+			const ds = dragState;
+			longPressTimer = setTimeout(() => {
+				if (dragState === ds && !ds.moved) {
+					ds.longPress = true;
+					openContextMenu(node, ds.clientX, ds.clientY);
+				}
+			}, LONG_PRESS_MS);
+		}
 	}
 
 	function handlePointerMove(e) {
 		if (!dragState) return;
+		dragState.clientX = e.clientX;
+		dragState.clientY = e.clientY;
 		const dx = (e.clientX - dragState.startX) / zoom;
 		const dy = (e.clientY - dragState.startY) / zoom;
 		if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
@@ -184,22 +204,85 @@
 	function handlePointerUp() {
 		window.removeEventListener('pointermove', handlePointerMove);
 		window.removeEventListener('pointerup', handlePointerUp);
+		clearTimeout(longPressTimer);
 		const moved = dragState?.moved;
 		const path = dragState?.path;
+		const pointerType = dragState?.pointerType;
+		const longPress = dragState?.longPress;
 		dragState = null;
+		if (longPress) return; // 메뉴는 이미 떴으니 탭/클릭 처리 안함
 		if (moved) {
 			dirty = true;
-		} else if (path) {
-			handleNodeActivate(nodeByPath(path));
+			return;
+		}
+		const node = path && nodeByPath(path);
+		if (!node) return;
+		if (pointerType === 'touch') {
+			handleNodeTap(node);
+		} else {
+			openEditPanel(node);
 		}
 	}
 
-	function handleNodeActivate(node) {
-		if (!node) return;
-		if (panelNode?.path === node.path) {
-			enterEditMode();
+	// PC: 노드 우클릭 → 생성 메뉴 (파일 노드는 같은 부모폴더에 생성 + 클릭한 파일과 연결)
+	function handleContextMenu(e, node) {
+		if (connectMode) return;
+		e.preventDefault();
+		e.stopPropagation(); // 캔버스 배경 우클릭 메뉴와 겹쳐 뜨지 않게
+		openContextMenu(node, e.clientX, e.clientY);
+	}
+
+	// PC: 빈 캔버스 우클릭 → 새 프로젝트 폴더 생성 메뉴 (currentFolder 바로 아래)
+	function handleCanvasContextMenu(e) {
+		if (connectMode) return;
+		e.preventDefault();
+		openContextMenu(null, e.clientX, e.clientY);
+	}
+
+	function parentPathOf(node) {
+		if (!node) return currentFolder;
+		if (node.type === 'folder') return node.path;
+		const idx = node.path.lastIndexOf('/');
+		return idx >= 0 ? node.path.slice(0, idx) : '';
+	}
+
+	function openContextMenu(node, x, y) {
+		metaNode = null;
+		contextMenu = { node, x, y };
+	}
+
+	function closeContextMenu() {
+		contextMenu = null;
+	}
+
+	async function handleCreateNode(type) {
+		const node = contextMenu?.node ?? null;
+		closeContextMenu();
+		if (dirty && !confirm('저장하지 않은 위치/연결 변경사항이 있습니다. 새로 만들면 사라집니다. 계속할까요?')) {
+			return;
+		}
+		const name = prompt(`생성할 ${type === 'folder' ? '폴더' : '파일'} 이름`);
+		if (!name || !name.trim()) return;
+		try {
+			await createNode({
+				parent_path: parentPathOf(node),
+				name: name.trim(),
+				type,
+				link_from: node?.type === 'file' ? node.path : undefined
+			});
+			await reloadGraph();
+		} catch (e) {
+			error = e.message;
+		}
+	}
+
+	// 모바일: 첫 탭엔 메타데이터 툴팁만 띄우고, 그 노드를 다시 탭하면 편집창을 연다
+	function handleNodeTap(node) {
+		if (metaNode === node.path) {
+			metaNode = null;
+			openEditPanel(node);
 		} else {
-			openPanel(node);
+			metaNode = node.path;
 		}
 	}
 
@@ -235,8 +318,25 @@
 	}
 
 	function nodeCenter(node) {
+		// 노드 아이콘(circle)이 row 레이아웃 맨 왼쪽에 있으므로 중심은 (x+r, y+r)
 		const r = node.type === 'folder' ? 17 : 11;
-		return { x: node.x + 28, y: node.y + r };
+		return { x: node.x + r, y: node.y + r };
+	}
+
+	// 두 노드 중심을 잇는 3차 베지어 스플라인. 두 노드 중 더 벌어진 축(가로/세로)으로만
+	// 진입/진출하게 컨트롤포인트를 맞춰서, 각 노드에서 선이 상하좌우 90도로만 붙게 한다.
+	function edgePath(a, b) {
+		const dx = b.x - a.x;
+		const dy = b.y - a.y;
+		const offset = Math.min(Math.max(Math.max(Math.abs(dx), Math.abs(dy)) * 0.5, 24), 60);
+		const horizontal = Math.abs(dx) >= Math.abs(dy);
+		const sx = Math.sign(dx) || 1;
+		const sy = Math.sign(dy) || 1;
+		const c1x = horizontal ? a.x + sx * offset : a.x;
+		const c1y = horizontal ? a.y : a.y + sy * offset;
+		const c2x = horizontal ? b.x - sx * offset : b.x;
+		const c2y = horizontal ? b.y : b.y - sy * offset;
+		return `M ${a.x} ${a.y} C ${c1x} ${c1y} ${c2x} ${c2y} ${b.x} ${b.y}`;
 	}
 
 	function handleWheelZoom(e) {
@@ -309,88 +409,49 @@
 		window.removeEventListener('pointerup', handleWrapperPointerUp);
 	}
 
-	function openPanel(node) {
-		if (!node) return;
-		panelNode = node;
-		panelMode = 'view';
-		panelStatus = node.status;
-		panelStart = node.start_date || '';
-		panelEnd = node.end_date || '';
-		panelBody = '';
-		panelBodyLoaded = false;
+	// 폴더 노드는 그 폴더의 README.md를 곧 자기 자신처럼 편집한다 (폴더 == README.md 파일노드)
+	function panelNotePath(node) {
+		return node.type === 'folder' ? `${node.path}/README.md` : node.path;
 	}
 
-	async function enterEditMode() {
-		panelMode = 'edit';
-		if (panelNode?.type === 'file' && !panelBodyLoaded) {
-			try {
-				const content = await getNodeContent(panelNode.path);
-				panelBody = content.content;
-				panelBodyLoaded = true;
-			} catch (e) {
-				error = e.message;
-			}
+	async function openEditPanel(node) {
+		if (!node) return;
+		panelNode = node;
+		panelBody = '';
+		metaNode = null;
+		try {
+			const content = await getNodeContent(panelNotePath(node));
+			// frontmatter가 아직 없는 파일(= status 등을 한번도 저장한 적 없는 파일)은 기본 블록을 붙여서 보여준다
+			panelBody = content.content.startsWith('---')
+				? content.content
+				: `---\nstatus: ${node.status}\n---\n\n${content.content}`;
+		} catch (e) {
+			error = e.message;
 		}
 	}
 
 	function closePanel() {
 		panelNode = null;
-		panelMode = 'view';
-	}
-
-	// 파일 원문 맨 위 --- ~ --- 블록만 가볍게 파싱 (다이어그램 뱃지 갱신용, 서버 파싱 로직과 동일한 규칙)
-	function parseLeadingFrontmatter(text) {
-		const lines = text.split('\n');
-		if (lines[0]?.trim() !== '---') return {};
-		let end = -1;
-		for (let i = 1; i < lines.length; i++) {
-			if (lines[i].trim() === '---') {
-				end = i;
-				break;
-			}
-		}
-		if (end < 0) return {};
-		const meta = {};
-		for (const line of lines.slice(1, end)) {
-			const idx = line.indexOf(':');
-			if (idx < 0) continue;
-			meta[line.slice(0, idx).trim()] = line
-				.slice(idx + 1)
-				.trim()
-				.replace(/^["']|["']$/g, '');
-		}
-		return meta;
+		metaNode = null;
 	}
 
 	async function savePanel() {
 		if (!panelNode) return;
 		panelSaving = true;
 		try {
-			if (panelNode.type === 'folder') {
-				await saveFolderMeta({
-					path: panelNode.path,
-					status: panelStatus,
-					start_date: panelStart || null,
-					end_date: panelEnd || null
-				});
-				const node = nodeByPath(panelNode.path);
-				if (node) {
-					node.status = panelStatus;
-					node.start_date = panelStart || null;
-					node.end_date = panelEnd || null;
-					nodes = nodes;
-				}
-			} else {
-				await saveNode({ path: panelNode.path, content: panelBody });
-				const meta = parseLeadingFrontmatter(panelBody);
-				const node = nodeByPath(panelNode.path);
-				if (node) {
-					node.status = STATUS_OPTIONS.some((s) => s.value === meta.status) ? meta.status : 'planned';
-					node.start_date = meta.start_date || null;
-					node.end_date = meta.end_date || null;
-					nodes = nodes;
-				}
+			await saveNode({ path: panelNotePath(panelNode), content: panelBody });
+
+			// 서버가 실제로 저장한 값을 다시 읽어와 캔버스에 반영 (프론트에서 frontmatter를 다시 파싱해 추측하지 않음)
+			const fresh = await getGraph(currentFolder);
+			const freshNode = fresh.nodes.find((n) => n.path === panelNode.path);
+			const node = nodeByPath(panelNode.path);
+			if (freshNode && node) {
+				node.status = freshNode.status;
+				node.start_date = freshNode.start_date;
+				node.end_date = freshNode.end_date;
+				nodes = [...nodes]; // 새 배열 참조로 캔버스 리렌더 강제
 			}
+
 			closePanel();
 		} catch (e) {
 			error = e.message;
@@ -403,7 +464,7 @@
 <div class="projects-page">
 	<div class="page-header">
 		<div>
-			<h1>프로젝트</h1>
+			<h1>Projects</h1>
 		</div>
 		<div class="toolbar-actions">
 			<ProjectVisibilityManager projects={subprojects} onToggle={handleToggleProjectHide} />
@@ -437,9 +498,11 @@
 	{:else}
 		<div
 			class="canvas-wrapper"
+			role="presentation"
 			bind:this={canvasWrapperEl}
 			onwheel={handleWheelZoom}
 			onpointerdown={handleWrapperPointerDown}
+			oncontextmenu={handleCanvasContextMenu}
 			ontouchstart={handleTouchStart}
 			ontouchmove={handleTouchMove}
 			ontouchend={handleTouchEnd}
@@ -452,11 +515,9 @@
 						{#if from && to}
 							{@const a = nodeCenter(from)}
 							{@const b = nodeCenter(to)}
-							<line
-								x1={a.x}
-								y1={a.y}
-								x2={b.x}
-								y2={b.y}
+							<path
+								d={edgePath(a, b)}
+								fill="none"
 								stroke={edge.type === 'manual' ? 'var(--accent)' : 'var(--border-color-dark)'}
 								stroke-width="2"
 								stroke-dasharray={edge.type === 'manual' ? '6 4' : 'none'}
@@ -471,25 +532,56 @@
 						class:folder-node={node.type === 'folder'}
 						class:connect-selected={connectFrom === node.path}
 						class:selected={panelNode?.path === node.path}
+						class:meta-active={metaNode === node.path}
 						style="left: {node.x}px; top: {node.y}px;"
 						onpointerdown={(e) => handlePointerDown(e, node)}
 						onclick={() => handleNodeClick(node)}
+						oncontextmenu={(e) => handleContextMenu(e, node)}
 						onkeydown={(e) =>
 							(e.key === 'Enter' || e.key === ' ') &&
-							(connectMode ? handleNodeClick(node) : handleNodeActivate(node))}
+							(connectMode ? handleNodeClick(node) : openEditPanel(node))}
 						role="button"
 						tabindex="0"
 					>
 						<div class="node-circle" style="background: {statusInfo(node.status).color};">
 							{node.type === 'folder' ? '📁' : '📄'}
 						</div>
-						<div class="node-name">{node.name}</div>
+						<div class="node-label">
+							<span class="node-name">{node.name}</span>
+							<div class="node-meta-tooltip">
+								<span
+									class="badge"
+									style="background: {statusInfo(node.status).color}; color: white;"
+								>
+									{statusInfo(node.status).label}
+								</span>
+								<span class="node-meta-dates">{node.start_date || '-'} ~ {node.end_date || '-'}</span>
+							</div>
+						</div>
 					</div>
 				{/each}
 			</div>
 		</div>
 	{/if}
 </div>
+
+{#if contextMenu}
+	<div
+		class="context-menu-overlay"
+		role="presentation"
+		onclick={closeContextMenu}
+		oncontextmenu={(e) => {
+			e.preventDefault();
+			closeContextMenu();
+		}}
+	></div>
+	<div class="context-menu" style="left: {contextMenu.x}px; top: {contextMenu.y}px;">
+		{#if contextMenu.node}
+			<button onclick={() => handleCreateNode('file')}>📄 파일 생성</button>
+		{/if}
+		<button onclick={() => handleCreateNode('folder')}>📁 폴더 생성</button>
+	</div>
+{/if}
 
 {#if panelNode}
 	<div class="side-panel">
@@ -498,68 +590,20 @@
 				<span class="node-icon">{panelNode.type === 'folder' ? '📁' : '📄'}</span>
 				{panelNode.name}
 			</h2>
-			<button class="btn-secondary" onclick={closePanel}>닫기</button>
+			<button class="btn-secondary" onclick={savePanel} disabled={panelSaving}>닫기</button>
+		</div>
+		
+		<div class="side-panel-editor">
+			{#key panelNode.path}
+				<TuiEditor bind:value={panelBody} height="100%" previewStyle="tab" />
+			{/key}
 		</div>
 
-		{#if panelMode === 'view'}
-			<dl class="meta-view">
-				<dt>상태</dt>
-				<dd>
-					<span class="badge" style="background: {statusInfo(panelNode.status).color}; color: white;">
-						{statusInfo(panelNode.status).label}
-					</span>
-				</dd>
-				<dt>시작일</dt>
-				<dd>{panelNode.start_date || '-'}</dd>
-				<dt>종료일</dt>
-				<dd>{panelNode.end_date || '-'}</dd>
-				<dt>경로</dt>
-				<dd class="meta-path">{panelNode.path}</dd>
-			</dl>
-			<p class="edit-hint">한 번 더 클릭하면 편집할 수 있습니다.</p>
-			<div class="side-panel-footer">
-				<button class="btn-primary" onclick={enterEditMode}>✏️ 편집</button>
-			</div>
-		{:else if panelNode.type === 'folder'}
-			<div class="form-row">
-				<div class="form-group">
-					<label for="panel-status">상태</label>
-					<select id="panel-status" bind:value={panelStatus}>
-						{#each STATUS_OPTIONS as opt (opt.value)}
-							<option value={opt.value}>{opt.label}</option>
-						{/each}
-					</select>
-				</div>
-				<div class="form-group">
-					<label for="panel-start">시작일</label>
-					<input id="panel-start" type="date" bind:value={panelStart} />
-				</div>
-				<div class="form-group">
-					<label for="panel-end">종료일</label>
-					<input id="panel-end" type="date" bind:value={panelEnd} />
-				</div>
-			</div>
-			<p class="folder-panel-hint">폴더 노드는 상태/기간만 저장됩니다 ({panelNode.path}/README.md).</p>
-
-			<div class="side-panel-footer">
-				<button class="btn-primary" onclick={savePanel} disabled={panelSaving}>
-					{panelSaving ? '저장 중...' : '저장'}
-				</button>
-			</div>
-		{:else}
-			<p class="edit-hint">맨 위 --- ~ --- 블록에서 status / start_date / end_date를 직접 수정할 수 있습니다.</p>
-			<div class="side-panel-editor">
-				{#key panelNode.path}
-					<TuiEditor bind:value={panelBody} height="100%" previewStyle="tab" />
-				{/key}
-			</div>
-
-			<div class="side-panel-footer">
-				<button class="btn-primary" onclick={savePanel} disabled={panelSaving}>
-					{panelSaving ? '저장 중...' : '저장'}
-				</button>
-			</div>
-		{/if}
+		<div class="side-panel-footer">
+			<button class="btn-primary" onclick={savePanel} disabled={panelSaving}>
+				{panelSaving ? '저장 중...' : '저장'}
+			</button>
+		</div>
 	</div>
 {/if}
 
@@ -596,6 +640,7 @@
 		width: 3000px;
 		height: 2000px;
 		transform-origin: 0 0;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M64 0H0V64' fill='none' stroke='%238D8C8A' stroke-opacity='0.45' stroke-width='1' stroke-dasharray='4 4'/%3E%3C/svg%3E");
 	}
 
 	.edges-layer {
@@ -609,11 +654,12 @@
 
 	.project-node {
 		position: absolute;
-		width: 56px;
+		width: max-content;
+		max-width: 160px;
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
 		align-items: center;
-		gap: 3px;
+		gap: 6px;
 		cursor: grab;
 		user-select: none;
 		touch-action: none;
@@ -626,6 +672,7 @@
 	.node-circle {
 		width: 22px;
 		height: 22px;
+		flex-shrink: 0;
 		border-radius: 50%;
 		display: flex;
 		align-items: center;
@@ -658,15 +705,82 @@
 		outline-offset: 2px;
 	}
 
+	.node-label {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 2px;
+		min-width: 0;
+	}
+
 	.node-name {
-		font-size: 0.65rem;
-		text-align: center;
-		word-break: break-word;
+		font-size: 0.7rem;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 130px;
 		color: var(--text-primary);
+	}
+
+	.node-meta-tooltip {
+		display: none;
+		align-items: center;
+		gap: 6px;
+		font-size: 0.65rem;
+		white-space: nowrap;
+	}
+
+	.node-meta-tooltip .badge {
+		padding: 1px 6px;
+		border-radius: 8px;
+		font-size: 0.6rem;
+	}
+
+	.node-meta-dates {
+		color: var(--text-tertiary);
+	}
+
+	.project-node:hover .node-meta-tooltip,
+	.project-node.meta-active .node-meta-tooltip {
+		display: flex;
 	}
 
 	.node-icon {
 		margin-right: 4px;
+	}
+
+	.context-menu-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 1100;
+	}
+
+	.context-menu {
+		position: fixed;
+		z-index: 1101;
+		display: flex;
+		flex-direction: column;
+		min-width: 140px;
+		background: var(--bg-primary);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		box-shadow: var(--shadow-lg);
+		padding: 4px;
+	}
+
+	.context-menu button {
+		background: none;
+		border: none;
+		text-align: left;
+		padding: 8px 10px;
+		border-radius: 6px;
+		font-size: 0.9rem;
+		color: var(--text-primary);
+		cursor: pointer;
+	}
+
+	.context-menu button:hover {
+		background: var(--bg-secondary);
 	}
 
 	.side-panel {
@@ -690,53 +804,9 @@
 		align-items: center;
 	}
 
-	.side-panel .form-row {
-		grid-template-columns: repeat(3, 1fr);
-	}
-
-	.side-panel .form-group {
-		flex-direction: column;
-		align-items: stretch;
-	}
-
-	.side-panel .form-group label {
-		min-width: 0;
-	}
-
 	.side-panel-editor {
 		flex: 1;
 		min-height: 0;
-	}
-
-	.folder-panel-hint {
-		color: var(--text-tertiary);
-		font-size: 0.9rem;
-	}
-
-	.meta-view {
-		display: grid;
-		grid-template-columns: auto 1fr;
-		gap: 10px 16px;
-	}
-
-	.meta-view dt {
-		color: var(--text-tertiary);
-		font-size: 0.9rem;
-	}
-
-	.meta-view dd {
-		color: var(--text-primary);
-	}
-
-	.meta-path {
-		font-size: 0.85rem;
-		word-break: break-all;
-		color: var(--text-secondary);
-	}
-
-	.edit-hint {
-		color: var(--text-tertiary);
-		font-size: 0.85rem;
 	}
 
 	.side-panel-footer {

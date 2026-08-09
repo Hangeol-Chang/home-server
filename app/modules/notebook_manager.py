@@ -400,34 +400,6 @@ def ensure_vault_branch():
     print(f"[notebook] Switched obsidian-vault to branch '{VAULT_BRANCH}' (was: '{current or 'detached HEAD'}')")
 
 
-def update_parent_submodule_pointer(vault_commit_message: str):
-    """home-server 레포의 obsidian-vault 서브모듈 포인터를 최신으로 갱신"""
-    try:
-        status_result = subprocess.run(
-            ["git", "status", "--porcelain", "obsidian-vault"],
-            cwd=REPO_PATH, capture_output=True, text=True
-        )
-        if not status_result.stdout.strip():
-            return
-
-        subprocess.run(
-            ["git", "add", "obsidian-vault"],
-            cwd=REPO_PATH, check=True, capture_output=True, text=True
-        )
-        subprocess.run(
-            ["git", "commit", "-m", f"chore: update obsidian-vault pointer ({vault_commit_message})"],
-            cwd=REPO_PATH, check=True, capture_output=True, text=True
-        )
-        subprocess.run(
-            ["git", "push"],
-            cwd=REPO_PATH, check=True, capture_output=True, text=True
-        )
-        print("Parent submodule pointer updated.")
-    except subprocess.CalledProcessError as e:
-        # 포인터 갱신 실패는 vault 작업 자체를 막지 않도록 경고만 출력
-        print(f"update_parent_submodule_pointer failed: {e.stderr}")
-
-
 def is_git_repo(path: Path) -> bool:
     """해당 경로가 유효한 git 저장소인지 확인"""
     git_dir = path / ".git"
@@ -444,7 +416,7 @@ _git_sync_lock = threading.Lock()
 
 
 def sync_vault_to_git(commit_message: str):
-    """Vault 변경사항을 Git에 커밋하고 푸시한 뒤 부모 레포 서브모듈 포인터도 갱신.
+    """Vault 변경사항만 Git에 커밋하고 푸시 (home-server 레포는 건드리지 않음).
     .git이 없는 환경(Mutagen sync 등)에서는 git 작업을 건너뜀.
     동시 요청(예: 다이어그램에서 노드 여러 개를 빠르게 드래그)이 겹치면 git이
     .git/index.lock 충돌로 실패하므로, 락으로 직렬화한다."""
@@ -468,9 +440,6 @@ def sync_vault_to_git(commit_message: str):
         run_git_command(["git", "add", "."])
         run_git_command(["git", "commit", "-m", commit_message])
         run_git_command(["git", "push", "--set-upstream", "origin", VAULT_BRANCH])
-
-        # 4. 부모 레포 서브모듈 포인터 갱신
-        update_parent_submodule_pointer(commit_message)
 
 @router.get("/git-status")
 def git_status():

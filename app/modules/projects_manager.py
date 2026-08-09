@@ -6,7 +6,8 @@ from fastapi import APIRouter, HTTPException, Query, status
 
 from models.projects import (
     ProjectStatus, ProjectNode, ProjectEdge, ProjectGraph,
-    SaveGraphRequest, SaveNodeRequest, NodeContent, FolderMetaRequest, SubprojectInfo
+    SaveGraphRequest, SaveNodeRequest, NodeContent, FolderMetaRequest, SubprojectInfo,
+    CreateNodeRequest
 )
 from modules.notebook_manager import VAULT_PATH, get_safe_path, sync_vault_to_git
 
@@ -117,6 +118,22 @@ def write_node_frontmatter(file_path: Path, updates: Dict[str, str]):
     else:
         new_text = body
     file_path.write_text(new_text, encoding='utf-8')
+
+
+def add_link(source_path: Path, target_rel_path: str):
+    """source_path 노드의 metadata에 target_rel_path로의 수동 연결(links) 추가"""
+    if source_path.is_dir():
+        meta = read_folder_meta(source_path)
+        links = parse_links(meta)
+        if target_rel_path not in links:
+            links.append(target_rel_path)
+        meta["links"] = format_links(links)
+        write_folder_meta(source_path, meta)
+    else:
+        links = parse_links(read_node_meta(source_path))
+        if target_rel_path not in links:
+            links.append(target_rel_path)
+        write_node_frontmatter(source_path, {"links": format_links(links)})
 
 
 def status_or_default(meta: Dict[str, str]) -> str:
@@ -355,3 +372,44 @@ def save_folder_meta(request: FolderMetaRequest):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     return {"status": "success", "path": request.path}
+
+
+@router.post("/create-node")
+def create_node(request: CreateNodeRequest):
+    """부모 폴더 노드 아래에 새 파일/폴더 노드 생성 (트리 연결은 폴더 구조로 자동 계산됨)"""
+    parent_path = get_safe_path(request.parent_path)
+    if not parent_path.exists() or not parent_path.is_dir():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent folder not found")
+
+    name = request.name.strip()
+    if not name or '/' in name or '\\' in name or name in ('.', '..'):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid name")
+
+    try:
+        if request.type == "folder":
+            target_path = parent_path / name
+            if target_path.exists():
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Already exists")
+            target_path.mkdir(parents=True)
+            ensure_folder_note(target_path)
+        else:
+            filename = name if name.lower().endswith(('.md', '.markdown')) else f'{name}.md'
+            target_path = parent_path / filename
+            if target_path.exists():
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Already exists")
+            target_path.write_text(f'---\nstatus: planned\n---\n\n# {name}\n', encoding='utf-8')
+
+        rel_path = str(target_path.relative_to(VAULT_PATH)).replace('\\', '/')
+
+        if request.link_from:
+            link_from_path = get_safe_path(request.link_from)
+            if link_from_path.exists():
+                add_link(link_from_path, rel_path)
+
+        sync_vault_to_git(f"Create project {request.type} {rel_path}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    return {"status": "success", "path": rel_path, "type": request.type}

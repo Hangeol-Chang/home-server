@@ -70,3 +70,10 @@ class SaveNodeRequest(BaseModel):
 class NodeContent(BaseModel):
     path: str
     content: str = Field(..., description="frontmatter 포함 파일 전체 원문")
+
+
+class CreateNodeRequest(BaseModel):
+    parent_path: str = Field(..., description="생성 위치가 될 부모 폴더 노드의 vault 기준 경로")
+    name: str
+    type: Literal["file", "folder"]
+    link_from: Optional[str] = Field(None, description="파일 노드에서 생성한 경우, 그 파일 노드와 수동 연결(links)을 추가")

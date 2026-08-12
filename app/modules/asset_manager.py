@@ -13,7 +13,7 @@ from models.asset import (
     AssetBudget, AssetBudgetCreate, AssetBudgetUpdate,
     RecurringPayment, RecurringPaymentCreate, RecurringPaymentUpdate, RecurringPaymentDetail
 )
-from utils.database import get_db_connection
+from utils.database import get_db_connection, build_update_clause, resolve_tier_id
 
 # 라우터 생성
 router = APIRouter(
@@ -90,6 +90,26 @@ def get_asset_tags(cursor, asset_id: int) -> List[str]:
     """, (asset_id,))
     
     return [row[0] for row in cursor.fetchall()]
+
+def get_asset_tags_batch(cursor, asset_ids: List[int]) -> dict:
+    """여러 거래의 태그를 한 번에 조회 (N+1 방지)"""
+    tags_by_asset = {asset_id: [] for asset_id in asset_ids}
+    if not asset_ids:
+        return tags_by_asset
+
+    placeholders = ",".join("?" * len(asset_ids))
+    cursor.execute(f"""
+        SELECT r.asset_id, t.name
+        FROM asset_tags t
+        JOIN asset_tag_relations r ON t.id = r.tag_id
+        WHERE r.asset_id IN ({placeholders})
+        ORDER BY t.name
+    """, asset_ids)
+
+    for asset_id, tag_name in cursor.fetchall():
+        tags_by_asset[asset_id].append(tag_name)
+
+    return tags_by_asset
 
 # ===== Classes (거래 분류) API =====
 
@@ -499,15 +519,11 @@ def get_unclassified_transactions():
             ORDER BY t.date DESC, t.id DESC
         """)
         
-        transactions = []
-        rows = cursor.fetchall()
-        
-        for row in rows:
-            row_dict = dict(row)
-            # 태그 조회
-            row_dict['tags'] = get_asset_tags(cursor, row_dict['id'])
-            transactions.append(row_dict)
-            
+        transactions = [dict(row) for row in cursor.fetchall()]
+        tags_by_asset = get_asset_tags_batch(cursor, [t['id'] for t in transactions])
+        for t in transactions:
+            t['tags'] = tags_by_asset[t['id']]
+
         return transactions
 
 @router.get("/transactions", response_model=List[AssetTransactionDetail])
@@ -565,15 +581,13 @@ def get_transactions(
         params.extend([limit, offset])
         
         cursor.execute(query, params)
-        rows = cursor.fetchall()
-        
-        # 각 거래의 태그 조회
-        result = []
-        for row in rows:
-            row_dict = dict(row)
-            row_dict['tags'] = get_asset_tags(cursor, row_dict['id'])
-            result.append(row_dict)
-        
+        result = [dict(row) for row in cursor.fetchall()]
+
+        # 각 거래의 태그 일괄 조회
+        tags_by_asset = get_asset_tags_batch(cursor, [t['id'] for t in result])
+        for t in result:
+            t['tags'] = tags_by_asset[t['id']]
+
         return result
 
 @router.get("/transactions/{transaction_id}", response_model=AssetTransactionDetail)
@@ -676,12 +690,11 @@ def update_transaction(transaction_id: int, transaction: AssetTransactionUpdate)
         
         # 기본 필드 업데이트
         if update_data:
-            set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
-            set_clause += ", updated_at = CURRENT_TIMESTAMP"
-            params = list(update_data.values()) + [transaction_id]
-            
+            set_clause, params = build_update_clause(update_data, touch_updated_at=True)
+            params.append(transaction_id)
+
             cursor.execute(f"""
-                UPDATE assets 
+                UPDATE assets
                 SET {set_clause}
                 WHERE id = ?
             """, params)
@@ -1019,17 +1032,11 @@ def get_period_comparison(
                 LIMIT 5
             """, (period_start.strftime("%Y-%m-%d"), period_end.strftime("%Y-%m-%d")))
             
+            top_rows = cursor.fetchall()
+            tags_by_asset = get_asset_tags_batch(cursor, [row[0] for row in top_rows])
+
             top_transactions = []
-            for row in cursor.fetchall():
-                # 태그 조회
-                cursor.execute("""
-                    SELECT at.name
-                    FROM asset_tags at
-                    JOIN asset_tag_relations atr ON at.id = atr.tag_id
-                    WHERE atr.asset_id = ?
-                """, (row[0],))
-                tags = [t[0] for t in cursor.fetchall()]
-                
+            for row in top_rows:
                 top_transactions.append({
                     "id": row[0],
                     "name": row[1],
@@ -1046,7 +1053,7 @@ def get_period_comparison(
                     "tier_level": row[12],
                     "tier_name": row[13],
                     "tier_display_name": row[14],
-                    "tags": tags
+                    "tags": tags_by_asset[row[0]]
                 })
             
             period_data_list.append({
@@ -1177,11 +1184,11 @@ def update_tag(tag_id: int, tag: AssetTagUpdate):
                 )
         
         # 업데이트 쿼리 생성
-        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
-        params = list(update_data.values()) + [tag_id]
-        
+        set_clause, params = build_update_clause(update_data)
+        params.append(tag_id)
+
         cursor.execute(f"""
-            UPDATE asset_tags 
+            UPDATE asset_tags
             SET {set_clause}
             WHERE id = ?
         """, params)
@@ -1275,6 +1282,14 @@ def search_transactions(
 
 # ===== Budget (예산) API =====
 
+def _apply_budget_cap(amount: float, default_budget: float, rollover_amount: float) -> float:
+    """예산 상한 적용: 기본 예산의 2배(2N)를 넘지 않도록 캡"""
+    if default_budget > 0:
+        return min(amount, default_budget * 2)
+    if rollover_amount > 0:
+        return 0
+    return amount
+
 def calculate_budget_for_month(cursor, category_id: int, year: int, month: int) -> dict:
     """특정 월의 예산을 계산하고 DB에 저장 (이월 로직 포함)"""
     
@@ -1345,14 +1360,7 @@ def calculate_budget_for_month(cursor, category_id: int, year: int, month: int) 
         if existing_dict['rollover_amount'] != rollover_amount:
             # budget_amount는 (기존 예산액 - 기존 이월액 + 새 이월액)으로 보정
             new_budget_amount = existing_dict['budget_amount'] - existing_dict['rollover_amount'] + rollover_amount
-            
-            # 단, 이월외는 예산이 많더라도 최대 2N원을 넘어가지 않게 해줘
-            if default_budget > 0:
-                max_cap = default_budget * 2
-                if new_budget_amount > max_cap:
-                    new_budget_amount = max_cap
-            elif default_budget == 0 and rollover_amount > 0:
-                new_budget_amount = 0
+            new_budget_amount = _apply_budget_cap(new_budget_amount, default_budget, rollover_amount)
 
             cursor.execute("""
                 UPDATE asset_budgets
@@ -1371,19 +1379,8 @@ def calculate_budget_for_month(cursor, category_id: int, year: int, month: int) 
 
     # 4. 새 예산 계산
     new_budget = default_budget + rollover_amount
-    
-    # 이월외는 예산이 많더라도 최대 2N원을 넘어가지 않게 해줘
-    if default_budget > 0:
-        max_cap = default_budget * 2
-        if new_budget > max_cap:
-            new_budget = max_cap
-    elif default_budget == 0 and rollover_amount > 0:
-        # 기본 예산이 0인 경우, 이월금이 있어도 예산은 0이 됨 (2N = 0)
-        # 하지만 사용자가 의도적으로 0으로 설정했을 수 있으므로, 
-        # 이월금만이라도 유지할지, 아니면 0으로 날릴지 결정해야 함.
-        # 요구사항: "최대 2N원을 넘어가지 않게 해줘" -> N=0이면 0이어야 함.
-        new_budget = 0
-            
+    new_budget = _apply_budget_cap(new_budget, default_budget, rollover_amount)
+
     # 5. DB 저장
     cursor.execute("""
         INSERT INTO asset_budgets (category_id, year, month, budget_amount, rollover_amount)
@@ -1485,17 +1482,7 @@ def create_recurring_payment(payment: RecurringPaymentCreate):
         cursor = conn.cursor()
 
         # tier_id가 없으면 sub_category 또는 category 기본 tier 사용
-        tier_id = payment.tier_id
-        if not tier_id and payment.sub_category_id:
-            cursor.execute("SELECT tier_id FROM asset_sub_categories WHERE id = ?", (payment.sub_category_id,))
-            row = cursor.fetchone()
-            if row:
-                tier_id = row[0]
-        if not tier_id:
-            cursor.execute("SELECT tier_id FROM asset_categories WHERE id = ?", (payment.category_id,))
-            row = cursor.fetchone()
-            if row:
-                tier_id = row[0]
+        tier_id = resolve_tier_id(cursor, payment.tier_id, payment.sub_category_id, payment.category_id)
 
         cursor.execute("""
             INSERT INTO recurring_payments (name, cost, class_id, category_id, sub_category_id, tier_id, day_of_month, description, is_active)
@@ -1536,8 +1523,8 @@ def update_recurring_payment(payment_id: int, payment: RecurringPaymentUpdate):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
 
         update_data['updated_at'] = datetime.now().isoformat()
-        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
-        params = list(update_data.values()) + [payment_id]
+        set_clause, params = build_update_clause(update_data)
+        params.append(payment_id)
 
         cursor.execute(f"UPDATE recurring_payments SET {set_clause} WHERE id = ?", params)
 
@@ -1593,19 +1580,31 @@ def update_category(category_id: int, category: AssetCategoryUpdate):
             )
         
         # 업데이트 쿼리 생성
-        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
-        params = list(update_data.values()) + [category_id]
-        
+        set_clause, params = build_update_clause(update_data)
+        params.append(category_id)
+
         cursor.execute(f"""
-            UPDATE asset_categories 
+            UPDATE asset_categories
             SET {set_clause}
             WHERE id = ?
         """, params)
         
         cursor.execute("""
-            SELECT id, class_id, name, display_name, tier_id, description, 
+            SELECT id, class_id, name, display_name, tier_id, description,
                    is_active, sort_order, created_at, default_budget, rollover_enabled
             FROM asset_categories WHERE id = ?
         """, (category_id,))
-        
+
         return dict(cursor.fetchone())
+
+
+def _self_check():
+    assert _apply_budget_cap(300, 100, 50) == 200   # capped at default_budget * 2
+    assert _apply_budget_cap(150, 100, 50) == 150   # under cap, unchanged
+    assert _apply_budget_cap(30, 0, 30) == 0         # no default budget, rollover exists -> 0
+    assert _apply_budget_cap(0, 0, 0) == 0           # no default budget, no rollover -> unchanged
+    print("asset_manager self-check passed")
+
+
+if __name__ == "__main__":
+    _self_check()

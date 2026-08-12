@@ -5,7 +5,7 @@ from datetime import datetime, date, timedelta
 import calendar
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from utils.database import get_db_connection
+from utils.database import get_db_connection, resolve_tier_id
 
 
 def _prev_month(year: int, month: int) -> tuple:
@@ -444,17 +444,7 @@ def process_recurring_payments():
                     print(f"[RecurringPayment] Already executed today: {p['name']} (id={payment_id})")
                     continue
 
-                tier_id = p['tier_id']
-                if not tier_id and p['sub_category_id']:
-                    cursor.execute("SELECT tier_id FROM asset_sub_categories WHERE id = ?", (p['sub_category_id'],))
-                    row = cursor.fetchone()
-                    if row:
-                        tier_id = row[0]
-                if not tier_id:
-                    cursor.execute("SELECT tier_id FROM asset_categories WHERE id = ?", (p['category_id'],))
-                    row = cursor.fetchone()
-                    if row:
-                        tier_id = row[0]
+                tier_id = resolve_tier_id(cursor, p['tier_id'], p['sub_category_id'], p['category_id'])
 
                 cursor.execute("""
                     INSERT INTO assets (name, cost, class_id, category_id, sub_category_id, tier_id, date, description)

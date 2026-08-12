@@ -22,6 +22,27 @@ def get_db_connection():
     finally:
         conn.close()
 
+def build_update_clause(update_data: dict, touch_updated_at: bool = False) -> tuple[str, list]:
+    """update_data 딕셔너리로부터 UPDATE SET 절과 파라미터 리스트 생성"""
+    set_parts = [f"{key} = ?" for key in update_data.keys()]
+    params = list(update_data.values())
+    if touch_updated_at:
+        set_parts.append("updated_at = CURRENT_TIMESTAMP")
+    return ", ".join(set_parts), params
+
+def resolve_tier_id(cursor, tier_id: Optional[int], sub_category_id: Optional[int], category_id: int) -> Optional[int]:
+    """tier_id 미지정 시 sub_category -> category 순으로 기본 tier 조회"""
+    if tier_id:
+        return tier_id
+    if sub_category_id:
+        cursor.execute("SELECT tier_id FROM asset_sub_categories WHERE id = ?", (sub_category_id,))
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+    cursor.execute("SELECT tier_id FROM asset_categories WHERE id = ?", (category_id,))
+    row = cursor.fetchone()
+    return row[0] if row else None
+
 def init_database():
     """데이터베이스 테이블 생성 및 초기 데이터 삽입"""
     with get_db_connection() as conn:
@@ -393,41 +414,7 @@ def init_database():
                         WHERE category_id = ? AND sub_category_id IS NULL
                     """, (sub_cat_id, cat_id))
             print("Sub Category Migration completed.")
-        
-        if categories_to_update:
-            print(f"Migrating {len(categories_to_update)} categories to have tier_id...")
-            for cat_id, class_id in categories_to_update:
-                # 해당 카테고리의 거래 내역에서 가장 많이 사용된 tier_id 조회
-                cursor.execute("""
-                    SELECT tier_id, COUNT(*) as count 
-                    FROM assets 
-                    WHERE category_id = ? 
-                    GROUP BY tier_id 
-                    ORDER BY count DESC 
-                    LIMIT 1
-                """, (cat_id,))
-                result = cursor.fetchone()
-                
-                best_tier_id = None
-                if result:
-                    best_tier_id = result[0]
-                else:
-                    # 거래 내역이 없으면 해당 클래스의 기본 티어(보통 99: 구분없음) 또는 첫 번째 티어 할당
-                    # 99번 티어(구분없음) 찾기
-                    cursor.execute("SELECT id FROM asset_tiers WHERE class_id = ? AND tier_level = 99", (class_id,))
-                    tier_row = cursor.fetchone()
-                    if tier_row:
-                        best_tier_id = tier_row[0]
-                    else:
-                        # 없으면 첫 번째 티어
-                        cursor.execute("SELECT id FROM asset_tiers WHERE class_id = ? ORDER BY tier_level ASC LIMIT 1", (class_id,))
-                        tier_row = cursor.fetchone()
-                        best_tier_id = tier_row[0] if tier_row else None
-                
-                if best_tier_id:
-                    cursor.execute("UPDATE asset_categories SET tier_id = ? WHERE id = ?", (best_tier_id, cat_id))
-            print("Migration completed.")
-        
+
         conn.commit()
         print("Database initialized successfully!")
 
@@ -505,6 +492,15 @@ def insert_initial_data(cursor):
     
     print("Initial data inserted successfully!")
 
+def _self_check():
+    clause, params = build_update_clause({"name": "a", "cost": 5})
+    assert clause == "name = ?, cost = ?" and params == ["a", 5]
+    clause, params = build_update_clause({"name": "a"}, touch_updated_at=True)
+    assert clause == "name = ?, updated_at = CURRENT_TIMESTAMP" and params == ["a"]
+    print("database self-check passed")
+
+
 # 앱 시작 시 데이터베이스 초기화
 if __name__ == "__main__":
+    _self_check()
     init_database()

@@ -11,7 +11,7 @@ from models.schedule import (
     Todo, TodoCreate, TodoUpdate,
     WeeklySchedule, WeeklyScheduleCreate, WeeklyScheduleUpdate
 )
-from utils.database import get_db_connection
+from utils.database import get_db_connection, build_update_clause
 import sqlite3
 
 router = APIRouter(
@@ -62,10 +62,9 @@ def update_recurring_schedule(schedule_id: int, schedule: RecurringScheduleUpdat
             cursor.execute("SELECT * FROM recurring_schedules WHERE id = ?", (schedule_id,))
             return dict(cursor.fetchone())
 
-        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
-        values = list(update_data.values())
+        set_clause, values = build_update_clause(update_data)
         values.append(schedule_id)
-        
+
         cursor.execute(f"UPDATE recurring_schedules SET {set_clause} WHERE id = ?", values)
         
         cursor.execute("SELECT * FROM recurring_schedules WHERE id = ?", (schedule_id,))
@@ -189,10 +188,9 @@ def update_long_term_plan(plan_id: int, plan: LongTermPlanUpdate):
             cursor.execute("SELECT * FROM long_term_plans WHERE id = ?", (plan_id,))
             return dict(cursor.fetchone())
 
-        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
-        values = list(update_data.values())
+        set_clause, values = build_update_clause(update_data)
         values.append(plan_id)
-        
+
         cursor.execute(f"UPDATE long_term_plans SET {set_clause} WHERE id = ?", values)
         
         cursor.execute("SELECT * FROM long_term_plans WHERE id = ?", (plan_id,))
@@ -208,12 +206,8 @@ def delete_long_term_plan(plan_id: int):
 
 # --- Google Calendar Events ---
 
-@router.get("/google-events")
-def get_google_events(year: int, month: int):
-    """
-    Fetch events from Google Calendar via iCal URL.
-    Requires GOOGLE_CALENDAR_ICS_URL environment variable.
-    """
+def _fetch_google_events(range_start: date, range_end: date):
+    """Fetch events from Google Calendar via iCal URL that overlap [range_start, range_end]."""
     ics_url = os.getenv("GOOGLE_CALENDAR_ICS_URL")
     if not ics_url:
         print("GOOGLE_CALENDAR_ICS_URL not set")
@@ -223,28 +217,20 @@ def get_google_events(year: int, month: int):
         response = requests.get(ics_url)
         response.raise_for_status()
         cal = Calendar.from_ical(response.content)
-        
+
         events = []
-        
-        # Calculate month range
-        # We want to include events that overlap with this month
-        month_start = date(year, month, 1)
-        if month == 12:
-            month_end = date(year + 1, 1, 1) - timedelta(days=1)
-        else:
-            month_end = date(year, month + 1, 1) - timedelta(days=1)
-            
+
         for component in cal.walk():
             if component.name == "VEVENT":
                 summary = str(component.get('summary'))
                 dtstart_prop = component.get('dtstart')
                 dtend_prop = component.get('dtend')
-                
+
                 if not dtstart_prop:
                     continue
-                    
+
                 dtstart = dtstart_prop.dt
-                
+
                 if dtend_prop:
                     dtend = dtend_prop.dt
                 else:
@@ -256,18 +242,17 @@ def get_google_events(year: int, month: int):
                     start_d = dtstart.date()
                 else:
                     start_d = dtstart
-                
+
                 if isinstance(dtend, datetime):
                     end_d = dtend.date()
                 else:
-                    end_d = dtend
                     # For all-day events (date type), dtend is exclusive in iCal
                     # We want inclusive for our frontend logic
-                    end_d = end_d - timedelta(days=1)
-                
-                # Check overlap with the requested month
-                # (Start <= MonthEnd) and (End >= MonthStart)
-                if start_d <= month_end and end_d >= month_start:
+                    end_d = dtend - timedelta(days=1)
+
+                # Check overlap with the requested range
+                # (Start <= RangeEnd) and (End >= RangeStart)
+                if start_d <= range_end and end_d >= range_start:
                     events.append({
                         "title": summary,
                         "start_date": start_d.isoformat(),
@@ -275,74 +260,30 @@ def get_google_events(year: int, month: int):
                         "color": "#4285F4", # Google Blue
                         "source": "google"
                     })
-                    
+
         return events
 
     except Exception as e:
         print(f"Error fetching Google Calendar: {e}")
         return []
+
+
+@router.get("/google-events")
+def get_google_events(year: int, month: int):
+    """Fetch Google Calendar events overlapping the given month."""
+    month_start = date(year, month, 1)
+    if month == 12:
+        month_end = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        month_end = date(year, month + 1, 1) - timedelta(days=1)
+
+    return _fetch_google_events(month_start, month_end)
 
 
 @router.get("/google-events/week")
 def get_google_events_for_week(start_date: date, end_date: date):
-    """
-    Fetch events from Google Calendar via iCal URL for a specific date range.
-    """
-    ics_url = os.getenv("GOOGLE_CALENDAR_ICS_URL")
-    if not ics_url:
-        print("GOOGLE_CALENDAR_ICS_URL not set")
-        return []
-
-    try:
-        response = requests.get(ics_url)
-        response.raise_for_status()
-        cal = Calendar.from_ical(response.content)
-        
-        events = []
-            
-        for component in cal.walk():
-            if component.name == "VEVENT":
-                summary = str(component.get('summary'))
-                dtstart_prop = component.get('dtstart')
-                dtend_prop = component.get('dtend')
-                
-                if not dtstart_prop:
-                    continue
-                    
-                dtstart = dtstart_prop.dt
-                
-                if dtend_prop:
-                    dtend = dtend_prop.dt
-                else:
-                    dtend = dtstart
-
-                # Normalize to date objects
-                if isinstance(dtstart, datetime):
-                    start_d = dtstart.date()
-                else:
-                    start_d = dtstart
-                
-                if isinstance(dtend, datetime):
-                    end_d = dtend.date()
-                else:
-                    end_d = dtend
-                    end_d = end_d - timedelta(days=1)
-                
-                # Check overlap with the requested range
-                if start_d <= end_date and end_d >= start_date:
-                    events.append({
-                        "title": summary,
-                        "start_date": start_d.isoformat(),
-                        "end_date": end_d.isoformat(),
-                        "color": "#4285F4",
-                        "source": "google"
-                    })
-                    
-        return events
-
-    except Exception as e:
-        print(f"Error fetching Google Calendar: {e}")
-        return []
+    """Fetch Google Calendar events overlapping the given date range."""
+    return _fetch_google_events(start_date, end_date)
 
 
 # --- Todo Items ---
@@ -417,10 +358,9 @@ def update_todo(todo_id: int, todo: TodoUpdate):
             return dict(cursor.fetchone())
 
         update_data['updated_at'] = datetime.now()
-        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
-        values = list(update_data.values())
+        set_clause, values = build_update_clause(update_data)
         values.append(todo_id)
-        
+
         cursor.execute(f"UPDATE todos SET {set_clause} WHERE id = ?", values)
         
         cursor.execute("SELECT * FROM todos WHERE id = ?", (todo_id,))
@@ -531,10 +471,9 @@ def update_weekly_schedule(schedule_id: int, schedule: WeeklyScheduleUpdate):
             return dict(cursor.fetchone())
 
         update_data['updated_at'] = datetime.now()
-        set_clause = ", ".join([f"{key} = ?" for key in update_data.keys()])
-        values = list(update_data.values())
+        set_clause, values = build_update_clause(update_data)
         values.append(schedule_id)
-        
+
         cursor.execute(f"UPDATE weekly_schedules SET {set_clause} WHERE id = ?", values)
         
         cursor.execute("SELECT * FROM weekly_schedules WHERE id = ?", (schedule_id,))

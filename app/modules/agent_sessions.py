@@ -6,17 +6,20 @@
 import json
 import sqlite3
 import uuid
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 DB_PATH = Path(__file__).parent.parent / "data" / "agent_sessions.db"
 
+_schema_ready = False
 
-def _conn() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
+
+def _ensure_schema(conn: sqlite3.Connection) -> None:
+    global _schema_ready
+    if _schema_ready:
+        return
     conn.execute("""
         CREATE TABLE IF NOT EXISTS agent_sessions (
             id          TEXT PRIMARY KEY,
@@ -35,11 +38,26 @@ def _conn() -> sqlite3.Connection:
     # 기존 DB에 summary 컬럼이 없으면 추가
     try:
         conn.execute("ALTER TABLE agent_sessions ADD COLUMN summary TEXT")
-        conn.commit()
-    except Exception:
+    except sqlite3.OperationalError:
         pass
     conn.commit()
-    return conn
+    _schema_ready = True
+
+
+@contextmanager
+def _conn():
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.row_factory = sqlite3.Row
+    _ensure_schema(conn)
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def create(objective: str, system_prompt: Optional[str]) -> str:
@@ -74,32 +92,28 @@ def save(session_id: str, status: str, iteration: int, error: Optional[str],
 
 def list_all(limit: int = 50) -> list[dict]:
     """세션 목록을 최신순으로 반환합니다 (messages/logs 제외)."""
-    conn = _conn()
-    rows = conn.execute(
-        """SELECT id, objective, status, iteration, error, started_at, finished_at, summary
-           FROM agent_sessions ORDER BY started_at DESC LIMIT ?""",
-        (limit,),
-    ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT id, objective, status, iteration, error, started_at, finished_at, summary
+               FROM agent_sessions ORDER BY started_at DESC LIMIT ?""",
+            (limit,),
+        ).fetchall()
+        return [dict(r) for r in rows]
 
 
 def get(session_id: str) -> Optional[dict]:
     """세션 전체 데이터를 반환합니다 (messages/logs 포함)."""
-    conn = _conn()
-    row = conn.execute("SELECT * FROM agent_sessions WHERE id=?", (session_id,)).fetchone()
-    conn.close()
-    if not row:
-        return None
-    d = dict(row)
+    with _conn() as conn:
+        row = conn.execute("SELECT * FROM agent_sessions WHERE id=?", (session_id,)).fetchone()
+        if not row:
+            return None
+        d = dict(row)
     d["messages"] = json.loads(d["messages"] or "[]")
     d["logs"] = json.loads(d["logs"] or "[]")
     return d
 
 
 def delete(session_id: str) -> bool:
-    conn = _conn()
-    affected = conn.execute("DELETE FROM agent_sessions WHERE id=?", (session_id,)).rowcount
-    conn.commit()
-    conn.close()
-    return affected > 0
+    with _conn() as conn:
+        affected = conn.execute("DELETE FROM agent_sessions WHERE id=?", (session_id,)).rowcount
+        return affected > 0

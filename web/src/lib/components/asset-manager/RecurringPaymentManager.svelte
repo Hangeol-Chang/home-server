@@ -13,6 +13,7 @@
 	let payments = $state([]);
 	let loading = $state(true);
 	let error = $state('');
+	let isExpanded = $state(false);
 
 	// 모달 상태
 	let isFormOpen = $state(false);
@@ -178,7 +179,22 @@
 
 <div class="module-container">
 	<div class="chart-header">
-		<h3>정기 결제 관리</h3>
+		<button class="recurring-toggle" onclick={() => (isExpanded = !isExpanded)}>
+			<svg
+				class="chevron"
+				class:expanded={isExpanded}
+				width="16"
+				height="16"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+			>
+				<polyline points="9 18 15 12 9 6"></polyline>
+			</svg>
+			<h3>정기 결제 관리</h3>
+			<span class="recurring-count">{payments.length}건</span>
+		</button>
 		<button class="add-btn" onclick={openNew}>
 			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<line x1="12" y1="5" x2="12" y2="19" />
@@ -188,16 +204,17 @@
 		</button>
 	</div>
 
-	<p class="recurring-subtitle">매월 설정한 날 KST 정오에 자동으로 소비가 등록됩니다.</p>
+	{#if isExpanded}
+		<p class="recurring-subtitle">매월 설정한 날 KST 정오에 자동으로 소비가 등록됩니다.</p>
 
-	{#if loading}
-		<div class="loading"><div class="spinner"></div></div>
-	{:else if error}
-		<div class="error"><p>{error}</p></div>
-	{:else if payments.length === 0}
-		<div class="no-data">등록된 정기 결제가 없습니다.</div>
-	{:else}
-		<div class="items-list">
+		{#if loading}
+			<div class="loading"><div class="spinner"></div></div>
+		{:else if error}
+			<div class="error"><p>{error}</p></div>
+		{:else if payments.length === 0}
+			<div class="no-data">등록된 정기 결제가 없습니다.</div>
+		{:else}
+			<div class="items-list">
 			{#each payments as p (p.id)}
 				{@const classType = classTypes.find(c => c.id === p.class_id)}
 				<div class="item-card" class:inactive={!p.is_active}>
@@ -244,6 +261,7 @@
 				</div>
 			{/each}
 		</div>
+		{/if}
 	{/if}
 </div>
 
@@ -384,6 +402,35 @@
 {/if}
 
 <style>
+	.recurring-toggle {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.recurring-toggle h3 {
+		margin: 0;
+	}
+
+	.recurring-count {
+		font-size: 0.85rem;
+		color: var(--text-tertiary);
+	}
+
+	.chevron {
+		color: var(--text-tertiary);
+		transition: transform 0.2s;
+		flex-shrink: 0;
+	}
+
+	.chevron.expanded {
+		transform: rotate(90deg);
+	}
+
 	.recurring-subtitle {
 		margin: -16px 0 20px 0;
 		font-size: 0.85rem;
@@ -415,8 +462,8 @@
 		text-align: center;
 		font-size: 1rem;
 		font-weight: 600;
-		color: var(--accent);
-		background: var(--bg-tertiary);
+		color: var(--text-primary);
+		background: var(--accent);
 		border-radius: 8px;
 		padding: 6px 4px;
 		flex-shrink: 0;

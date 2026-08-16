@@ -5,6 +5,7 @@
 	import '$lib/styles/module.css';
 	import '$lib/styles/module-common.css';
 	import ModuleIcon from '$lib/components/ui/ModuleIcon.svelte';
+	import QuoteOfTheDay from '$lib/components/ui/QuoteOfTheDay.svelte';
 
 	const modules = [
 		{ name: 'Asset Manager', href: '/asset-manager', icon: 'asset' },
@@ -30,6 +31,8 @@
 			</a>
 		{/each}
 	</nav>
+
+	<QuoteOfTheDay />
 
 	<div class="dashboard-container">
 		<!-- Asset Manager Dashboard -->

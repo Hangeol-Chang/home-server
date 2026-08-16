@@ -6,6 +6,7 @@
 	import TransactionDropdown from './TransactionDropdown.svelte';
 	import TransactionForm from './TransactionForm.svelte';
     import BudgetManager from './BudgetManager.svelte';
+    import TransactionTypeIcon from '$lib/components/ui/TransactionTypeIcon.svelte';
 
     let { class: className = '', style = '' } = $props();
 
@@ -216,7 +217,7 @@
 				</svg>
 			</button>
 			<h3>
-				📊 {year}-{month}
+				{year}-{month}
 			</h3>
 			<button class="nav-btn" onclick={() => changeMonth(1)} aria-label="다음 달">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -240,7 +241,7 @@
 		</div>
 	{:else if error}
 		<div class="error">
-			<p>⚠️ {error}</p>
+			<p>{error}</p>
 			<button class="retry-btn" onclick={loadStatistics}>다시 시도</button>
 		</div>
 	{:else if transactions && chartData()}
@@ -274,7 +275,7 @@
 								<tbody>
 									<tr class="row-earn">
 										<td class="cell-label">
-											<span class="cell-icon">💰</span>
+											<span class="cell-icon"><TransactionTypeIcon type="earn" /></span>
 											<span>수익</span>
 											{#if chartData().usingDefault}
 												<span class="cell-badge">d</span>
@@ -293,7 +294,7 @@
 
 									<tr class="row-spend">
 										<td class="cell-label">
-											<span class="cell-icon">💸</span>
+											<span class="cell-icon"><TransactionTypeIcon type="spend" /></span>
 											<span>지출</span>
 										</td>
 										<td class="cell-amount text-right">{formatCurrency(chartData().spend)}</td>
@@ -304,7 +305,7 @@
 
 									<tr class="row-save">
 										<td class="cell-label">
-											<span class="cell-icon">🏦</span>
+											<span class="cell-icon"><TransactionTypeIcon type="save" /></span>
 											<span>저축</span>
 										</td>
 										<td class="cell-amount text-right">{formatCurrency(chartData().save)}</td>
@@ -315,7 +316,7 @@
 
 									<tr class="{chartData().balance >= 0 ? 'row-positive' : 'row-negative'}">
 										<td class="cell-label">
-											<span class="cell-icon">{chartData().balance >= 0 ? '📈' : '📉'}</span>
+											<span class="cell-icon"><TransactionTypeIcon type={chartData().balance >= 0 ? 'earn' : 'spend'} /></span>
 											<span>잔액</span>
 										</td>
 										<td class="cell-amount text-right">

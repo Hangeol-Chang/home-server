@@ -2,6 +2,7 @@
 	import { createTransaction, updateTransaction, deleteTransaction, getCategories, getSubCategories, getTiers, getTags } from '$lib/api/asset-manager.js';
 	import { onMount, untrack } from 'svelte';
 	import { device } from '$lib/stores/device';
+	import TransactionTypeIcon from '$lib/components/ui/TransactionTypeIcon.svelte';
 
 	let {
 		isOpen = $bindable(false),
@@ -39,9 +40,9 @@
 	let error = $state('');
 
 	const classTypes = [
-		{ id: 1, name: 'spend', label: '지출', color: '#f44336', icon: '💸' },
-		{ id: 2, name: 'earn', label: '수익', color: '#4caf50', icon: '💰' },
-		{ id: 3, name: 'save', label: '저축', color: '#2196f3', icon: '🏦' }
+		{ id: 1, name: 'spend', label: '지출', color: '#f44336' },
+		{ id: 2, name: 'earn', label: '수익', color: '#4caf50' },
+		{ id: 3, name: 'save', label: '저축', color: '#2196f3' }
 	];
 
 	// 태그 목록 로드
@@ -291,7 +292,7 @@
 {#snippet formContent()}
 	<form class="transaction-form" onsubmit={handleSubmit}>
 		<div class="chart-header">
-			<h3>📝 {initialTransaction ? '거래 수정' : '거래 등록'}</h3>
+			<h3>{initialTransaction ? '거래 수정' : '거래 등록'}</h3>
 			<button type="button" class="icon-btn" onclick={handleCancel} aria-label="닫기">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<line x1="18" y1="6" x2="6" y2="18"></line>
@@ -314,14 +315,14 @@
 						loadCategoriesAndTiers();
 					}}
 				>
-					<span class="class-icon">{classType.icon}</span>
+					<span class="class-icon"><TransactionTypeIcon type={classType.name} /></span>
 					<span>{classType.label}</span>
 				</button>
 			{/each}
 		</div>
 
 		{#if error}
-			<div class="error-message">⚠️ {error}</div>
+			<div class="error-message">{error}</div>
 		{/if}
 
 		<!-- 날짜 -->

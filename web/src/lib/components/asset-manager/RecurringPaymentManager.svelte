@@ -8,6 +8,7 @@
 		getSubCategories,
 	} from '$lib/api/asset-manager.js';
 	import { onMount } from 'svelte';
+	import TransactionTypeIcon from '$lib/components/ui/TransactionTypeIcon.svelte';
 
 	let payments = $state([]);
 	let loading = $state(true);
@@ -34,9 +35,9 @@
 	let formError = $state('');
 
 	const classTypes = [
-		{ id: 1, label: '지출', color: '#f44336', icon: '💸' },
-		{ id: 2, label: '수익', color: '#4caf50', icon: '💰' },
-		{ id: 3, label: '저축', color: '#2196f3', icon: '🏦' }
+		{ id: 1, label: '지출', color: '#f44336', type: 'spend' },
+		{ id: 2, label: '수익', color: '#4caf50', type: 'earn' },
+		{ id: 3, label: '저축', color: '#2196f3', type: 'save' }
 	];
 
 	async function load() {
@@ -177,7 +178,7 @@
 
 <div class="module-container">
 	<div class="chart-header">
-		<h3>🔄 정기 결제 관리</h3>
+		<h3>정기 결제 관리</h3>
 		<button class="add-btn" onclick={openNew}>
 			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<line x1="12" y1="5" x2="12" y2="19" />
@@ -212,7 +213,7 @@
 					<div class="recurring-right">
 						<span class="recurring-cost">{p.cost.toLocaleString()}원</span>
 						<span class="badge" style="background: {classType?.color}22; color: {classType?.color}">
-							{classType?.icon} {classType?.label}
+							{classType?.label}
 						</span>
 						<div class="recurring-actions">
 							<button
@@ -252,7 +253,7 @@
 		<div class="modal-container" onclick={(e) => e.stopPropagation()} role="presentation">
 			<form onsubmit={handleSubmit}>
 				<div class="chart-header">
-					<h3>🔄 {editTarget ? '정기결제 수정' : '정기결제 추가'}</h3>
+					<h3>{editTarget ? '정기결제 수정' : '정기결제 추가'}</h3>
 					<button type="button" class="icon-btn" onclick={closeForm} aria-label="닫기">
 						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<line x1="18" y1="6" x2="6" y2="18"></line>
@@ -275,14 +276,14 @@
 								loadCategories();
 							}}
 						>
-							<span class="class-icon">{classType.icon}</span>
+							<span class="class-icon"><TransactionTypeIcon type={classType.type} /></span>
 							<span>{classType.label}</span>
 						</button>
 					{/each}
 				</div>
 
 				{#if formError}
-					<div class="error-message">⚠️ {formError}</div>
+					<div class="error-message">{formError}</div>
 				{/if}
 
 				<!-- 결제명 -->

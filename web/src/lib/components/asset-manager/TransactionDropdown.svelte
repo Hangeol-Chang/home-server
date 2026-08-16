@@ -1,4 +1,6 @@
 <script>
+	import TransactionTypeIcon from '$lib/components/ui/TransactionTypeIcon.svelte';
+
 	let {
 		selectedDate = $bindable(null),
 		visible = $bindable(false),
@@ -111,21 +113,21 @@
 						<tbody>
 							<tr class="row-spend">
 								<td class="cell-label">
-									<span class="cell-icon">💸</span>
+									<span class="cell-icon"><TransactionTypeIcon type="spend" /></span>
 									<span>지출</span>
 								</td>
 								<td class="cell-amount amount-spend text-right">-{formatCurrency(dayData.spend)}원</td>
 							</tr>
 							<tr class="row-earn">
 								<td class="cell-label">
-									<span class="cell-icon">💰</span>
+									<span class="cell-icon"><TransactionTypeIcon type="earn" /></span>
 									<span>수익</span>
 								</td>
 								<td class="cell-amount amount-earn text-right">+{formatCurrency(dayData.earn)}원</td>
 							</tr>
 							<tr class="row-save">
 								<td class="cell-label">
-									<span class="cell-icon">🏦</span>
+									<span class="cell-icon"><TransactionTypeIcon type="save" /></span>
 									<span>저축</span>
 								</td>
 								<td class="cell-amount amount-spend text-right">-{formatCurrency(dayData.save)}원</td>

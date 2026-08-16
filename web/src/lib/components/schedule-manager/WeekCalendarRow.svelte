@@ -350,7 +350,7 @@
 
 <div class="module-container" style={style} class:mobile={$device.isMobile}>
 	<div>
-		<h2 class="module-title">🚐 주간 일정</h2>
+		<h2 class="module-title">주간 일정</h2>
 	</div>
 
 	<div class="week-calendar">

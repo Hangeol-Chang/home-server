@@ -1,19 +1,17 @@
 <script>
+	import { Chart, registerables } from 'chart.js';
+	import { SankeyController, Flow } from 'chartjs-chart-sankey';
 	import { CHART_COLORS } from '$lib/constants.js';
 	import TransactionDropdown from './TransactionDropdown.svelte';
 	import TransactionForm from './TransactionForm.svelte';
 
+	Chart.register(...registerables, SankeyController, Flow);
+
 	let { transactions = [] } = $props();
 
-	// Layout constants (SVG user units)
-	const W = 800, H_MIN = 420, NW = 16, PY = 32;
-	const X1 = 60, X2 = 310, X3 = 570;
-	const CAT_GAP = 16, SUB_GAP = 10, SAVE_GAP = 22;
-	const MIN_CAT_H = 28;
-	const MIN_SUB_H = 22;
+	const SAVE_COLOR = '#4ECDC4';
 
 	// All spend categories with stable color assignment (for filter buttons)
-	// All sub-categories included — no top-N limit
 	const allCats = $derived.by(() => {
 		const catObj = /** @type {Record<string,{id:number,name:string,total:number,subs:Record<string,number>}>} */ ({});
 		transactions.filter(t => t.class_name === 'spend').forEach(t => {
@@ -38,7 +36,6 @@
 				name: c.name,
 				total: c.total,
 				color: CHART_COLORS[i % CHART_COLORS.length],
-				// All subs sorted by value — no slice limit
 				subs: Object.entries(c.subs)
 					.map(([name, val]) => ({ name, val }))
 					.sort((a, b) => b.val - a.val)
@@ -56,8 +53,15 @@
 		}
 	}
 
-	// Sankey layout — only enabled categories
-	const data = $derived.by(() => {
+	function catKey(catId) {
+		return `cat:${catId}`;
+	}
+	function subKey(catId, subName) {
+		return `sub:${catId}:${subName}`;
+	}
+
+	// Sankey flow data — only enabled categories
+	const flowData = $derived.by(() => {
 		const cats = allCats.filter(c => !disabledCatIds.includes(c.id));
 
 		const earnTxs = transactions.filter(t => t.class_name === 'earn');
@@ -70,130 +74,175 @@
 		const saveAmount = Math.max(effIncome - spendTotal, 0);
 		const hasSavings = saveAmount > 0;
 
-		// Proportional scale — based on reference value vs available height
-		const catGapsH = Math.max(cats.length - 1, 0) * CAT_GAP;
-		const gapOverhead = catGapsH + (hasSavings ? SAVE_GAP : 0);
-		const refVal = Math.max(effIncome, spendTotal);
-		const tentativeAH = H_MIN - 2 * PY;
-		const scale = (tentativeAH - gapOverhead) / refVal;
-
-		// Sub-cat heights: proportional with minimum enforcement
-		// catHeight = sum of its sub-cat heights (no gaps) so flows match exactly
-		const subHeightsByCat = cats.map(c =>
-			c.subs.map(sb => Math.max(sb.val * scale, MIN_SUB_H))
-		);
-
-		// Category height = sum of outgoing flow heights (= sum of sub-cat heights)
-		// For categories without sub-cats, use proportional height directly
-		const catHeights = cats.map((c, i) => {
-			const subHs = subHeightsByCat[i];
-			if (!subHs.length) return Math.max(c.total * scale, MIN_CAT_H);
-			return Math.max(subHs.reduce((s, h) => s + h, 0), MIN_CAT_H);
-		});
-
-		const saveH = hasSavings ? Math.max(saveAmount * scale, MIN_CAT_H) : 0;
-
-		// Col-2 total height (nodes + gaps between them)
-		const col2Total =
-			catHeights.reduce((s, h) => s + h, 0) +
-			catGapsH +
-			(hasSavings ? saveH + SAVE_GAP : 0);
-
-		// Income node height = total flow quantity (no gaps)
-		const incomeH = catHeights.reduce((s, h) => s + h, 0) + saveH;
-
-		// SVG expands if minimum heights push beyond H_MIN
-		const svgH = Math.max(H_MIN, col2Total + 2 * PY);
-		const dynamicAH = svgH - 2 * PY;
-
-		// Income node — centered vertically against col-2
-		const incomeNode = {
-			y: PY + (dynamicAH - incomeH) / 2,
-			h: incomeH,
-			effVal: effIncome,
-			hasReal: incomeTotal > 0
-		};
-
-		// Category nodes stacked from PY
-		let col2Y = PY;
-		const catNodes = cats.map((c, i) => {
-			const h = catHeights[i];
-			const node = { y: col2Y, h, label: c.name, val: c.total, color: c.color, catId: c.id };
-			col2Y += h + (i < cats.length - 1 ? CAT_GAP : 0);
-			return node;
-		});
-
-		// Savings node
-		let saveNode = null;
-		if (hasSavings) {
-			col2Y += SAVE_GAP;
-			saveNode = { y: col2Y, h: saveH, label: '저축', val: saveAmount, color: '#4ECDC4' };
-		}
-
-		// Sub-category nodes — centered on their parent category's midpoint
-		// (may extend above/below the category rect; flows fan out via bezier)
-		const subNodes = [];
-		cats.forEach((c, ci) => {
-			const cn = catNodes[ci];
-			if (!c.subs.length) return;
-			const subHs = subHeightsByCat[ci];
-			// Visual span including gaps
-			const totalVisualH = subHs.reduce((s, h) => s + h, 0) + (c.subs.length - 1) * SUB_GAP;
-			// Center sub-cat column on category midpoint
-			let sy = cn.y + cn.h / 2 - totalVisualH / 2;
-			c.subs.forEach((sb, si) => {
-				const sh = subHs[si];
-				subNodes.push({
-					y: sy, h: sh,
-					label: sb.name, val: sb.val,
-					color: cn.color,
-					catId: c.id,
-					subName: sb.name
-				});
-				sy += sh + SUB_GAP;
-			});
-		});
-
-		// Flows: income → categories (packed at departure, fanning at arrival)
 		const flows = [];
-		let fy = incomeNode.y;
-		catNodes.forEach(cn => {
-			flows.push({ x1: X1 + NW, y1t: fy, y1b: fy + cn.h, x2: X2, y2t: cn.y, y2b: cn.y + cn.h, color: cn.color });
-			fy += cn.h;
-		});
-		if (saveNode) {
-			flows.push({
-				x1: X1 + NW, y1t: fy, y1b: fy + saveNode.h,
-				x2: X2, y2t: saveNode.y, y2b: saveNode.y + saveNode.h,
-				color: saveNode.color
+		const labels = {};
+		const colors = {};
+		const priority = {};
+		let subCount = 0;
+
+		labels['income'] = `수입${incomeTotal > 0 ? '' : ' *'}\n${fmt(effIncome)}`;
+
+		cats.forEach((c, i) => {
+			const ck = catKey(c.id);
+			flows.push({ from: 'income', to: ck, flow: c.total });
+			labels[ck] = `${c.name}\n${fmt(c.total)}`;
+			colors[ck] = c.color;
+			priority[ck] = i;
+
+			c.subs.forEach((sb) => {
+				const sk = subKey(c.id, sb.name);
+				flows.push({ from: ck, to: sk, flow: sb.val });
+				labels[sk] = `${sb.name}\n${fmt(sb.val)}`;
+				colors[sk] = c.color;
+				priority[sk] = subCount++;
 			});
+		});
+
+		if (hasSavings) {
+			flows.push({ from: 'income', to: 'save', flow: saveAmount });
+			labels['save'] = `저축\n${fmt(saveAmount)}`;
+			colors['save'] = SAVE_COLOR;
+			priority['save'] = cats.length;
 		}
 
-		// Flows: categories → sub-categories
-		// Departure side: packed contiguously from cn.y (cn.h = sum of sub-cat heights)
-		// Arrival side: each sub-cat node's actual position (with gaps)
-		let si = 0;
-		catNodes.forEach((cn, ci) => {
-			if (!cats[ci].subs.length) return;
-			let cfy = cn.y;
-			cats[ci].subs.forEach(() => {
-				const sn = subNodes[si++];
-				flows.push({
-					x1: X2 + NW, y1t: cfy, y1b: cfy + sn.h,
-					x2: X3, y2t: sn.y, y2b: sn.y + sn.h,
-					color: cn.color
-				});
-				cfy += sn.h;
-			});
-		});
-
-		return { incomeNode, catNodes, saveNode, subNodes, flows, svgH };
+		return { flows, labels, colors, priority, subCount, catCount: cats.length };
 	});
+
+	// ── Chart instance ──────────────────────────────────────────────────
+	let canvasEl = $state(null);
+	let chartInstance = null;
+
+	function nodeColor(key) {
+		return flowData?.colors[key] || '#999';
+	}
+
+	function updateChart() {
+		if (!canvasEl) return;
+
+		if (chartInstance) {
+			chartInstance.destroy();
+			chartInstance = null;
+		}
+
+		if (!flowData) return;
+
+		const style = getComputedStyle(canvasEl);
+		const textColor = style.getPropertyValue('--text-primary').trim() || '#222';
+
+		chartInstance = new Chart(canvasEl.getContext('2d'), {
+			type: 'sankey',
+			data: {
+				datasets: [
+					{
+						data: flowData.flows,
+						labels: flowData.labels,
+						priority: flowData.priority,
+						colorFrom: (c) => nodeColor(c.dataset.data[c.dataIndex].to),
+						colorTo: (c) => nodeColor(c.dataset.data[c.dataIndex].to),
+						alpha: 0.22,
+						colorMode: 'to',
+						nodeWidth: 14,
+						nodePadding: 24,
+						size: 'max',
+						font: { family: 'Pretendard, sans-serif', size: 12 },
+						nodeLabels: {
+							color: textColor,
+							position: 'auto'
+						}
+					}
+				]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				interaction: { mode: 'nearest', intersect: false },
+				scales: {
+					x: { display: false },
+					y: { display: false }
+				},
+				plugins: {
+					legend: { display: false },
+					tooltip: { enabled: false }
+				},
+				onHover: (event, elements) => {
+					canvasEl.style.cursor = elements.length ? 'pointer' : 'default';
+					if (!elements.length) {
+						hoveredNode = null;
+						return;
+					}
+					const info = pickNodeInfo(elements[0], event);
+					if (!info) {
+						hoveredNode = null;
+						return;
+					}
+					clearTimeout(clearTimer);
+					hoveredNode = { ...info, txs: getTxs(info) };
+					tipX = event.native.clientX + 14;
+					tipY = event.native.clientY - 24;
+					clampTip();
+				},
+				onClick: (event, elements) => {
+					if (!elements.length) return;
+					const info = pickNodeInfo(elements[0], event);
+					if (!info) return;
+					clickNode(info);
+				}
+			}
+		});
+	}
+
+	$effect(() => {
+		flowData;
+		updateChart();
+	});
+
+	$effect(() => {
+		return () => {
+			if (chartInstance) chartInstance.destroy();
+		};
+	});
+
+	// ── Resolve which node (from/to) a flow click/hover refers to ────────
+	function parseKey(key) {
+		if (key === 'income') return null; // income node has no drilldown, as before
+		if (key === 'save') return { type: 'save', label: '저축', val: flowData.flows.find(f => f.to === 'save')?.flow ?? 0 };
+		if (key.startsWith('sub:')) {
+			const rest = key.slice(4);
+			const idx = rest.indexOf(':');
+			const catId = Number(rest.slice(0, idx));
+			const subName = rest.slice(idx + 1);
+			const f = flowData.flows.find(fl => fl.to === key);
+			return { type: 'sub', catId, subName, label: subName, val: f?.flow ?? 0 };
+		}
+		if (key.startsWith('cat:')) {
+			const catId = Number(key.slice(4));
+			const cat = allCats.find(c => c.id === catId);
+			return { type: 'cat', catId, label: cat?.name ?? '', val: cat?.total ?? 0 };
+		}
+		return null;
+	}
+
+	function pickNodeInfo(element, event) {
+		const raw = element.element;
+		const { x, x2 } = raw.getProps(['x', 'x2'], true);
+		const mid = (x + x2) / 2;
+		const dataPoint = flowData.flows[element.index];
+		const key = event.x < mid ? dataPoint.from : dataPoint.to;
+		return parseKey(key);
+	}
 
 	// ── Hover / tooltip ──────────────────────────────────────────────────
 	let hoveredNode = $state(null);
 	let tipX = $state(0), tipY = $state(0);
 	let clearTimer = null;
+
+	function clampTip() {
+		const TW = 252;
+		if (typeof window === 'undefined') return;
+		if (tipX + TW > window.innerWidth - 8) tipX = tipX - TW - 28;
+		if (tipY + 280 > window.innerHeight - 8) tipY = window.innerHeight - 288;
+		if (tipY < 8) tipY = 8;
+	}
 
 	// ── Dropdown / form ──────────────────────────────────────────────────
 	let ddVisible = $state(false);
@@ -223,44 +272,12 @@
 		return [];
 	}
 
-	function positionTip(e) {
-		const TW = 252;
-		let x = e.clientX + 14;
-		let y = e.clientY - 24;
-		if (typeof window !== 'undefined') {
-			if (x + TW > window.innerWidth - 8) x = e.clientX - TW - 10;
-			if (y + 280 > window.innerHeight - 8) y = window.innerHeight - 288;
-			if (y < 8) y = 8;
-		}
-		tipX = x;
-		tipY = y;
-	}
-
-	function enterNode(e, info) {
-		clearTimeout(clearTimer);
-		hoveredNode = { ...info, txs: getTxs(info) };
-		positionTip(e);
-	}
-
-	function leaveNode() {
-		clearTimer = setTimeout(() => { hoveredNode = null; }, 60);
-	}
-
 	function clickNode(info) {
 		clearTimeout(clearTimer);
 		hoveredNode = null;
 		ddTitle = info.label + (info.type === 'save' ? ' 내역' : ' 지출 내역');
 		ddTxs = getTxs(info);
 		ddVisible = true;
-	}
-
-	function svgMouseMove(e) {
-		if (hoveredNode) positionTip(e);
-	}
-
-	function bezier({ x1, y1t, y1b, x2, y2t, y2b }) {
-		const mx = (x1 + x2) / 2;
-		return `M${x1},${y1t}C${mx},${y1t},${mx},${y2t},${x2},${y2t}L${x2},${y2b}C${mx},${y2b},${mx},${y1b},${x1},${y1b}Z`;
 	}
 
 	function fmt(v) {
@@ -275,6 +292,10 @@
 	function fmtFull(v) {
 		return new Intl.NumberFormat('ko-KR').format(Math.round(v)) + '원';
 	}
+
+	const chartHeight = $derived(
+		flowData ? Math.max(420, flowData.subCount * 40 + flowData.catCount * 30 + 160) : 180
+	);
 </script>
 
 <!-- Tooltip -->
@@ -322,93 +343,20 @@
 	{/if}
 
 	<div class="sankey-wrap">
-		{#if !data}
+		{#if !flowData}
 			<div class="empty">
 				{allCats.length > 0
 					? '모든 카테고리가 숨겨진 상태입니다'
 					: '이번 달 지출 내역이 없습니다'}
 			</div>
 		{:else}
-			<svg
-				viewBox="0 0 {W} {data.svgH}"
-				class="sankey-svg"
-				role="img"
-				aria-label="수입/지출 흐름 다이어그램"
-				onmousemove={svgMouseMove}
-				onmouseleave={() => { clearTimeout(clearTimer); hoveredNode = null; }}
-			>
-				<!-- Flows -->
-				{#each data.flows as f, i (i)}
-					<path d={bezier(f)} fill={f.color} fill-opacity="0.22" />
-				{/each}
-
-				<!-- Income node -->
-				<rect x={X1} y={data.incomeNode.y} width={NW} height={data.incomeNode.h} fill="#4caf50" rx="1" />
-				<text x={X1 - 8} y={data.incomeNode.y + data.incomeNode.h / 2 - 8} text-anchor="end" class="nlbl">
-					수입{#if !data.incomeNode.hasReal} *{/if}
-				</text>
-				<text x={X1 - 8} y={data.incomeNode.y + data.incomeNode.h / 2 + 8} text-anchor="end" class="nval">
-					{fmt(data.incomeNode.effVal)}
-				</text>
-
-				<!-- Spend category nodes -->
-				{#each data.catNodes as n (n.label)}
-					{@const ni = { type: 'cat', label: n.label, val: n.val, catId: n.catId }}
-					<g
-						onmouseenter={(e) => enterNode(e, ni)}
-						onmouseleave={leaveNode}
-						onclick={() => clickNode(ni)}
-						role="button"
-						tabindex="0"
-						onkeydown={(e) => e.key === 'Enter' && clickNode(ni)}
-						style="cursor:pointer"
-					>
-						<rect x={X2 - 140} y={n.y - 3} width={140 + NW + 3} height={n.h + 6} fill="transparent" />
-						<rect x={X2} y={n.y} width={NW} height={n.h} fill={n.color} rx="1" />
-						<text x={X2 - 8} y={n.y + n.h / 2 - 7} text-anchor="end" class="nlbl">{n.label}</text>
-						<text x={X2 - 8} y={n.y + n.h / 2 + 7} text-anchor="end" class="nval">{fmt(n.val)}</text>
-					</g>
-				{/each}
-
-				<!-- Savings node -->
-				{#if data.saveNode}
-					{@const sn = data.saveNode}
-					{@const ni = { type: 'save', label: sn.label, val: sn.val }}
-					<g
-						onmouseenter={(e) => enterNode(e, ni)}
-						onmouseleave={leaveNode}
-						onclick={() => clickNode(ni)}
-						role="button"
-						tabindex="0"
-						onkeydown={(e) => e.key === 'Enter' && clickNode(ni)}
-						style="cursor:pointer"
-					>
-						<rect x={X2 - 140} y={sn.y - 3} width={140 + NW + 3} height={sn.h + 6} fill="transparent" />
-						<rect x={X2} y={sn.y} width={NW} height={sn.h} fill={sn.color} rx="1" />
-						<text x={X2 - 8} y={sn.y + sn.h / 2 - 7} text-anchor="end" class="nlbl">{sn.label}</text>
-						<text x={X2 - 8} y={sn.y + sn.h / 2 + 7} text-anchor="end" class="nval">{fmt(sn.val)}</text>
-					</g>
-				{/if}
-
-				<!-- Sub-category nodes -->
-				{#each data.subNodes as n, i (i)}
-					{@const ni = { type: 'sub', label: n.label, val: n.val, catId: n.catId, subName: n.subName }}
-					<g
-						onmouseenter={(e) => enterNode(e, ni)}
-						onmouseleave={leaveNode}
-						onclick={() => clickNode(ni)}
-						role="button"
-						tabindex="0"
-						onkeydown={(e) => e.key === 'Enter' && clickNode(ni)}
-						style="cursor:pointer"
-					>
-						<rect x={X3 - 4} y={n.y - 3} width={NW + 178} height={n.h + 6} fill="transparent" />
-						<rect x={X3} y={n.y} width={NW} height={n.h} fill={n.color} fill-opacity="0.8" rx="1" />
-						<text x={X3 + NW + 8} y={n.y + n.h / 2 - 6} text-anchor="start" class="nlbl">{n.label}</text>
-						<text x={X3 + NW + 8} y={n.y + n.h / 2 + 7} text-anchor="start" class="nval">{fmt(n.val)}</text>
-					</g>
-				{/each}
-			</svg>
+			<div class="sankey-canvas-wrap" style="height: {chartHeight}px">
+				<canvas
+					bind:this={canvasEl}
+					role="img"
+					aria-label="수입/지출 흐름 다이어그램"
+				></canvas>
+			</div>
 		{/if}
 	</div>
 </div>
@@ -484,7 +432,7 @@
 		background: var(--border-color);
 	}
 
-	/* ── Sankey SVG ─────────────────────────────────────────────── */
+	/* ── Sankey chart ───────────────────────────────────────────── */
 	.sankey-wrap {
 		width: 100%;
 		min-height: 180px;
@@ -492,24 +440,10 @@
 		-webkit-overflow-scrolling: touch;
 	}
 
-	.sankey-svg {
+	.sankey-canvas-wrap {
 		width: 100%;
 		min-width: 540px;
-		height: auto;
-	}
-
-	.nlbl {
-		font-size: 13px;
-		fill: var(--text-primary);
-		font-family: Pretendard, sans-serif;
-		pointer-events: none;
-	}
-
-	.nval {
-		font-size: 11px;
-		fill: var(--text-secondary);
-		font-family: Pretendard, sans-serif;
-		pointer-events: none;
+		position: relative;
 	}
 
 	.empty {

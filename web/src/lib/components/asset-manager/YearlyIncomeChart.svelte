@@ -254,7 +254,7 @@
 
 <div class="module-container" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="chart-header">
-		<h3>📈 {year}년 월별 수익 비교</h3>
+		<h3>{year}년 월별 수익 비교</h3>
 	</div>
 
 	{#if loading}
@@ -264,7 +264,7 @@
 		</div>
 	{:else if error}
 		<div class="error">
-			<p>⚠️ {error}</p>
+			<p>{error}</p>
 			<button class="retry-btn" onclick={loadData}>다시 시도</button>
 		</div>
 	{:else if data}

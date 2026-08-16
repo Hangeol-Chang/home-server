@@ -189,7 +189,7 @@
 
 <div class="module-container">
     <div class="header">
-        <h3>✅ 반복 스케줄</h3>
+        <h3>반복 스케줄</h3>
         <button class="add-btn" onclick={() => showAddModal = true}>+ 일정 추가</button>
     </div>
 
@@ -244,7 +244,7 @@
         <div role="none" class="modal-overlay" class:mobile={$device.isMobile} class:tablet={$device.isTablet} onclick={() => showAddModal = false}>
             <div role="none" class="modal-container" onclick={(e) => e.stopPropagation()}>
 				<div class="chart-header">
-                    <h3>🎞️ 새 반복 스케줄</h3>
+                    <h3>새 반복 스케줄</h3>
                 </div>
 
                 <div class="form-group">

@@ -1,6 +1,7 @@
 <script>
 	import { deleteTransaction } from '$lib/api/asset-manager.js';
 	import { device } from '$lib/stores/device';
+	import TransactionTypeIcon from '$lib/components/ui/TransactionTypeIcon.svelte';
 
 	let {
 		transactions = [],
@@ -50,7 +51,7 @@
 		</div>
 	{:else if error}
 		<div class="error">
-			<p>⚠️ {error}</p>
+			<p>{error}</p>
 			<button class="retry-btn" onclick={onReload}>다시 시도</button>
 		</div>
 	{:else if transactions.length > 0}
@@ -79,13 +80,9 @@
 							tabindex="0"
 						>
 							<td class="cell-icon">
-								{#if transaction.class_name === 'earn'}
-									💰
-								{:else if transaction.class_name === 'spend'}
-									💸
-								{:else}
-									🏦
-								{/if}
+								<TransactionTypeIcon
+									type={transaction.class_name === 'earn' ? 'earn' : transaction.class_name === 'spend' ? 'spend' : 'save'}
+								/>
 							</td>
 							<td class="cell-name">
 								<div class="name-wrapper">

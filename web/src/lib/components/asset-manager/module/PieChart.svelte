@@ -1,13 +1,18 @@
 <script>
+	import { Chart, registerables } from 'chart.js';
 	import { device } from '$lib/stores/device';
 
-	let { 
-		tierSegments = [], 
-		circumference = 0, 
+	Chart.register(...registerables);
+
+	let {
+		tierSegments = [],
 		spend = 0,
 		circleRadius = 80,
 		onTierClick = () => {}
 	} = $props();
+
+	let canvasEl = $state(null);
+	let chartInstance = null;
 
 	let hoveredTier = $state(null);
 	let tooltipPosition = $state({ x: 0, y: 0 });
@@ -16,70 +21,148 @@
 		return new Intl.NumberFormat('ko-KR').format(value) + '원';
 	}
 
-	function handleMouseEnter(event, tier) {
-		hoveredTier = tier;
-		updateTooltipPosition(event);
+	function cssVar(canvas, name, fallback) {
+		return getComputedStyle(canvas).getPropertyValue(name).trim() || fallback;
 	}
 
-	function handleMouseMove(event) {
-		if (hoveredTier) {
-			updateTooltipPosition(event);
+	// Static background disc + "total" track ring, drawn under the tier arcs.
+	function drawBackground(chart) {
+		const arc0 = chart.getDatasetMeta(0).data[0];
+		if (!arc0) return;
+		const { x: cx, y: cy, outerRadius } = arc0.getProps(['x', 'y', 'outerRadius'], true);
+		const pxPerUnit = outerRadius / (circleRadius + 7);
+		const ctx = chart.ctx;
+
+		ctx.save();
+
+		ctx.beginPath();
+		ctx.arc(cx, cy, pxPerUnit * circleRadius, 0, Math.PI * 2);
+		ctx.fillStyle = cssVar(chart.canvas, '--bg-secondary', '#f5f5f5');
+		ctx.fill();
+
+		const trackOuter = pxPerUnit * (circleRadius + 1);
+		const trackInner = pxPerUnit * (circleRadius - 29);
+		ctx.beginPath();
+		ctx.arc(cx, cy, (trackOuter + trackInner) / 2, 0, Math.PI * 2);
+		ctx.lineWidth = trackOuter - trackInner;
+		ctx.strokeStyle = cssVar(chart.canvas, '--bg-tertiary', '#e0e0e0');
+		ctx.stroke();
+
+		ctx.restore();
+	}
+
+	// Segment labels + center text, drawn over the tier arcs.
+	function drawForeground(chart) {
+		const arc0 = chart.getDatasetMeta(0).data[0];
+		if (!arc0) return;
+		const { x: cx, y: cy, outerRadius } = arc0.getProps(['x', 'y', 'outerRadius'], true);
+		const pxPerUnit = outerRadius / (circleRadius + 7);
+		const ctx = chart.ctx;
+
+		ctx.save();
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+
+		ctx.font = `300 ${11 * pxPerUnit}px Pretendard, sans-serif`;
+		tierSegments.forEach((tier) => {
+			if (parseFloat(tier.percent) <= 3) return;
+			const lx = cx + (tier.labelX - 120) * pxPerUnit;
+			const ly = cy + (tier.labelY - 120) * pxPerUnit;
+			ctx.fillStyle = tier.color;
+			ctx.fillText(tier.display_name, lx, ly);
+		});
+
+		ctx.fillStyle = cssVar(chart.canvas, '--text-secondary', '#666');
+		ctx.font = `400 ${10 * pxPerUnit}px Pretendard, sans-serif`;
+		ctx.fillText('총 지출', cx, cy - 8 * pxPerUnit);
+
+		ctx.fillStyle = cssVar(chart.canvas, '--text-primary', '#222');
+		ctx.font = `400 ${11 * pxPerUnit}px Pretendard, sans-serif`;
+		ctx.fillText(formatCurrency(spend), cx, cy + 7 * pxPerUnit);
+
+		ctx.restore();
+	}
+
+	function updateChart() {
+		if (!canvasEl) return;
+
+		if (chartInstance) {
+			chartInstance.destroy();
+			chartInstance = null;
 		}
+
+		const radiusPct = ((circleRadius + 7) / 120) * 100;
+		const cutoutPct = ((circleRadius - 7) / (circleRadius + 7)) * 100;
+
+		chartInstance = new Chart(canvasEl.getContext('2d'), {
+			type: 'doughnut',
+			data: {
+				labels: tierSegments.map((t) => t.display_name),
+				datasets: [
+					{
+						data: tierSegments.map((t) => t.total),
+						backgroundColor: tierSegments.map((t) => t.color),
+						borderWidth: 0,
+						borderRadius: 6,
+						spacing: 2,
+						hoverOffset: 6
+					}
+				]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: true,
+				aspectRatio: 1,
+				rotation: 0,
+				radius: `${radiusPct}%`,
+				cutout: `${cutoutPct}%`,
+				interaction: { mode: 'nearest', intersect: true },
+				plugins: {
+					legend: { display: false },
+					tooltip: { enabled: false }
+				},
+				onHover: (event, elements) => {
+					canvasEl.style.cursor = elements.length ? 'pointer' : 'default';
+					if (elements.length) {
+						hoveredTier = tierSegments[elements[0].index];
+						tooltipPosition = { x: event.native.clientX, y: event.native.clientY };
+					} else {
+						hoveredTier = null;
+					}
+				},
+				onClick: (event, elements) => {
+					if (elements.length) onTierClick(tierSegments[elements[0].index]);
+				}
+			},
+			plugins: [
+				{
+					id: 'pieChartExtras',
+					beforeDatasetsDraw: drawBackground,
+					afterDatasetsDraw: drawForeground
+				}
+			]
+		});
 	}
 
-	function handleMouseLeave() {
-		hoveredTier = null;
-	}
+	$effect(() => {
+		// track dependencies explicitly so re-renders happen on data change
+		tierSegments;
+		spend;
+		circleRadius;
+		updateChart();
+	});
 
-	function updateTooltipPosition(event) {
-		tooltipPosition = {
-			x: event.clientX,
-			y: event.clientY
+	$effect(() => {
+		return () => {
+			if (chartInstance) chartInstance.destroy();
 		};
-	}
+	});
 </script>
 
 <div class="pie-chart-wrapper" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
-	<svg class="circular-chart" viewBox="0 0 240 240">
-		<!-- 배경 -->
-		<circle class="circle-bg" cx="120" cy="120" r="{circleRadius}"/>
-		
-		<!-- 내부 원 (총 지출) - 100% -->
-		<circle class="circle-inner" cx="120" cy="120" r="{circleRadius - 14}" 
-			stroke-dasharray="{circumference} {0}"
-		/>
-
-		<!-- 외부 원 - 티어별 세그먼트 -->
-		{#each tierSegments as tier}
-		<circle class="circle-outer" cx="120" cy="120" r="{circleRadius}"
-			stroke-dasharray="{tier.dash} {circumference}"
-			transform="rotate({tier.rotation} 120 120)"
-			stroke={tier.color}
-			onmouseenter={(e) => handleMouseEnter(e, tier)}
-			onmousemove={handleMouseMove}
-			onmouseleave={handleMouseLeave}
-			onclick={() => onTierClick(tier)}
-			role="button"
-			tabindex="0"
-			onkeydown={(e) => e.key === 'Enter' && onTierClick(tier)}
-			aria-label="{tier.display_name}"
-		/>
-		<!-- 라벨 텍스트 (3% 이상일 때만 표시) -->
-		{#if parseFloat(tier.percent) > 3}
-			<text x={tier.labelX} y={tier.labelY} class="chart-label" 
-				  text-anchor="middle" dominant-baseline="middle"
-				  fill={tier.color}>
-				{tier.display_name}
-			</text>
-		{/if}
-		{/each}
-
-		<!-- 중앙 텍스트 -->
-		<text x="120" y="115" class="chart-center-label">총 지출</text>
-		<text x="120" y="130" class="chart-center-value">
-			{formatCurrency(spend)}
-		</text>
-	</svg>
+	<div class="circular-chart">
+		<canvas bind:this={canvasEl}></canvas>
+	</div>
 
 	<!-- 툴팁 -->
 	{#if hoveredTier}
@@ -89,7 +172,7 @@
 				<span class="tooltip-total">{formatCurrency(hoveredTier.total)}</span>
 			</div>
 			<div class="tooltip-body">
-				{#each hoveredTier.categoryList as cat}
+				{#each hoveredTier.categoryList as cat (cat.name)}
 					<div class="tooltip-row">
 						<span>{cat.name}</span>
 						<span>{formatCurrency(cat.value)}</span>
@@ -109,64 +192,10 @@
 		width: 100%;
 	}
 
-	/* SVG 차트 */
 	.circular-chart {
 		max-width: 320px;
 		width: 100%;
 		margin: 0;
-	}
-
-	/* 원 배경 */
-	.circle-bg {
-		fill: var(--bg-secondary);
-	}
-
-	/* 내부 원 (총 지출) */
-	.circle-inner {
-		fill: none;
-		stroke: var(--bg-tertiary); /* 은은한 배경색 */
-		stroke-width: 30;
-	}
-
-	/* 외부 원 세그먼트 */
-	.circle-outer {
-		fill: none;
-		stroke-width: 14;
-		stroke-linecap: round;
-		transition: all 0.3s ease;
-		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-		cursor: pointer;
-	}
-
-	.circle-outer:hover {
-		stroke-width: 18;
-		filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-	}
-
-	.circle-outer:focus {
-		outline: none;
-	}
-
-	/* 중앙 텍스트 */
-	.chart-center-label {
-		font-size: 10px;
-		fill: var(--text-secondary);
-		text-anchor: middle;
-		font-weight: 400;
-	}
-
-	.chart-center-value {
-		font-size: 11px;
-		fill: var(--text-primary);
-		text-anchor: middle;
-		font-weight: 400;
-	}
-
-	.chart-label {
-		font-size: 11px;
-		font-weight: 300;
-		pointer-events: none;
-		text-shadow: 0 1px 2px var(--bg-primary);
 	}
 
 	/* 툴팁 스타일 */
@@ -177,7 +206,7 @@
 		border: 1px solid var(--border-color);
 		border-radius: 8px;
 		padding: 12px;
-		box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		pointer-events: none;
 		transform: translate(15px, 15px);
 		min-width: 180px;
@@ -220,27 +249,11 @@
 			.circular-chart {
 				max-width: 70%;
 			}
-
-			.chart-center-label {
-				font-size: 9px;
-			}
-
-			.chart-center-value {
-				font-size: 10px;
-			}
 		}
 
 		&.mobile {
 			.circular-chart {
 				max-width: 200px;
-			}
-
-			.chart-center-label {
-				font-size: 8px;
-			}
-
-			.chart-center-value {
-				font-size: 9px;
 			}
 		}
 	}

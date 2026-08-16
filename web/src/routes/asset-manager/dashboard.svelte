@@ -52,7 +52,7 @@
 		<div class="error">{error}</div>
 	{:else if stats}
 		<div class="chart-header">
-			<h3><a href="/asset-manager" style="text-decoration: none; color: inherit;">💵 Asset Manager</a></h3>
+			<h3><a href="/asset-manager" style="text-decoration: none; color: inherit;">Asset Manager</a></h3>
 			<div class="header-actions">
 				<button class="add-btn" onclick={openForm} title="거래 등록">
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">

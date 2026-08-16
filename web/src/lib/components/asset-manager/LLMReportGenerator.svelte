@@ -88,11 +88,11 @@
 
 <div class="llm-report">
 	<div class="report-header">
-		<h3 class="report-title">🤖 AI 재무 리포트</h3>
+		<h3 class="report-title">AI 재무 리포트</h3>
 		<div class="mode-tabs">
-			<button class="mode-tab" class:active={mode === 'weekly'}  onclick={() => setMode('weekly')}>📅 주간</button>
-			<button class="mode-tab" class:active={mode === 'monthly'} onclick={() => setMode('monthly')}>📊 월간</button>
-			<button class="mode-tab" class:active={mode === 'custom'}  onclick={() => setMode('custom')}>✏️ 커스텀</button>
+			<button class="mode-tab" class:active={mode === 'weekly'}  onclick={() => setMode('weekly')}>주간</button>
+			<button class="mode-tab" class:active={mode === 'monthly'} onclick={() => setMode('monthly')}>월간</button>
+			<button class="mode-tab" class:active={mode === 'custom'}  onclick={() => setMode('custom')}>커스텀</button>
 		</div>
 	</div>
 
@@ -111,7 +111,7 @@
 					{#if loading}
 						<span class="spinner"></span>분석 중…
 					{:else}
-						✨ 분석 & Discord 전송
+						분석 & Discord 전송
 					{/if}
 				</button>
 			</div>
@@ -140,7 +140,7 @@
 				{#if loading}
 					<span class="spinner"></span>생성 중…
 				{:else}
-					✨ Discord로 전송
+					Discord로 전송
 				{/if}
 			</button>
 		</div>
@@ -148,13 +148,13 @@
 
 	{#if status === 'success' && mode === 'custom' && customResult}
 		<div class="custom-result">
-			<p class="result-label">📨 Discord로 전송된 내용</p>
+			<p class="result-label">Discord로 전송된 내용</p>
 			<pre class="result-content">{customResult}</pre>
 		</div>
 	{:else if status === 'success'}
-		<p class="status-msg success">✅ Discord로 리포트를 전송했습니다.</p>
+		<p class="status-msg success">Discord로 리포트를 전송했습니다.</p>
 	{:else if status === 'error'}
-		<p class="status-msg error">⚠️ {errorMsg}</p>
+		<p class="status-msg error">{errorMsg}</p>
 	{/if}
 </div>
 

@@ -280,10 +280,10 @@
 	<!-- Tab bar -->
 	<div class="tab-bar">
 		<button class="tab-btn" class:active={activeTab === 'chat'} onclick={() => (activeTab = 'chat')}>
-			💬 채팅
+			채팅
 		</button>
 		<button class="tab-btn" class:active={activeTab === 'agent'} onclick={() => (activeTab = 'agent')}>
-			🤖 에이전트
+			에이전트
 			{#if agentData?.status === 'running'}
 				<span class="pulse-dot"></span>
 			{/if}
@@ -294,7 +294,7 @@
 	{#if activeTab === 'chat'}
 		<div class="chat-page">
 			<div class="chat-header">
-				<h1>💬 Chat</h1>
+				<h1>Chat</h1>
 				<p class="subtitle">qwen3.6 AI와 대화하세요</p>
 				<div class="ctx-stepper">
 					<button class="ctx-btn" onclick={ctxDown} disabled={ctxIdx === 0}>‹</button>
@@ -309,7 +309,6 @@
 			<div class="chat-messages">
 				{#if messages.length === 0}
 					<div class="empty-state">
-						<span class="empty-icon">🤖</span>
 						<p>메시지를 입력해 대화를 시작하세요.</p>
 					</div>
 				{:else}
@@ -330,7 +329,7 @@
 					{/if}
 				{/if}
 				{#if chatError}
-					<div class="error-message">⚠️ {chatError}</div>
+					<div class="error-message">{chatError}</div>
 				{/if}
 				<div bind:this={messagesEndEl}></div>
 			</div>
@@ -389,7 +388,7 @@
 
 				<div class="sidebar-list">
 					{#if sessionError}
-						<div class="sidebar-error">⚠️ {sessionError}</div>
+						<div class="sidebar-error">{sessionError}</div>
 					{/if}
 					{#if sessionList.length === 0}
 						<div class="sidebar-empty">저장된 세션이 없습니다.</div>
@@ -425,7 +424,7 @@
 						<button class="hamburger-btn" onclick={() => (sidebarOpen = !sidebarOpen)} title={sidebarOpen ? '사이드바 닫기' : '사이드바 열기'}>
 							<span></span><span></span><span></span>
 						</button>
-						<h1>🤖 에이전트</h1>
+						<h1>에이전트</h1>
 						<div class="ctx-stepper">
 							<button class="ctx-btn" onclick={ctxDown} disabled={ctxIdx === 0}>‹</button>
 							<span class="ctx-label">{ctxLabel(ctxSize)}</span>
@@ -468,21 +467,21 @@
 									▶ 시작
 								</button>
 								<button class="action-btn refresh-btn" onclick={fetchAgentStatus}>⟳</button>
-								<button class="action-btn clear-btn-sm" onclick={handleClearLogs}>🗑 로그 초기화</button>
+								<button class="action-btn clear-btn-sm" onclick={handleClearLogs}>로그 초기화</button>
 							</div>
 
 							{#if agentError}
-								<div class="error-message">⚠️ {agentError}</div>
+								<div class="error-message">{agentError}</div>
 							{/if}
 							{#if agentData?.error}
-								<div class="error-message">🔴 {agentData.error}</div>
+								<div class="error-message">{agentData.error}</div>
 							{/if}
 						</div>
 					{/if}
 
 					{#if agentData?.summary}
 						<div class="summary-panel">
-							<div class="summary-header">📋 결과 요약</div>
+							<div class="summary-header">결과 요약</div>
 							<p class="summary-body">{agentData.summary}</p>
 						</div>
 					{/if}
@@ -534,7 +533,7 @@
 
 						{#if selectedSessionDetail.summary}
 							<div class="summary-panel">
-								<div class="summary-header">📋 결과 요약</div>
+								<div class="summary-header">결과 요약</div>
 								<p class="summary-body">{selectedSessionDetail.summary}</p>
 							</div>
 						{/if}

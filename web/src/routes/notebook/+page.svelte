@@ -435,12 +435,12 @@
 <div class="notebook-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<header class="page-header">
 		<div class="header-content">
-			<h1>📓 Notebook</h1>
+			<h1>Notebook</h1>
 			{#if stats}
 				<div class="stats-chips">
-					<span class="chip">📄 {stats.total_files} files</span>
-					<span class="chip">📁 {stats.total_folders} folders</span>
-					<span class="chip">💾 {formatFileSize(stats.total_size)}</span>
+					<span class="chip">{stats.total_files} files</span>
+					<span class="chip">{stats.total_folders} folders</span>
+					<span class="chip">{formatFileSize(stats.total_size)}</span>
 				</div>
 			{/if}
 			<div class="search-bar">
@@ -464,8 +464,8 @@
 		<!-- 사이드바 -->
 		<aside class="sidebar" oncontextmenu={(e) => e.preventDefault()}>
 			<div class="nav-actions">
-				<button class="btn-primary" onclick={() => handleNewFile()}>➕ 새 파일</button>
-				<button class="refresh-btn" onclick={() => handleNewFolder()}>📁 새 폴더</button>
+				<button class="btn-primary" onclick={() => handleNewFile()}>새 파일</button>
+				<button class="refresh-btn" onclick={() => handleNewFolder()}>새 폴더</button>
 				<button
 					class="toggle-hidden-btn"
 					class:active={showHidden}
@@ -523,7 +523,6 @@
 								class:active={selectedFile?.path === file.path}
 								onclick={() => selectFile(file)}
 							>
-								<span class="icon">📄</span>
 								<div class="search-item-info">
 									<span class="name">{file.name}</span>
 									<span class="path-hint">{file.folder_path || 'root'}</span>
@@ -546,7 +545,7 @@
 					<p>불러오는 중...</p>
 				</div>
 			{:else if error}
-				<div class="error-message"><p>⚠️ {error}</p></div>
+				<div class="error-message"><p>{error}</p></div>
 			{:else if selectedFile}
 				<div class="editor-container">
 					<div class="editor-header">
@@ -582,7 +581,7 @@
 								<span class="autosave-status saved">✓ 자동 저장됨</span>
 							{/if}
 							<button class="btn-primary" onclick={handleSave} disabled={isSaving}>
-								{isSaving ? '저장 중...' : '💾 저장'}
+								{isSaving ? '저장 중...' : '저장'}
 							</button>
 						</div>
 					</div>
@@ -599,7 +598,7 @@
 				</div>
 			{:else}
 				<div class="welcome-message">
-					<h2>📓 Obsidian Vault</h2>
+					<h2>Obsidian Vault</h2>
 					<p>왼쪽에서 파일을 선택하거나 우클릭으로 새 파일/폴더를 만드세요.</p>
 				</div>
 			{/if}
@@ -620,17 +619,17 @@
 		oncontextmenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
 	>
 		{#if contextMenu.item.type === 'folder'}
-			<button class="ctx-item" onclick={contextCreateFile}>📄 새 파일</button>
-			<button class="ctx-item" onclick={contextCreateFolder}>📁 새 폴더</button>
+			<button class="ctx-item" onclick={contextCreateFile}>새 파일</button>
+			<button class="ctx-item" onclick={contextCreateFolder}>새 폴더</button>
 			<div class="ctx-divider"></div>
-			<button class="ctx-item" onclick={() => openRenameModal(contextMenu.item)}>✏️ 이름 변경</button>
-			<button class="ctx-item danger" onclick={contextDeleteItem}>🗑 폴더 삭제</button>
+			<button class="ctx-item" onclick={() => openRenameModal(contextMenu.item)}>이름 변경</button>
+			<button class="ctx-item danger" onclick={contextDeleteItem}>폴더 삭제</button>
 		{:else}
-			<button class="ctx-item" onclick={contextCreateFile}>📄 같은 위치에 새 파일</button>
-			<button class="ctx-item" onclick={contextCreateFolder}>📁 같은 위치에 새 폴더</button>
+			<button class="ctx-item" onclick={contextCreateFile}>같은 위치에 새 파일</button>
+			<button class="ctx-item" onclick={contextCreateFolder}>같은 위치에 새 폴더</button>
 			<div class="ctx-divider"></div>
-			<button class="ctx-item" onclick={() => openRenameModal(contextMenu.item)}>✏️ 이름 변경</button>
-			<button class="ctx-item danger" onclick={contextDeleteItem}>🗑 파일 삭제</button>
+			<button class="ctx-item" onclick={() => openRenameModal(contextMenu.item)}>이름 변경</button>
+			<button class="ctx-item danger" onclick={contextDeleteItem}>파일 삭제</button>
 		{/if}
 	</div>
 {/if}
@@ -813,15 +812,6 @@
 		background: var(--bg-tertiary);
 		color: var(--color-impact-3);
 		font-weight: 600;
-	}
-
-	.explorer-item .icon {
-		font-size: 1rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 16px;
-		flex-shrink: 0;
 	}
 
 	.explorer-item .name {

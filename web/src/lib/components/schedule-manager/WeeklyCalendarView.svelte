@@ -221,7 +221,7 @@
 				</svg>
 			</button>
 			<a href="/schedule-manager">
-				<h3>📅 {year}년 연간 일정</h3>
+				<h3>{year}년 연간 일정</h3>
 			</a>
 			<button class="nav-btn" onclick={() => changeYear(1)} aria-label="다음 해">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -236,7 +236,7 @@
         <div role="none" class="modal-overlay" onclick={() => showAddModal = false}>
             <div role="none" class="modal-container" onclick={(e) => e.stopPropagation()}>
 				<div class="chart-header">
-					<h3>🗓️ 새 장기 일정</h3>
+					<h3>새 장기 일정</h3>
 				</div>
 					
                 <div class="form-group">
@@ -306,7 +306,7 @@
         <div role="none" class="modal-overlay" onclick={() => showDetailModal = false}>
             <div role="none" class="modal-container" onclick={(e) => e.stopPropagation()}>
 				<div class="chart-header">
-					<h3>✏️ 일정 상세 / 수정</h3>
+					<h3>일정 상세 / 수정</h3>
                     <button class="delete-btn" onclick={deletePlan} aria-label="삭제">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="3 6 5 6 21 6"></polyline>

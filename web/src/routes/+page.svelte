@@ -4,15 +4,16 @@
 	import { device } from '$lib/stores/device';
 	import '$lib/styles/module.css';
 	import '$lib/styles/module-common.css';
+	import ModuleIcon from '$lib/components/ui/ModuleIcon.svelte';
 
 	const modules = [
-		{ name: 'Asset Manager', href: '/asset-manager', icon: '💰' },
-		{ name: 'Schedule', href: '/schedule-manager', icon: '📅' },
-		{ name: 'Notebook', href: '/notebook', icon: '📓' },
-		{ name: 'Projects', href: '/projects', icon: '🗂️' },
-		{ name: 'Chat', href: '/chat', icon: '💬' },
-		{ name: 'Google Drive', href: '/gdrive', icon: '☁️' },
-		{ name: 'System Test', href: '/test', icon: '🛠️' }
+		{ name: 'Asset Manager', href: '/asset-manager', icon: 'asset' },
+		{ name: 'Schedule', href: '/schedule-manager', icon: 'schedule' },
+		{ name: 'Notebook', href: '/notebook', icon: 'notebook' },
+		{ name: 'Projects', href: '/projects', icon: 'projects' },
+		{ name: 'Chat', href: '/chat', icon: 'chat' },
+		{ name: 'Google Drive', href: '/gdrive', icon: 'gdrive' },
+		{ name: 'System Test', href: '/test', icon: 'test' }
 	];
 </script>
 
@@ -24,7 +25,7 @@
 	<nav class="module-nav">
 		{#each modules as mod}
 			<a href={mod.href} class="module-btn">
-				<span class="module-icon">{mod.icon}</span>
+				<span class="module-icon"><ModuleIcon name={mod.icon} /></span>
 				<span class="module-name">{mod.name}</span>
 			</a>
 		{/each}
@@ -79,12 +80,16 @@
 	}
 
 	.module-icon {
-		font-size: 28px;
-		line-height: 1;
+		display: flex;
+		color: var(--text-tertiary);
+	}
+
+	.module-btn:hover .module-icon {
+		color: var(--text-secondary);
 	}
 
 	.module-name {
-		font-size: 13px;
+		font-size: 15px;
 		font-weight: 600;
 		letter-spacing: 0.02em;
 	}

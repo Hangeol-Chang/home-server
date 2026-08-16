@@ -147,7 +147,7 @@
 
 <div class="module-container" class:mobile={$device.isMobile}>
     <div class="chart-header">
-        <h3>🗓️ 주간 타임테이블</h3>
+        <h3>주간 타임테이블</h3>
     </div>
 
     {#if loading}

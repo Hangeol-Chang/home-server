@@ -20,10 +20,10 @@
 	let saveChartInstance = null;0
 
 	const units = [
-		{ value: 'day', label: '일별', icon: '📅' },
-		{ value: 'week', label: '주별', icon: '📆' },
-		{ value: 'month', label: '월별', icon: '🗓️' },
-		{ value: 'year', label: '연도별', icon: '📊' }
+		{ value: 'day', label: '일별' },
+		{ value: 'week', label: '주별' },
+		{ value: 'month', label: '월별' },
+		{ value: 'year', label: '연도별' }
 	];
 
 	onMount(() => {
@@ -346,7 +346,6 @@
 					class:active={selectedUnit === unitOption.value}
 					onclick={() => handleUnitChange(unitOption.value)}
 				>
-					<span class="unit-icon">{unitOption.icon}</span>
 					<span>{unitOption.label}</span>
 				</button>
 			{/each}
@@ -376,13 +375,13 @@
 		</div>
 	{:else if error}
 		<div class="error">
-			<p>⚠️ {error}</p>
+			<p>{error}</p>
 			<button class="retry-btn" onclick={loadData}>다시 시도</button>
 		</div>
 	{:else if data}
 		<!-- 지출 카테고리별 차트 -->
 		{#if getSpendChartData()}
-            <h3>💸 SPEND</h3>
+            <h3>SPEND</h3>
 			<div class="chart-section">
                 <table class="data-table compact">
                     <thead>

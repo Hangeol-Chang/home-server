@@ -469,10 +469,10 @@
 		<div class="toolbar-actions">
 			<ProjectVisibilityManager projects={subprojects} onToggle={handleToggleProjectHide} />
 			<button class="btn-secondary" class:active={connectMode} onclick={toggleConnectMode}>
-				{connectMode ? '🔗 연결 모드 (클릭해서 종료)' : '🔗 노드 연결하기'}
+				{connectMode ? '연결 모드 (클릭해서 종료)' : '노드 연결하기'}
 			</button>
 			<button class="btn-primary" onclick={persistGraph} disabled={!dirty || saving}>
-				{saving ? '저장 중...' : dirty ? '💾 저장' : '저장됨'}
+				{saving ? '저장 중...' : dirty ? '저장' : '저장됨'}
 			</button>
 		</div>
 	</div>
@@ -577,9 +577,9 @@
 	></div>
 	<div class="context-menu" style="left: {contextMenu.x}px; top: {contextMenu.y}px;">
 		{#if contextMenu.node}
-			<button onclick={() => handleCreateNode('file')}>📄 파일 생성</button>
+			<button onclick={() => handleCreateNode('file')}>파일 생성</button>
 		{/if}
-		<button onclick={() => handleCreateNode('folder')}>📁 폴더 생성</button>
+		<button onclick={() => handleCreateNode('folder')}>폴더 생성</button>
 	</div>
 {/if}
 

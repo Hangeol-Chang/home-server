@@ -260,7 +260,7 @@
 					<polyline points="15 18 9 12 15 6"></polyline>
 				</svg>
 			</button>
-			<h3>📅 {year}-{month}</h3>
+			<h3>{year}-{month}</h3>
 			<button class="nav-btn" onclick={() => changeMonth(1)} aria-label="다음 달">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<polyline points="9 18 15 12 9 6"></polyline>
@@ -295,7 +295,7 @@
 		</div>
 	{:else if error}
 		<div class="error">
-			<p>⚠️ {error}</p>
+			<p>{error}</p>
 		</div>
 	{:else}
 		<div class="calendar-container">

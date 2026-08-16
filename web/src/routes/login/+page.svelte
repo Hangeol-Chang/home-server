@@ -108,7 +108,7 @@
 		padding: 48px;
 		max-width: 440px;
 		width: 100%;
-		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+		box-shadow: var(--shadow-lg);
 		text-align: center;
 
 		background-color: var(--bg-primary);

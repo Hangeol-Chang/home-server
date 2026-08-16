@@ -60,30 +60,12 @@
 
 					{#if isMenuDropdownOpen}
 						<div class="menu-dropdown">
-							<a href="/asset-manager" class="menu-dropdown-item">
-								<span>💰</span>
-								<span>자산관리</span>
-							</a>
-							<a href="/schedule-manager" class="menu-dropdown-item">
-								<span>📅</span>
-								<span>일정관리</span>
-							</a>
-							<a href="/notebook" class="menu-dropdown-item">
-								<span>📓</span>
-								<span>노트북</span>
-							</a>
-							<a href="/projects" class="menu-dropdown-item">
-								<span>🗂️</span>
-								<span>프로젝트</span>
-							</a>
-							<a href="/chat" class="menu-dropdown-item">
-								<span>💬</span>
-								<span>채팅</span>
-							</a>
-							<a href="/test" class="menu-dropdown-item">
-								<span>🛠️</span>
-								<span>시스템 테스트</span>
-							</a>
+							<a href="/asset-manager" class="menu-dropdown-item">자산관리</a>
+							<a href="/schedule-manager" class="menu-dropdown-item">일정관리</a>
+							<a href="/notebook" class="menu-dropdown-item">노트북</a>
+							<a href="/projects" class="menu-dropdown-item">프로젝트</a>
+							<a href="/chat" class="menu-dropdown-item">채팅</a>
+							<a href="/test" class="menu-dropdown-item">시스템 테스트</a>
 						</div>
 					{/if}
 				</div>

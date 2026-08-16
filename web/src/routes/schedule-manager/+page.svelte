@@ -25,7 +25,7 @@
 <div class="schedule-manager-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<!-- 헤더 -->
 	<header class="page-header">
-		<h1>📅 일정 관리</h1>
+		<h1>일정 관리</h1>
 		<div class="header-actions">
             <a href="/schedule-manager/admin" class="admin-link">
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

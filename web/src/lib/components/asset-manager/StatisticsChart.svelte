@@ -1,5 +1,8 @@
 <script>
+	import { Chart, registerables } from 'chart.js';
 	import { getPeriodStatistics } from '$lib/api/asset-manager.js';
+
+	Chart.register(...registerables);
 
 	let {
 		classId = 1,
@@ -11,6 +14,9 @@
 	let loading = $state(true);
 	let error = $state('');
 	let viewType = $state('category'); // 'category' 또는 'tier'
+
+	let canvasEl = $state(null);
+	let chartInstance = null;
 
 	async function loadStatistics() {
 		loading = true;
@@ -45,8 +51,99 @@
 		return categoryColors[index % categoryColors.length];
 	}
 
+	function currentItems() {
+		if (!stats) return [];
+		if (viewType === 'category') {
+			return stats.by_category.map((item) => ({
+				name: item.category_display_name,
+				value: item.total_cost,
+				count: item.count
+			}));
+		}
+		return stats.by_tier.map((item) => ({
+			name: item.tier_display_name,
+			value: item.total_cost,
+			count: item.count
+		}));
+	}
+
+	function updateChart() {
+		if (!canvasEl) return;
+
+		if (chartInstance) {
+			chartInstance.destroy();
+			chartInstance = null;
+		}
+
+		const items = currentItems();
+		if (items.length === 0) return;
+
+		chartInstance = new Chart(canvasEl.getContext('2d'), {
+			type: 'bar',
+			data: {
+				labels: items.map((it) => it.name),
+				datasets: [
+					{
+						data: items.map((it) => it.value),
+						backgroundColor: items.map((_, i) => getColor(i)),
+						borderRadius: 4,
+						barPercentage: 0.7
+					}
+				]
+			},
+			options: {
+				indexAxis: 'y',
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					legend: { display: false },
+					tooltip: {
+						backgroundColor: 'rgba(0, 0, 0, 0.8)',
+						padding: 12,
+						callbacks: {
+							label: (context) => {
+								const item = items[context.dataIndex];
+								return `${formatCurrency(item.value)} (${getPercentage(item.value)}%) · ${item.count}건`;
+							}
+						}
+					}
+				},
+				scales: {
+					x: {
+						beginAtZero: true,
+						grid: { color: 'rgba(0, 0, 0, 0.05)' },
+						ticks: {
+							font: { size: 11 },
+							callback: (value) => {
+								if (value >= 1000000) return (value / 1000000).toFixed(0) + 'M';
+								if (value >= 1000) return (value / 1000).toFixed(0) + 'K';
+								return value;
+							}
+						}
+					},
+					y: {
+						grid: { display: false },
+						ticks: { font: { size: 11 } }
+					}
+				}
+			}
+		});
+	}
+
 	$effect(() => {
 		loadStatistics();
+	});
+
+	$effect(() => {
+		stats;
+		viewType;
+		updateChart();
+	});
+
+	$effect(() => {
+		return () => {
+			if (chartInstance) chartInstance.destroy();
+		};
 	});
 </script>
 
@@ -85,7 +182,7 @@
 		</div>
 	{:else if error}
 		<div class="error">
-			<p>⚠️ {error}</p>
+			<p>{error}</p>
 			<button class="retry-btn" onclick={loadStatistics}>다시 시도</button>
 		</div>
 	{:else if stats}
@@ -99,61 +196,79 @@
 				</div>
 			</div>
 
-			{#if viewType === 'category'}
-				<!-- 카테고리별 차트 -->
-				{#if stats.by_category.length > 0}
-					<div class="bar-chart">
-						{#each stats.by_category as item, index}
-							<div class="bar-item">
-								<div class="bar-info">
-									<span class="bar-name">{item.category_display_name}</span>
-									<span class="bar-value">{formatCurrency(item.total_cost)}</span>
-								</div>
-								<div class="bar-wrapper">
-									<div
-										class="bar-fill"
-										style="width: {getPercentage(item.total_cost)}%; background: {getColor(index)}"
-									>
-										<span class="bar-percentage">{getPercentage(item.total_cost)}%</span>
-									</div>
-								</div>
-								<div class="bar-count">{item.count}건</div>
-							</div>
-						{/each}
-					</div>
-				{:else}
-					<p class="no-data">카테고리별 데이터가 없습니다</p>
-				{/if}
+			{#if currentItems().length > 0}
+				<div class="chart-container" style="height: {Math.max(currentItems().length * 40, 120)}px">
+					<canvas bind:this={canvasEl}></canvas>
+				</div>
+
+				<div class="item-list">
+					{#each currentItems() as item, index (item.name)}
+						<div class="item-row">
+							<span class="item-dot" style="background: {getColor(index)}"></span>
+							<span class="item-name">{item.name}</span>
+							<span class="item-count">{item.count}건</span>
+							<span class="item-percent">{getPercentage(item.value)}%</span>
+							<span class="item-value">{formatCurrency(item.value)}</span>
+						</div>
+					{/each}
+				</div>
 			{:else}
-				<!-- 티어별 차트 -->
-				{#if stats.by_tier.length > 0}
-					<div class="bar-chart">
-						{#each stats.by_tier as item, index}
-							<div class="bar-item">
-								<div class="bar-info">
-									<span class="bar-name">{item.tier_display_name}</span>
-									<span class="bar-value">{formatCurrency(item.total_cost)}</span>
-								</div>
-								<div class="bar-wrapper">
-									<div
-										class="bar-fill"
-										style="width: {getPercentage(item.total_cost)}%; background: {getColor(index)}"
-									>
-										<span class="bar-percentage">{getPercentage(item.total_cost)}%</span>
-									</div>
-								</div>
-								<div class="bar-count">{item.count}건</div>
-							</div>
-						{/each}
-					</div>
-				{:else}
-					<p class="no-data">분류별 데이터가 없습니다</p>
-				{/if}
+				<p class="no-data">
+					{viewType === 'category' ? '카테고리별' : '분류별'} 데이터가 없습니다
+				</p>
 			{/if}
 		</div>
 	{/if}
 </div>
 
 <style>
-	/* 추가적인 커스텀 스타일이 필요한 경우 여기에 작성 */
+	.chart-container {
+		position: relative;
+		width: 100%;
+	}
+
+	.item-list {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		margin-top: 16px;
+	}
+
+	.item-row {
+		display: grid;
+		grid-template-columns: 8px 1fr auto auto auto;
+		align-items: center;
+		gap: 10px;
+		font-size: 0.85rem;
+		color: var(--text-secondary);
+	}
+
+	.item-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	.item-name {
+		color: var(--text-primary);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.item-count {
+		white-space: nowrap;
+	}
+
+	.item-percent {
+		white-space: nowrap;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.item-value {
+		white-space: nowrap;
+		color: var(--text-primary);
+		font-variant-numeric: tabular-nums;
+	}
 </style>

@@ -215,7 +215,7 @@
 </script>
 
 <div class="module-container" class:mobile={$device.isMobile}>
-	<h3>📊 예산 대비 지출 현황</h3>
+	<h3>예산 대비 지출 현황</h3>
 	
 	<div class="content-wrapper">
 		{#if loading}

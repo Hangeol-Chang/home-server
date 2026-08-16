@@ -14,7 +14,7 @@
 <svelte:window onclick={open ? handleClickOutside : undefined} />
 
 <div class="visibility-manager">
-	<button class="btn-secondary" onclick={() => (open = !open)}>👁 프로젝트 표시 관리</button>
+	<button class="btn-secondary" onclick={() => (open = !open)}>프로젝트 표시 관리</button>
 
 	{#if open}
 		<div class="visibility-dropdown">

@@ -275,9 +275,7 @@
 
 <div class="module-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="module-header">
-		<h1 class="module-title">
-			<span class="module-icon">☁️</span> Google Drive
-		</h1>
+		<h1 class="module-title">Google Drive</h1>
 	</div>
 
 	<!-- Breadcrumb -->
@@ -375,7 +373,7 @@
 			<div class="preview-header">
 				<span class="preview-title">{previewFile.name}</span>
 				<div class="preview-actions">
-					<a href={previewUrl} download={previewFile.name} class="preview-download-btn">⬇ 다운로드</a>
+					<a href={previewUrl} download={previewFile.name} class="preview-download-btn">다운로드</a>
 					<button class="preview-close-btn" onclick={closePreview}>✕</button>
 				</div>
 			</div>
@@ -443,10 +441,6 @@
 		align-items: center;
 		gap: 8px;
 		margin: 0;
-	}
-
-	.module-icon {
-		font-size: 1.4rem;
 	}
 
 	/* Breadcrumb */

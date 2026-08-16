@@ -13,6 +13,7 @@
 	import BudgetComparisonChart from '$lib/components/asset-manager/BudgetComparisonChart.svelte';
 	import BudgetEditor from '$lib/components/asset-manager/BudgetEditor.svelte';
 	import RecurringPaymentManager from '$lib/components/asset-manager/RecurringPaymentManager.svelte';
+	import TransactionTypeIcon from '$lib/components/ui/TransactionTypeIcon.svelte';
 	import '$lib/styles/module.css';
 	import '$lib/styles/module-common.css';
 
@@ -52,10 +53,10 @@
 	);
 
 	const classTypes = [
-		{ id: null, name: 'all', label: '전체', color: '#6366f1', icon: '📊' },
-		{ id: 1, name: 'spend', label: '지출', color: '#f44336', icon: '💸' },
-		{ id: 2, name: 'earn', label: '수익', color: '#4caf50', icon: '💰' },
-		{ id: 3, name: 'save', label: '저축', color: '#2196f3', icon: '🏦' }
+		{ id: null, name: 'all', label: '전체', color: '#6366f1' },
+		{ id: 1, name: 'spend', label: '지출', color: '#f44336' },
+		{ id: 2, name: 'earn', label: '수익', color: '#4caf50' },
+		{ id: 3, name: 'save', label: '저축', color: '#2196f3' }
 	];
 
 	async function loadTransactions() {
@@ -100,7 +101,7 @@
 <div class="asset-manager-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<!-- 헤더 -->
 	<header class="page-header">
-		<h1>💰 Asset Manager</h1>
+		<h1>Asset Manager</h1>
 		<div class="header-actions">
 			<a href="/asset-manager/admin" class="admin-link">
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -134,7 +135,7 @@
 
 	<hr>
 	<button class="part-btn">
-		🗓️ 월간 캘린더
+		월간 캘린더
 	</button>
 	<hr>
 
@@ -144,7 +145,7 @@
 	<hr>
 	<div class="part-header">
 		<button class="part-btn">
-			💰 예산 관리
+			예산 관리
 		</button>
 	</div>
 	<hr>
@@ -156,7 +157,7 @@
 				<polyline points="15 18 9 12 15 6"></polyline>
 			</svg>
 		</button>
-		<h3>📅 {budgetYear}-{String(budgetMonth).padStart(2, '0')}</h3>
+		<h3>{budgetYear}-{String(budgetMonth).padStart(2, '0')}</h3>
 		<button class="nav-btn" onclick={() => changeBudgetMonth(1)} aria-label="다음 달">
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<polyline points="9 18 15 12 9 6"></polyline>
@@ -171,7 +172,7 @@
 
 	<hr>
 	<button class="part-btn">
-		� 월별 수익 비교
+		월별 수익 비교
 	</button>
 	<hr>
 
@@ -180,7 +181,7 @@
 
 	<hr>
 	<button class="part-btn">
-		�🗓️ 기간별 통계
+		기간별 통계
 	</button>
 	<hr>
 
@@ -189,7 +190,7 @@
 
 	<hr>
 	<button class="part-btn">
-		📊 항목별 통계
+		항목별 통계
 	</button>
 	<hr>
 	<!-- 거래 분류 필터 -->
@@ -201,7 +202,9 @@
 				style="--class-color: {classType.color}"
 				onclick={() => (selectedClass = classType.id)}
 			>
-				<span class="class-icon">{classType.icon}</span>
+				{#if classType.name !== 'all'}
+					<span class="class-icon"><TransactionTypeIcon type={classType.name} /></span>
+				{/if}
 				<span>{classType.label}</span>
 			</button>
 		{/each}
@@ -230,7 +233,7 @@
 
 	<hr>
 	<button class="part-btn">
-		🔄 정기 결제
+		정기 결제
 	</button>
 	<hr>
 

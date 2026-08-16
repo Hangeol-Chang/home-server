@@ -29,7 +29,7 @@
 
 <div class="test-page-container">
 	<header class="page-header">
-		<h1>🛠️ 시스템 테스트 대시보드</h1>
+		<h1>시스템 테스트 대시보드</h1>
 		<p class="subtitle">서버의 여러 기능과 서비스 연동을 테스트할 수 있는 관리자 페이지입니다.</p>
 	</header>
 
@@ -37,7 +37,7 @@
 		<!-- 디스코드 웹훅 테스트 카드 -->
 		<section class="test-card">
 			<div class="card-header">
-				<h2><span class="icon">💬</span> 디스코드(Discord) 웹훅</h2>
+				<h2>디스코드(Discord) 웹훅</h2>
 			</div>
 			
 			<div class="card-body">
@@ -63,13 +63,13 @@
                 <!-- 결과 표시 영역 -->
 				{#if discordResult}
 					<div class="result-box success">
-						<pre>✅ {discordResult}</pre>
+						<pre>{discordResult}</pre>
 					</div>
 				{/if}
 
 				{#if discordError}
 					<div class="result-box error">
-						<pre>❌ {discordError}</pre>
+						<pre>{discordError}</pre>
 					</div>
 				{/if}
 			</div>
@@ -78,7 +78,7 @@
 		<!-- 앞으로 추가될 다른 테스트 기능들을 위한 더미 카드 -->
 		<section class="test-card placeholder">
 			<div class="card-header">
-				<h2><span class="icon">🗂️</span> 추가 시스템 테스트 (예정)</h2>
+				<h2>추가 시스템 테스트 (예정)</h2>
 			</div>
 			<div class="card-body">
 				<p class="description">추후 외부 연동 (예: 구글 드라이브 스토리지 확인 등) 테스트가 추가될 자리입니다.</p>

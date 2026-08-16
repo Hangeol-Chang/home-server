@@ -349,7 +349,7 @@
 <div class="admin-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<header class="page-header">
 		<div>
-			<h1>⚙️ 관리자 설정</h1>
+			<h1>관리자 설정</h1>
 			<p class="subtitle">카테고리와 티어를 관리합니다</p>
 		</div>
 		<a href="/asset-manager" class="back-btn">
@@ -368,7 +368,7 @@
 		</div>
 	{:else if error}
 		<div class="error">
-			<p>⚠️ {error}</p>
+			<p>{error}</p>
 			<button class="retry-btn" onclick={loadData}>다시 시도</button>
 		</div>
 	{:else}
@@ -376,7 +376,7 @@
 			<!-- 거래 분류 정보 -->
 			<section class="manage-section">
 				<div class="section-header">
-					<h2>📊 거래 분류</h2>
+					<h2>거래 분류</h2>
 				</div>
 				<div class="section-content">
 					<div class="class-grid">
@@ -395,7 +395,7 @@
 			<!-- 미분류 거래 관리 -->
 			<section class="manage-section">
 				<div class="section-header" onclick={() => toggleSection('unclassified')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSection('unclassified')}>
-					<h2>⚠️ 미분류 거래 관리 ({unclassifiedTransactions.length})</h2>
+					<h2>미분류 거래 관리 ({unclassifiedTransactions.length})</h2>
 					<span class="toggle-icon">{expandedSections.unclassified ? '▼' : '▶'}</span>
 				</div>
 				
@@ -458,7 +458,7 @@
 								</table>
 							</div>
 						{:else}
-							<p class="empty-message">미분류 거래가 없습니다. 모두 분류되었습니다! 🎉</p>
+							<p class="empty-message">미분류 거래가 없습니다. 모두 분류되었습니다.</p>
 						{/if}
 					</div>
 				{/if}
@@ -467,7 +467,7 @@
 			<!-- 카테고리 관리 -->
 			<section class="manage-section">
 				<div class="section-header" onclick={() => toggleSection('category')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSection('category')}>
-					<h2>🏷️ 카테고리 관리</h2>
+					<h2>카테고리 관리</h2>
 					<div class="header-actions">
 						<button class="add-btn" onclick={(e) => { 
 							e.stopPropagation();
@@ -602,7 +602,7 @@
 		<!-- 하위 카테고리 관리 -->
 		<section class="manage-section">
 			<div class="section-header" onclick={() => toggleSection('subCategory')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSection('subCategory')}>
-				<h2>📑 세부 분류 관리</h2>
+				<h2>세부 분류 관리</h2>
 				<div class="header-actions">
 					<button class="add-btn" onclick={(e) => { 
 						e.stopPropagation();
@@ -730,7 +730,7 @@
 			<!-- 티어 관리 -->
 			<section class="manage-section">
 				<div class="section-header" onclick={() => toggleSection('tier')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSection('tier')}>
-					<h2>🎯 티어 관리</h2>
+					<h2>티어 관리</h2>
 					<div class="header-actions">
 						<button class="add-btn" onclick={(e) => { 
 							e.stopPropagation();
@@ -869,7 +869,7 @@
 			</section>			<!-- 태그 관리 -->
 			<section class="manage-section">
 				<div class="section-header" onclick={() => toggleSection('tag')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSection('tag')}>
-					<h2>🏷️ 태그 관리</h2>
+					<h2>태그 관리</h2>
 					<div class="header-actions">
 						<button class="add-btn" onclick={(e) => { 
 							e.stopPropagation();

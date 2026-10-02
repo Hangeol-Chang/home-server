@@ -93,9 +93,13 @@ def _send_discord_image(webhook_url: str, image_bytes: bytes, filename: str,
 # ── 카테고리별 지출 비교 차트 ───────────────────────────────────────────────
 
 def _setup_korean_font():
-    """설치된 한글 폰트가 있으면 matplotlib에 적용합니다 (없으면 기본 폰트로 진행)."""
+    """한글 폰트를 matplotlib에 적용합니다. 시스템 폰트가 없으면 번들 폰트(app/assets/fonts)를 사용합니다."""
     import matplotlib.font_manager as fm
     import matplotlib.pyplot as plt
+
+    bundled = os.path.join(os.path.dirname(__file__), "..", "assets", "fonts", "NanumGothic-Regular.ttf")
+    if os.path.exists(bundled):
+        fm.fontManager.addfont(bundled)
 
     candidates = ["NanumGothic", "Noto Sans CJK KR", "Noto Sans KR", "Malgun Gothic", "AppleGothic"]
     available = {f.name for f in fm.fontManager.ttflist}
@@ -326,18 +330,20 @@ def generate_custom_report(user_prompt: str, send_discord: bool = True) -> str:
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
+        # 원본 거래를 그대로 넣으면 ~10k 토큰이 되어 n_ctx 확장(재로드 2회) → CPU 추론 지연/OOM으로 응답이 오지 않음.
+        # 월×유형×카테고리×세부카테고리 합계로 압축해 프롬프트를 수천 토큰 이내로 유지한다.
         cursor.execute("""
-            SELECT a.date, ac.name as class_name,
+            SELECT substr(a.date, 1, 7) as month, ac.name as class_name,
                    ac_cat.display_name as category,
                    COALESCE(ac_sub.name, '') as sub_category,
-                   a.name, a.cost
+                   COUNT(*) as cnt, SUM(a.cost) as total
             FROM assets a
             JOIN asset_classes ac ON a.class_id = ac.id
             JOIN asset_categories ac_cat ON a.category_id = ac_cat.id
             LEFT JOIN asset_sub_categories ac_sub ON a.sub_category_id = ac_sub.id
             WHERE a.date BETWEEN ? AND ?
-            ORDER BY a.date DESC
-            LIMIT 600
+            GROUP BY month, ac.name, ac_cat.id, ac_sub.id
+            ORDER BY month DESC, total DESC
         """, (start_date, end_date))
         rows = cursor.fetchall()
 
@@ -350,22 +356,24 @@ def generate_custom_report(user_prompt: str, send_discord: bool = True) -> str:
         r = dict(r)
         sub = f">{r['sub_category']}" if r['sub_category'] else ""
         lines.append(
-            f"{r['date']}|{type_label.get(r['class_name'], r['class_name'])}|"
-            f"{r['category']}{sub}|{r['name']}|{r['cost']:,.0f}원"
+            f"{r['month']}|{type_label.get(r['class_name'], r['class_name'])}|"
+            f"{r['category']}{sub}|{r['cnt']}건|{r['total']:,.0f}원"
         )
     data_text = "\n".join(lines)
 
-    prompt = f"""아래는 {start_date} ~ {end_date} 거래 내역입니다. 이 데이터로 다음 요청을 분석해 주세요.
+    prompt = f"""아래는 {start_date} ~ {end_date} 월별 거래 합계입니다. 이 데이터로 다음 요청을 분석해 주세요.
 
 요청: {user_prompt}
 
-거래 내역 (날짜|유형|카테고리|항목명|금액):
+월별 합계 (월|유형|카테고리|건수|금액):
 {data_text}
 
 규칙: Discord 메시지 형식(마크다운+이모지), 한국어, 500자 이내"""
 
     try:
         content = _call_llm(prompt, "커스텀")
+        if not content:
+            content = "⚠️ LLM이 빈 응답을 반환했습니다."
     except Exception as e:
         print(f"[Report] LLM Error: {e}")
         content = f"⚠️ 분석 중 오류가 발생했습니다.\n```{e}```"

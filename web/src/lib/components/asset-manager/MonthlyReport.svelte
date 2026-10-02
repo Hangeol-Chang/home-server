@@ -2,7 +2,6 @@
 	import { getTransactions } from '$lib/api/asset-manager.js';
 	import { CHART_COLORS } from '$lib/constants.js';
 	import PieChart from './module/PieChart.svelte';
-	import SankeyDiagram from './SankeyDiagram.svelte';
 	import TransactionDropdown from './TransactionDropdown.svelte';
 	import TransactionForm from './TransactionForm.svelte';
     import BudgetManager from './BudgetManager.svelte';
@@ -25,6 +24,8 @@
 
 	let isFormOpen = $state(false);
 	let editTransaction = $state(null);
+	// Sankey 비활성화: true로 바꾸면 탭 + 다이어그램 복구 (lazy import라 꺼져 있으면 모듈 로드 안 함)
+	const SHOW_SANKEY = false;
 	let slideIdx = $state(0);
 	let slide0H = $state(0);
 	let slide1H = $state(0);
@@ -250,9 +251,11 @@
 			<button class="slide-tab" class:active={slideIdx === 0} onclick={() => (slideIdx = 0)}>
 				pieChart
 			</button>
+			{#if SHOW_SANKEY}
 			<button class="slide-tab" class:active={slideIdx === 1} onclick={() => (slideIdx = 1)}>
 				Sankey	
 			</button>
+			{/if}
 		</div>
 
 		<!-- 슬라이드 컨테이너 -->
@@ -345,9 +348,13 @@
 				</div>
 
 				<!-- Slide 1: Sankey 다이어그램 -->
+				{#if SHOW_SANKEY}
 				<div class="slide" bind:clientHeight={slide1H}>
-					<SankeyDiagram {transactions} />
+					{#await import('./SankeyDiagram.svelte') then { default: SankeyDiagram }}
+						<SankeyDiagram {transactions} />
+					{/await}
 				</div>
+				{/if}
 			</div>
 		</div>
 	{/if}

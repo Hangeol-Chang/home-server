@@ -220,6 +220,7 @@
 						y: {
 							stacked: true,
 							beginAtZero: true,
+							max: 10000000, // 10M 초과분은 잘림
 							grid: {
 								color: 'rgba(0, 0, 0, 0.05)'
 							},

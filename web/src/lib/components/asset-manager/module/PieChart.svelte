@@ -25,12 +25,16 @@
 		return getComputedStyle(canvas).getPropertyValue(name).trim() || fallback;
 	}
 
+	// Center/scale from chartArea + controller, not arc[0] — so the disc still draws with zero segments.
+	function geometry(chart) {
+		const { left, right, top, bottom } = chart.chartArea;
+		const { outerRadius } = chart.getDatasetMeta(0).controller;
+		return { cx: (left + right) / 2, cy: (top + bottom) / 2, pxPerUnit: outerRadius / (circleRadius + 7) };
+	}
+
 	// Static background disc + "total" track ring, drawn under the tier arcs.
 	function drawBackground(chart) {
-		const arc0 = chart.getDatasetMeta(0).data[0];
-		if (!arc0) return;
-		const { x: cx, y: cy, outerRadius } = arc0.getProps(['x', 'y', 'outerRadius'], true);
-		const pxPerUnit = outerRadius / (circleRadius + 7);
+		const { cx, cy, pxPerUnit } = geometry(chart);
 		const ctx = chart.ctx;
 
 		ctx.save();
@@ -53,10 +57,7 @@
 
 	// Segment labels + center text, drawn over the tier arcs.
 	function drawForeground(chart) {
-		const arc0 = chart.getDatasetMeta(0).data[0];
-		if (!arc0) return;
-		const { x: cx, y: cy, outerRadius } = arc0.getProps(['x', 'y', 'outerRadius'], true);
-		const pxPerUnit = outerRadius / (circleRadius + 7);
+		const { cx, cy, pxPerUnit } = geometry(chart);
 		const ctx = chart.ctx;
 
 		ctx.save();

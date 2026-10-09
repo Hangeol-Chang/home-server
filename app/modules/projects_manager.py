@@ -1,4 +1,4 @@
-import json
+import re
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 
 from models.projects import (
     ProjectStatus, ProjectNode, ProjectEdge, ProjectGraph,
-    SaveGraphRequest, SaveNodeRequest, NodeContent, FolderMetaRequest, SubprojectInfo,
+    SaveNodeRequest, NodeContent, FolderMetaRequest, SubprojectInfo,
     CreateNodeRequest
 )
 from modules.notebook_manager import VAULT_PATH, get_safe_path, sync_vault_to_git
@@ -17,11 +17,9 @@ router = APIRouter(
     responses={404: {"description": "Not found"}}
 )
 
-GRAPH_FILE_NAME = ".graph.json"
 FOLDER_NOTE_FILE_NAME = "README.md"
-GRID_COLS = 4
-GRID_SPACING_X = 240
-GRID_SPACING_Y = 160
+# [[target]], [[target|alias]], [[target#heading]] 에서 target만 뽑는다
+WIKILINK_RE = re.compile(r'\[\[([^\]|#]+)')
 
 
 def get_folder_path(folder: str) -> Path:
@@ -69,13 +67,12 @@ def parse_frontmatter(text: str) -> Tuple[Dict[str, str], str]:
     return meta, body
 
 
-def read_node_meta(file_path: Path) -> Dict[str, str]:
+def read_note(file_path: Path) -> Tuple[Dict[str, str], str]:
     try:
         text = file_path.read_text(encoding='utf-8')
     except UnicodeDecodeError:
         text = file_path.read_text(encoding='cp949')
-    meta, _ = parse_frontmatter(text)
-    return meta
+    return parse_frontmatter(text)
 
 
 def ensure_folder_note(dir_path: Path) -> Path:
@@ -87,20 +84,11 @@ def ensure_folder_note(dir_path: Path) -> Path:
 
 
 def read_folder_meta(dir_path: Path) -> Dict[str, str]:
-    return read_node_meta(ensure_folder_note(dir_path))
+    return read_note(ensure_folder_note(dir_path))[0]
 
 
 def write_folder_meta(dir_path: Path, meta: Dict[str, str]):
     write_node_frontmatter(ensure_folder_note(dir_path), meta)
-
-
-def parse_links(meta: Dict[str, str]) -> List[str]:
-    """meta의 links 값('a; b; c')을 경로 리스트로 파싱"""
-    return [p.strip() for p in meta.get("links", "").split(';') if p.strip()]
-
-
-def format_links(links: List[str]) -> str:
-    return '; '.join(links)
 
 
 def write_node_frontmatter(file_path: Path, updates: Dict[str, str]):
@@ -118,22 +106,6 @@ def write_node_frontmatter(file_path: Path, updates: Dict[str, str]):
     else:
         new_text = body
     file_path.write_text(new_text, encoding='utf-8')
-
-
-def add_link(source_path: Path, target_rel_path: str):
-    """source_path 노드의 metadata에 target_rel_path로의 수동 연결(links) 추가"""
-    if source_path.is_dir():
-        meta = read_folder_meta(source_path)
-        links = parse_links(meta)
-        if target_rel_path not in links:
-            links.append(target_rel_path)
-        meta["links"] = format_links(links)
-        write_folder_meta(source_path, meta)
-    else:
-        links = parse_links(read_node_meta(source_path))
-        if target_rel_path not in links:
-            links.append(target_rel_path)
-        write_node_frontmatter(source_path, {"links": format_links(links)})
 
 
 def status_or_default(meta: Dict[str, str]) -> str:
@@ -156,40 +128,48 @@ def build_tree(dir_path: Path, parent_id: str, nodes: List[dict], edges: List[di
         if name.startswith('.') or name == 'node_modules':
             continue
         if name == FOLDER_NOTE_FILE_NAME:
-            continue  # README.md는 부모 폴더 노드의 metadata로 취급, 별도 노드로 만들지 않는다
+            continue  # README.md는 부모 폴더 노드 자체로 취급, 별도 노드로 만들지 않는다
 
         rel_path = str(item.relative_to(VAULT_PATH)).replace('\\', '/')
 
         if item.is_dir():
-            meta = read_folder_meta(item)
+            meta, body = read_note(ensure_folder_note(item))
             if meta.get("hide") == "true":
                 continue  # 숨긴 프로젝트는 하위 트리 전체를 그래프에서 제외
-            nodes.append({
-                "path": rel_path, "name": name, "type": "folder",
-                "meta": meta,
-            })
+            nodes.append({"path": rel_path, "name": name, "type": "folder", "meta": meta, "body": body})
             if parent_id:
                 edges.append({"source": parent_id, "target": rel_path, "type": "tree"})
             build_tree(item, rel_path, nodes, edges)
         elif item.is_file() and item.suffix.lower() in ('.md', '.markdown'):
-            meta = read_node_meta(item)
-            nodes.append({
-                "path": rel_path, "name": item.stem, "type": "file",
-                "meta": meta,
-            })
+            meta, body = read_note(item)
+            nodes.append({"path": rel_path, "name": item.stem, "type": "file", "meta": meta, "body": body})
             if parent_id:
                 edges.append({"source": parent_id, "target": rel_path, "type": "tree"})
 
 
-def load_graph_layout(folder_path: Path) -> dict:
-    """노드 위치(positions)만 저장. 연결 정보는 각 노드의 metadata에 저장한다."""
-    graph_file = folder_path / GRAPH_FILE_NAME
-    if not graph_file.exists():
-        return {"positions": {}}
-    try:
-        return json.loads(graph_file.read_text(encoding='utf-8'))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return {"positions": {}}
+def build_link_edges(nodes: List[dict]) -> List[dict]:
+    """본문의 [[wikilink]]를 Obsidian처럼 파일명 또는 vault 기준 경로(확장자 생략, 대소문자 무시)로 해석해 연결 엣지를 만든다.
+    그래프 밖(다른 폴더/숨긴 프로젝트)을 가리키는 링크는 무시한다."""
+    lookup: Dict[str, str] = {}
+    for n in nodes:
+        path_key = n["path"] if n["type"] == "folder" else n["path"].rsplit('.', 1)[0]
+        lookup[path_key.lower()] = n["path"]
+        lookup.setdefault(n["name"].lower(), n["path"])
+        if n["type"] == "folder":
+            lookup[f'{n["path"]}/README'.lower()] = n["path"]
+
+    seen = set()
+    edges = []
+    for n in nodes:
+        for raw in WIKILINK_RE.findall(n["body"]):
+            key = raw.strip().removesuffix('.md').lower()
+            target = lookup.get(key)
+            pair = frozenset((n["path"], target))
+            if not target or target == n["path"] or pair in seen:
+                continue
+            seen.add(pair)
+            edges.append({"source": n["path"], "target": target, "type": "link"})
+    return edges
 
 
 # ===== Endpoints =====
@@ -232,89 +212,29 @@ def get_subprojects(folder: str = Query(..., description="0_ 로 시작하는 �
 
 @router.get("/graph", response_model=ProjectGraph)
 def get_graph(folder: str = Query(..., description="0_ 로 시작하는 최상위 폴더명")):
-    """폴더 하위 트리(폴더+md 파일) 전체 + 저장된 위치/수동연결 정보를 병합해 반환.
-    폴더 자체가 하나의 노드가 되고, 그 안의 파일/하위폴더는 거기서 뻗어나오는 sub 노드가 된다."""
+    """폴더 하위 트리(폴더+md 파일) 노드와, 폴더 구조(tree) + 본문 [[wikilink]](link) 엣지를 반환.
+    위치는 저장하지 않는다 — 프론트가 force layout으로 매번 자동 배치한다."""
     folder_path = get_folder_path(folder)
-    layout = load_graph_layout(folder_path)
-    saved_positions = layout.get("positions", {})
 
     raw_nodes: List[dict] = []
     tree_edges: List[dict] = []
     build_tree(folder_path, "", raw_nodes, tree_edges)
 
-    known_paths = {n["path"] for n in raw_nodes}
-
-    nodes: List[ProjectNode] = []
-    for idx, n in enumerate(raw_nodes):
-        meta = n["meta"]
-        pos = saved_positions.get(n["path"])
-        if pos:
-            x, y = pos.get("x", 0), pos.get("y", 0)
-        else:
-            x = (idx % GRID_COLS) * GRID_SPACING_X
-            y = (idx // GRID_COLS) * GRID_SPACING_Y
-
-        nodes.append(ProjectNode(
+    nodes = [
+        ProjectNode(
             path=n["path"],
             name=n["name"],
             type=n["type"],
             folder=folder,
-            status=status_or_default(meta),
-            start_date=meta.get("start_date") or None,
-            end_date=meta.get("end_date") or None,
-            x=x,
-            y=y,
-        ))
-
-    manual_edges = [
-        ProjectEdge(source=n["path"], target=target, type="manual")
+            status=status_or_default(n["meta"]),
+            start_date=n["meta"].get("start_date") or None,
+            end_date=n["meta"].get("end_date") or None,
+        )
         for n in raw_nodes
-        for target in parse_links(n["meta"])
-        if target in known_paths
     ]
-    edges = [ProjectEdge(**e) for e in tree_edges] + manual_edges
+    edges = [ProjectEdge(**e) for e in tree_edges + build_link_edges(raw_nodes)]
 
     return ProjectGraph(nodes=nodes, edges=edges)
-
-
-@router.post("/graph")
-def save_graph(request: SaveGraphRequest):
-    """노드 위치는 .graph.json에, 수동 연결은 각 소스 노드의 metadata(links)에 저장 및 Git 자동 동기화.
-    (부모-자식 트리 연결은 폴더 구조에서 매번 자동 계산되므로 저장하지 않는다)"""
-    folder_path = get_folder_path(request.folder)
-
-    layout = {"positions": {path: pos.model_dump() for path, pos in request.positions.items()}}
-
-    links_by_source: Dict[str, List[str]] = {}
-    for e in request.edges:
-        if e.type == "manual":
-            links_by_source.setdefault(e.source, []).append(e.target)
-
-    raw_nodes: List[dict] = []
-    tree_edges: List[dict] = []
-    build_tree(folder_path, "", raw_nodes, tree_edges)
-
-    try:
-        graph_file = folder_path / GRAPH_FILE_NAME
-        graph_file.write_text(json.dumps(layout, ensure_ascii=False, indent=2), encoding='utf-8')
-
-        for n in raw_nodes:
-            new_links = links_by_source.get(n["path"], [])
-            if new_links == parse_links(n["meta"]):
-                continue
-            item_path = VAULT_PATH / n["path"]
-            if item_path.is_dir():
-                meta = read_folder_meta(item_path)
-                meta["links"] = format_links(new_links)
-                write_folder_meta(item_path, meta)
-            else:
-                write_node_frontmatter(item_path, {"links": format_links(new_links)})
-
-        sync_vault_to_git(f"Update project graph ({request.folder})")
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-    return {"status": "success", "folder": request.folder}
 
 
 @router.get("/node-content", response_model=NodeContent)
@@ -402,9 +322,11 @@ def create_node(request: CreateNodeRequest):
         rel_path = str(target_path.relative_to(VAULT_PATH)).replace('\\', '/')
 
         if request.link_from:
+            # 파일 노드에서 만든 경우 그 파일 본문 끝에 [[wikilink]]를 붙여 연결한다
             link_from_path = get_safe_path(request.link_from)
-            if link_from_path.exists():
-                add_link(link_from_path, rel_path)
+            if link_from_path.is_file():
+                with link_from_path.open('a', encoding='utf-8') as f:
+                    f.write(f'\n[[{target_path.stem}]]\n')
 
         sync_vault_to_git(f"Create project {request.type} {rel_path}")
     except HTTPException:

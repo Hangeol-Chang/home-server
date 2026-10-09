@@ -13,13 +13,9 @@ export async function getSubprojects(folder) {
 	return apiGet(`${API_BASE}/subprojects`, { folder });
 }
 
-// ===== Graph (nodes + edges + positions) =====
+// ===== Graph (nodes + tree/wikilink edges, 위치는 프론트 force layout) =====
 export async function getGraph(folder) {
 	return apiGet(`${API_BASE}/graph`, { folder });
-}
-
-export async function saveGraph(folder, positions, edges) {
-	return apiPost(`${API_BASE}/graph`, { folder, positions, edges });
 }
 
 // ===== Node content (frontmatter 포함 원문 전체) =====
@@ -36,7 +32,7 @@ export async function saveFolderMeta({ path, status, start_date, end_date, hide 
 	return apiPost(`${API_BASE}/folder-meta`, { path, status, start_date, end_date, hide });
 }
 
-// ===== 새 파일/폴더 노드 생성 (parent_path 폴더 노드 아래, link_from 있으면 그 노드와 수동 연결) =====
+// ===== 새 파일/폴더 노드 생성 (parent_path 폴더 노드 아래, link_from 있으면 그 파일 본문에 [[wikilink]] 추가) =====
 export async function createNode({ parent_path, name, type, link_from }) {
 	return apiPost(`${API_BASE}/create-node`, { parent_path, name, type, link_from });
 }

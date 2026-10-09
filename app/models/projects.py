@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Literal
+from typing import Optional, List, Literal
 from enum import Enum
 
 
@@ -18,14 +18,12 @@ class ProjectNode(BaseModel):
     status: ProjectStatus = ProjectStatus.planned
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    x: float = 0
-    y: float = 0
 
 
 class ProjectEdge(BaseModel):
     source: str
     target: str
-    type: Literal["tree", "manual"] = "manual"
+    type: Literal["tree", "link"] = "link"
 
 
 class FolderMetaRequest(BaseModel):
@@ -51,17 +49,6 @@ class ProjectGraph(BaseModel):
     edges: List[ProjectEdge] = Field(default_factory=list)
 
 
-class NodePosition(BaseModel):
-    x: float
-    y: float
-
-
-class SaveGraphRequest(BaseModel):
-    folder: str
-    positions: Dict[str, NodePosition]
-    edges: List[ProjectEdge] = Field(default_factory=list)
-
-
 class SaveNodeRequest(BaseModel):
     path: str
     content: str = Field(..., description="frontmatter 포함 파일 전체 원문")
@@ -76,4 +63,4 @@ class CreateNodeRequest(BaseModel):
     parent_path: str = Field(..., description="생성 위치가 될 부모 폴더 노드의 vault 기준 경로")
     name: str
     type: Literal["file", "folder"]
-    link_from: Optional[str] = Field(None, description="파일 노드에서 생성한 경우, 그 파일 노드와 수동 연결(links)을 추가")
+    link_from: Optional[str] = Field(None, description="파일 노드에서 생성한 경우, 그 파일 본문에 [[새 노드]] wikilink를 추가")

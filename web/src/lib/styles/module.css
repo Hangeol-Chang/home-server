@@ -7,10 +7,13 @@
 @import './module-extended.css';
 @import './module-calendar.css';
 
+/* 박스 없이 구분선으로만 모듈을 나눈다 */
 .module-container {
     background-color: transparent;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 24px;
-    margin-bottom: 24px;
-}
+    border-top: 1px solid var(--line);
+    padding: 12px 0;
+}
+
+.module-container:first-child {
+    border-top: none;
+}

@@ -280,8 +280,7 @@
 
 <style>
 	.module-container {
-		padding: 24px;
-		margin-top: 24px;
+		padding: 12px 0;
 	}
 
 	h3 {

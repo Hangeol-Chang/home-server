@@ -58,36 +58,6 @@
 	color: var(--text-danger);
 }
 
-/* 토글 버튼 그룹 */
-.view-toggle {
-	display: flex;
-	gap: 8px;
-	background: var(--bg-tertiary);
-	padding: 4px;
-	border-radius: var(--radius-md);
-}
-
-.toggle-btn {
-	padding: 8px 16px;
-	background: transparent;
-	border: none;
-	border-radius: var(--radius-md);
-	cursor: pointer;
-	font-size: 0.9rem;
-	font-weight: 300;
-	color: var(--text-secondary);
-	transition: all 0.2s;
-}
-
-.toggle-btn:hover {
-	background: var(--bg-primary);
-}
-
-.toggle-btn.active {
-	background: white;
-	color: var(--accent);
-	box-shadow: var(--shadow-sm);
-}
 
 /* 스피닝 애니메이션 */
 .spinning {
@@ -271,16 +241,6 @@
 		font-size: 0.75rem;
 	}
 
-	.view-toggle {
-		width: 100%;
-	}
-
-	.toggle-btn {
-		flex: 1;
-		padding: 8px 12px;
-		font-size: 0.85rem;
-	}
-
 	.total-summary {
 		flex-direction: column;
 		gap: 12px;
@@ -353,11 +313,6 @@
 		margin-top: 4px;
 		font-size: 0.7rem;
 		margin-left: 0;
-	}
-
-	.toggle-btn {
-		padding: 8px;
-		font-size: 0.8rem;
 	}
 
 	.total-value {

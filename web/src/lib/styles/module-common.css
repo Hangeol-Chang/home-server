@@ -172,11 +172,9 @@
 
 /* 폼 스타일 */
 .form-container {
-	background: var(--bg-secondary);
-	border: 1px solid var(--border-color);
-	border-radius: var(--radius-md);
-	padding: 20px;
-	margin-bottom: 20px;
+	border-top: 1px solid var(--line);
+	padding: 12px 0;
+	margin-bottom: 12px;
 }
 
 .form-group {
@@ -244,14 +242,8 @@
 /* 카드 스타일 */
 .card {
 	background: var(--bg-primary);
-	border: 1px solid var(--border-color);
-	border-radius: var(--radius-md);
-	padding: 24px;
-	transition: all 0.2s;
-}
-
-.card:hover {
-	box-shadow: var(--shadow-md);
+	border-top: 1px solid var(--line);
+	padding: 12px 0;
 }
 
 /* 뱃지 */
@@ -301,9 +293,7 @@
 /* 섹션 구분 */
 .section {
 	background: var(--bg-primary);
-	border: 1px solid var(--border-color);
-	border-radius: var(--radius-md);
-	padding: 12px;
+	padding: 12px 0;
 }
 
 /* 필터/탭 버튼 */
@@ -349,15 +339,13 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: start;
-	background: var(--bg-secondary);
-	border: 1px solid var(--border-color);
-	border-radius: var(--radius-md);
-	padding: 16px;
+	border-bottom: 1px solid var(--line);
+	padding: 8px 0;
 	transition: all 0.2s;
 }
 
 .item-card:hover {
-	box-shadow: var(--shadow-md);
+	background: var(--bg-tertiary);
 }
 
 .header-actions {

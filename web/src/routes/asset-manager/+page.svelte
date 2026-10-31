@@ -137,7 +137,7 @@
 	<LLMReportGenerator />
 
 	<!-- 월간 리포트 -->
-	<MonthlyReport style="border: 1px solid var(--border-color); margin-bottom: 32px; padding: 24px;" />
+	<MonthlyReport />
 
 	<hr>
 	<button class="part-btn">
@@ -270,33 +270,10 @@
 		margin-bottom: 8px;
 	}
 
-	.period-tabs {
-		display: flex;
-	}
-
-	.period-tabs .nav-btn {
-		height: 32px;
-		padding: 0 12px;
-		border: 1px solid var(--border-color);
-		margin-left: -1px;
-		border-radius: 0;
-		background: none;
-		color: var(--text-primary);
-		cursor: pointer;
-	}
-
-	.period-tabs .nav-btn:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); margin-left: 0; }
-	.period-tabs .nav-btn:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
-
-	.period-tabs .nav-btn.active {
-		background: var(--color-impact-3);
-		color: #fff;
-	}
-
 	.asset-manager-page {
-		max-width: 1400px;
+		max-width: 1800px;
 		margin: 0 auto;
-		padding: 20px;
+		padding: 12px;
 	}
 
 	.class-icon {

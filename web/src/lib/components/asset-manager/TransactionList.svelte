@@ -212,8 +212,8 @@
 	.filter-item {
 		position: relative;
 		padding: 6px 14px;
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-md);
+		border-top: 1px solid var(--line);
+		border-bottom: 1px solid var(--line);
 		background: var(--bg-white);
 		font-size: 0.85rem;
 		color: var(--text-tertiary);
@@ -261,7 +261,6 @@
 		position: sticky;
 		top: 0;
 		z-index: 10;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 	}
 
 	/* 컬럼 너비 조정 */

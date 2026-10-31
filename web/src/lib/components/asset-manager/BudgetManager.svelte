@@ -240,8 +240,7 @@
 
 <style>
     .module-container {
-        margin-top: 12px;
-        padding-top: 4px;
+        padding: 12px 0;
     }
 
     /* Budget Distribution Bar */

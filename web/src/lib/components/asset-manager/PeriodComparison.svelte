@@ -475,9 +475,7 @@
 		gap: 16px;
 		margin: 16px 0px;
 		background: var(--bg-primary);
-		box-shadow: var(--shadow-md);
-		padding: 24px;
-		border-radius: var(--radius-md);
+		padding: 12px 0;
 	}
 
 	.chart-container {
@@ -490,7 +488,6 @@
 	.data-table.compact {
 		max-width: 300px;
 		flex-grow: 1;
-		box-shadow: var(--shadow-md);
 	}
 
 	.period-label {
@@ -509,7 +506,6 @@
 	/* Tablet/Mobile (< 768px) */
 	.module-container {
 		&.tablet {
-			padding: 16px;
 
 			.chart-section {
 				flex-direction: column;
@@ -538,7 +534,6 @@
 
 		/* Mobile (< 320px) */
 		&.mobile {
-			padding: 12px;
 
 			.chart-container {
 				height: 220px;

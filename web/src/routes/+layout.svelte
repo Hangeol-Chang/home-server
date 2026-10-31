@@ -36,10 +36,9 @@
 
 	.app-main {
 		flex: 1;
-		max-width: 1200px;
+		max-width: 1800px;
 		width: 100%;
 		margin: 0 auto;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 		padding: 8px;
 	}
 

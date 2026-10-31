@@ -254,8 +254,8 @@
 
 <style>
     .module-container {
-		padding: 28px;
-		margin: 24px 0;
+		padding: 12px 0;
+		margin: 0;
 		container-type: inline-size;
     }
 
@@ -283,9 +283,7 @@
     }
 
     .budget-detail-card {
-        background: var(--bg-secondary);
-        border-radius: var(--radius-md);
-        padding: 20px;
+        padding: 12px 0;
     }
 
     .info-section {

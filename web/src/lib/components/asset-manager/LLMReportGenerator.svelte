@@ -158,10 +158,8 @@
 
 <style>
 	.llm-report {
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-md);
-		padding: 16px 24px;
-		margin-bottom: 32px;
+		border-top: 1px solid var(--line);
+		padding: 12px 0;
 		background-color: var(--bg-primary);
 	}
 
@@ -179,32 +177,6 @@
 		font-size: 1rem;
 		font-weight: 600;
 		color: var(--text-primary);
-	}
-
-	.mode-tabs {
-		display: flex;
-		gap: 4px;
-		background: var(--bg-secondary);
-		border-radius: var(--radius-md);
-		padding: 3px;
-	}
-
-	.mode-tab {
-		padding: 5px 14px;
-		border: none;
-		border-radius: var(--radius-md);
-		background: transparent;
-		color: var(--text-secondary);
-		font-size: 0.85rem;
-		cursor: pointer;
-		transition: all 0.15s;
-	}
-
-	.mode-tab.active {
-		background: var(--bg-primary);
-		color: var(--text-primary);
-		font-weight: 600;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 	}
 
 	.period-row {

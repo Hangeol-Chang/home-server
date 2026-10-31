@@ -117,13 +117,12 @@
 	.app-header {
 		background: var(--bg-primary);
 		border-bottom: 1px solid var(--border-color);
-		box-shadow: var(--shadow-sm);
 	}
 
 	.header-content {
-		max-width: 1400px;
+		max-width: 1800px;
 		margin: 0 auto;
-		padding: 12px 24px;
+		padding: 8px 12px;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;

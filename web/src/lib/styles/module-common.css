@@ -555,114 +555,6 @@
     color: #f44336;
 }
 
-/* Tag Input Styles */
-.tag-input-container {
-    position: relative;
-}
-
-.tag-input-wrapper {
-    display: flex;
-    gap: 8px;
-}
-
-.tag-input-wrapper input {
-    flex: 1;
-}
-
-.tag-suggestions {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: var(--shadow-lg);
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 100;
-    margin-top: 4px;
-}
-
-.tag-suggestion-item {
-    width: 100%;
-    padding: 10px 16px;
-    text-align: left;
-    background: none;
-    border: none;
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: background 0.2s;
-    font-size: 0.95rem;
-}
-
-.tag-suggestion-item:hover {
-    background: var(--bg-tertiary);
-}
-
-.btn-add-tag {
-    padding: 12px 20px;
-    background: var(--primary-color, #2196f3);
-    color: var(--text-primary);
-    border: none;
-    border-radius: 8px;
-    font-weight: 400;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-}
-
-.btn-add-tag:hover:not(:disabled) {
-    background: var(--primary-dark, #1976d2);
-    transform: translateY(-1px);
-}
-
-.btn-add-tag:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.tag-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 12px;
-}
-
-.tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    background: var(--primary-color, #2196f3);
-    color: white;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 300;
-}
-
-.tag-remove {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.2rem;
-    line-height: 1;
-    cursor: pointer;
-    padding: 0;
-    margin: 0;
-    width: 18px;
-    height: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background 0.2s;
-}
-
-.tag-remove:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
 /* Mobile Responsive for Modal */
 @media (max-width: 768px) {
     .modal-container {
@@ -670,14 +562,6 @@
         margin-bottom: 16px;
     }
 
-    .tag-input-wrapper {
-        flex-direction: column;
-    }
-
-    .btn-add-tag {
-        width: 100%;
-        padding: 10px 16px;
-    }
 }
 
 @media (max-width: 480px) {
@@ -728,10 +612,5 @@
 @media (max-width: 320px) {
     .modal-container {
         padding: 8px;
-    }
-
-    .tag {
-        font-size: 0.85rem;
-        padding: 5px 10px;
     }
 }

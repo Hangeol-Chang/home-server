@@ -87,7 +87,6 @@
 						<th class="col-name">항목명</th>
 						<th class="col-category">분류</th>
 						<th class="col-date">날짜</th>
-						<th class="col-tags">태그</th>
 						<th class="text-right col-amount">금액</th>
 						<th class="text-center col-actions">작업</th>
 					</tr>
@@ -124,15 +123,6 @@
 								</div>
 							</td>
 							<td class="cell-date">{formatDate(transaction.date)}</td>
-							<td class="cell-tags">
-								{#if transaction.tags && transaction.tags.length > 0}
-									<div class="tags-wrapper">
-										{#each transaction.tags as tag}
-											<span class="tag">{tag}</span>
-										{/each}
-									</div>
-								{/if}
-							</td>
 							<td class="text-right">
 								<span
 									class="cell-amount"
@@ -292,10 +282,6 @@
 		width: 140px;
 	}
 
-	.col-tags {
-		min-width: 150px;
-	}
-
 	.col-amount {
 		width: 150px;
 	}
@@ -354,21 +340,6 @@
 		font-size: 0.9rem;
 		color: var(--text-secondary);
 		white-space: nowrap;
-	}
-
-	.cell-tags .tags-wrapper {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 4px;
-	}
-
-	.cell-tags .tag {
-		padding: 4px 8px;
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		color: white;
-		border-radius: 8px;
-		font-size: 0.7rem;
-		font-weight: 300;
 	}
 
 	.clickable-row {

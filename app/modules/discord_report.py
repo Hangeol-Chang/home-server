@@ -6,6 +6,7 @@ import calendar
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from utils.database import get_db_connection, resolve_tier_id
+from modules.naverpay_checker import check_naverpay
 
 
 def _prev_month(year: int, month: int) -> tuple:
@@ -508,6 +509,13 @@ def init_scheduler():
         process_recurring_payments,
         trigger=CronTrigger(hour=3, minute=0, timezone='UTC'),
         id='recurring_payment_processor',
+        replace_existing=True
+    )
+
+    scheduler.add_job(
+        check_naverpay,
+        trigger=CronTrigger(hour=0, minute=10, timezone='Asia/Seoul'),
+        id='naverpay_checker',
         replace_existing=True
     )
 

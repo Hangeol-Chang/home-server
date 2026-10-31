@@ -125,31 +125,6 @@ def init_database():
             )
         """)        
         
-        # 5. asset_tags 테이블 (태그 마스터)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS asset_tags (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                description TEXT,
-                color TEXT DEFAULT '#6366f1',
-                is_active BOOLEAN DEFAULT TRUE,
-                usage_count INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # 6. asset_tag_relations 테이블 (거래-태그 다대다 관계)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS asset_tag_relations (
-                asset_id INTEGER NOT NULL,
-                tag_id INTEGER NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (asset_id, tag_id),
-                FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
-                FOREIGN KEY (tag_id) REFERENCES asset_tags(id) ON DELETE CASCADE
-            )
-        """)
-
         # 7. asset_sub_categories 테이블 (새로 추가)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS asset_sub_categories (
@@ -282,6 +257,12 @@ def init_database():
         except sqlite3.OperationalError:
             pass
 
+        # assets 테이블에 merchant(가맹점명) 컬럼 추가
+        try:
+            cursor.execute("ALTER TABLE assets ADD COLUMN merchant TEXT")
+        except sqlite3.OperationalError:
+            pass
+
         # 14. recurring_payments 테이블 (정기 결제)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS recurring_payments (
@@ -327,9 +308,6 @@ def init_database():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_categories_class ON asset_categories(class_id, is_active)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sub_categories_category ON asset_sub_categories(category_id, is_active)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tiers_class ON asset_tiers(class_id, is_active)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_name ON asset_tags(name)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tag_relations_asset ON asset_tag_relations(asset_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tag_relations_tag ON asset_tag_relations(tag_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_todos_date ON todos(start_date, end_date)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_weekly_schedules_day ON weekly_schedules(day_of_week)")
      

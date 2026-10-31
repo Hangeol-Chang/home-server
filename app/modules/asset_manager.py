@@ -9,7 +9,6 @@ from models.asset import (
     AssetTransaction, AssetTransactionCreate, AssetTransactionUpdate,
     AssetTransactionDetail, CategoryStatistics, TierStatistics,
     PeriodSummary, MonthlyStatistics,
-    AssetTag, AssetTagCreate, AssetTagUpdate,
     AssetBudget, AssetBudgetCreate, AssetBudgetUpdate,
     RecurringPayment, RecurringPaymentCreate, RecurringPaymentUpdate, RecurringPaymentDetail
 )
@@ -21,95 +20,6 @@ router = APIRouter(
     tags=["Asset Manager"],
     responses={404: {"description": "Not found"}}
 )
-
-# ===== 헬퍼 함수 =====
-
-def get_or_create_tags(cursor, tag_names: List[str]) -> List[int]:
-    """태그 이름 리스트를 받아서 태그 ID 리스트 반환 (없으면 생성)"""
-    tag_ids = []
-    
-    for tag_name in tag_names:
-        tag_name = tag_name.strip()
-        if not tag_name:
-            continue
-        
-        # 기존 태그 확인
-        cursor.execute("SELECT id FROM asset_tags WHERE name = ?", (tag_name,))
-        row = cursor.fetchone()
-        
-        if row:
-            tag_ids.append(row[0])
-        else:
-            # 새 태그 생성
-            cursor.execute("""
-                INSERT INTO asset_tags (name, description, color, is_active)
-                VALUES (?, ?, ?, ?)
-            """, (tag_name, f"자동 생성된 태그: {tag_name}", "#6366f1", True))
-            tag_ids.append(cursor.lastrowid)
-    
-    return tag_ids
-
-def sync_asset_tags(cursor, asset_id: int, tag_names: List[str]):
-    """거래의 태그 동기화 (기존 관계 삭제 후 새로 생성)"""
-    # 기존 관계 삭제 및 사용 횟수 감소
-    cursor.execute("""
-        UPDATE asset_tags 
-        SET usage_count = usage_count - 1
-        WHERE id IN (
-            SELECT tag_id FROM asset_tag_relations WHERE asset_id = ?
-        )
-    """, (asset_id,))
-    
-    cursor.execute("DELETE FROM asset_tag_relations WHERE asset_id = ?", (asset_id,))
-    
-    # 새 태그 생성/조회
-    if tag_names:
-        tag_ids = get_or_create_tags(cursor, tag_names)
-        
-        # 새 관계 생성 및 사용 횟수 증가
-        for tag_id in tag_ids:
-            cursor.execute("""
-                INSERT INTO asset_tag_relations (asset_id, tag_id)
-                VALUES (?, ?)
-            """, (asset_id, tag_id))
-            
-            cursor.execute("""
-                UPDATE asset_tags 
-                SET usage_count = usage_count + 1
-                WHERE id = ?
-            """, (tag_id,))
-
-def get_asset_tags(cursor, asset_id: int) -> List[str]:
-    """거래의 태그 이름 리스트 조회"""
-    cursor.execute("""
-        SELECT t.name
-        FROM asset_tags t
-        JOIN asset_tag_relations r ON t.id = r.tag_id
-        WHERE r.asset_id = ?
-        ORDER BY t.name
-    """, (asset_id,))
-    
-    return [row[0] for row in cursor.fetchall()]
-
-def get_asset_tags_batch(cursor, asset_ids: List[int]) -> dict:
-    """여러 거래의 태그를 한 번에 조회 (N+1 방지)"""
-    tags_by_asset = {asset_id: [] for asset_id in asset_ids}
-    if not asset_ids:
-        return tags_by_asset
-
-    placeholders = ",".join("?" * len(asset_ids))
-    cursor.execute(f"""
-        SELECT r.asset_id, t.name
-        FROM asset_tags t
-        JOIN asset_tag_relations r ON t.id = r.tag_id
-        WHERE r.asset_id IN ({placeholders})
-        ORDER BY t.name
-    """, asset_ids)
-
-    for asset_id, tag_name in cursor.fetchall():
-        tags_by_asset[asset_id].append(tag_name)
-
-    return tags_by_asset
 
 # ===== Classes (거래 분류) API =====
 
@@ -474,27 +384,20 @@ def create_transaction(transaction: AssetTransactionCreate):
         # 데이터 삽입
         cursor.execute("""
             INSERT INTO assets 
-            (name, cost, class_id, category_id, sub_category_id, tier_id, date, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (name, cost, class_id, category_id, sub_category_id, tier_id, date, description, merchant)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (transaction.name, transaction.cost, transaction.class_id,
               transaction.category_id, transaction.sub_category_id, final_tier_id, transaction.date,
-              transaction.description))
+              transaction.description, transaction.merchant))
         
         transaction_id = cursor.lastrowid
         
-        # 태그 처리 (자동 생성 포함)
-        if transaction.tags:
-            sync_asset_tags(cursor, transaction_id, transaction.tags)
-        
         cursor.execute("""
-            SELECT id, name, cost, class_id, category_id, sub_category_id, tier_id, date, description,
+            SELECT id, name, cost, class_id, category_id, sub_category_id, tier_id, date, description, merchant,
                    created_at, updated_at
             FROM assets WHERE id = ?
         """, (transaction_id,))
         row = dict(cursor.fetchone())
-        
-        # 태그 조회
-        row['tags'] = get_asset_tags(cursor, transaction_id)
         
         return row
 
@@ -505,7 +408,7 @@ def get_unclassified_transactions():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT 
-                t.id, t.name, t.cost, t.date, t.description, t.created_at, t.updated_at,
+                t.id, t.name, t.cost, t.date, t.description, t.merchant, t.created_at, t.updated_at,
                 c.id as class_id, c.name as class_name, c.display_name as class_display_name,
                 cat.id as category_id, cat.name as category_name, cat.display_name as category_display_name,
                 sub.id as sub_category_id, sub.name as sub_category_name,
@@ -520,10 +423,6 @@ def get_unclassified_transactions():
         """)
         
         transactions = [dict(row) for row in cursor.fetchall()]
-        tags_by_asset = get_asset_tags_batch(cursor, [t['id'] for t in transactions])
-        for t in transactions:
-            t['tags'] = tags_by_asset[t['id']]
-
         return transactions
 
 @router.get("/transactions", response_model=List[AssetTransactionDetail])
@@ -543,7 +442,7 @@ def get_transactions(
         
         query = """
             SELECT 
-                a.id, a.name, a.cost, a.date, a.description,
+                a.id, a.name, a.cost, a.date, a.description, a.merchant,
                 a.class_id, ac.name as class_name, ac.display_name as class_display_name,
                 a.category_id, cat.name as category_name, cat.display_name as category_display_name,
                 a.sub_category_id, sc.name as sub_category_name,
@@ -583,11 +482,6 @@ def get_transactions(
         cursor.execute(query, params)
         result = [dict(row) for row in cursor.fetchall()]
 
-        # 각 거래의 태그 일괄 조회
-        tags_by_asset = get_asset_tags_batch(cursor, [t['id'] for t in result])
-        for t in result:
-            t['tags'] = tags_by_asset[t['id']]
-
         return result
 
 @router.get("/transactions/{transaction_id}", response_model=AssetTransactionDetail)
@@ -597,7 +491,7 @@ def get_transaction(transaction_id: int):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT 
-                a.id, a.name, a.cost, a.date, a.description,
+                a.id, a.name, a.cost, a.date, a.description, a.merchant,
                 ac.name as class_name, ac.display_name as class_display_name,
                 cat.name as category_name, cat.display_name as category_display_name,
                 sc.name as sub_category_name,
@@ -616,8 +510,6 @@ def get_transaction(transaction_id: int):
                               detail=f"Transaction with id {transaction_id} not found")
         
         row_dict = dict(row)
-        # 태그 조회
-        row_dict['tags'] = get_asset_tags(cursor, transaction_id)
         
         return row_dict
 
@@ -637,10 +529,7 @@ def update_transaction(transaction_id: int, transaction: AssetTransactionUpdate)
         class_id = row[0]
         update_data = transaction.dict(exclude_unset=True)
         
-        # 태그는 따로 처리
-        tags = update_data.pop('tags', None)
-        
-        if not update_data and tags is None:
+        if not update_data:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                               detail="No fields to update")
         
@@ -699,20 +588,13 @@ def update_transaction(transaction_id: int, transaction: AssetTransactionUpdate)
                 WHERE id = ?
             """, params)
         
-        # 태그 업데이트 (자동 생성 포함)
-        if tags is not None:
-            sync_asset_tags(cursor, transaction_id, tags)
-        
         cursor.execute("""
-            SELECT id, name, cost, class_id, category_id, sub_category_id, tier_id, date, description,
+            SELECT id, name, cost, class_id, category_id, sub_category_id, tier_id, date, description, merchant,
                    created_at, updated_at
             FROM assets WHERE id = ?
         """, (transaction_id,))
         
         row_dict = dict(cursor.fetchone())
-        # 태그 조회
-        row_dict['tags'] = get_asset_tags(cursor, transaction_id)
-        
         return row_dict
 
 @router.delete("/transactions/{transaction_id}")
@@ -1033,8 +915,6 @@ def get_period_comparison(
             """, (period_start.strftime("%Y-%m-%d"), period_end.strftime("%Y-%m-%d")))
             
             top_rows = cursor.fetchall()
-            tags_by_asset = get_asset_tags_batch(cursor, [row[0] for row in top_rows])
-
             top_transactions = []
             for row in top_rows:
                 top_transactions.append({
@@ -1052,8 +932,7 @@ def get_period_comparison(
                     "category_display_name": row[11],
                     "tier_level": row[12],
                     "tier_name": row[13],
-                    "tier_display_name": row[14],
-                    "tags": tags_by_asset[row[0]]
+                    "tier_display_name": row[14]
                 })
             
             period_data_list.append({
@@ -1098,146 +977,6 @@ def get_period_comparison(
             "avg_save": avg_save,
             "spend_trend": spend_trend,
             "earn_trend": earn_trend
-        }
-
-# ===== Tags (태그) API =====
-
-@router.get("/tags", response_model=List[AssetTag])
-def get_all_tags(active_only: bool = Query(True, description="활성 태그만 조회")):
-    """모든 태그 목록 조회"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        if active_only:
-            cursor.execute("""
-                SELECT id, name, description, color, is_active, usage_count, created_at
-                FROM asset_tags
-                WHERE is_active = TRUE
-                ORDER BY usage_count DESC, name
-            """)
-        else:
-            cursor.execute("""
-                SELECT id, name, description, color, is_active, usage_count, created_at
-                FROM asset_tags
-                ORDER BY usage_count DESC, name
-            """)
-        
-        rows = cursor.fetchall()
-        return [dict(row) for row in rows]
-
-@router.post("/tags", response_model=AssetTag, status_code=status.HTTP_201_CREATED)
-def create_tag(tag: AssetTagCreate):
-    """새 태그 생성"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        # 중복 체크
-        cursor.execute("SELECT id FROM asset_tags WHERE name = ?", (tag.name,))
-        if cursor.fetchone():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Tag '{tag.name}' already exists"
-            )
-        
-        cursor.execute("""
-            INSERT INTO asset_tags (name, description, color, is_active)
-            VALUES (?, ?, ?, ?)
-        """, (tag.name, tag.description, tag.color, tag.is_active))
-        
-        tag_id = cursor.lastrowid
-        cursor.execute("""
-            SELECT id, name, description, color, is_active, usage_count, created_at
-            FROM asset_tags WHERE id = ?
-        """, (tag_id,))
-        
-        return dict(cursor.fetchone())
-
-@router.put("/tags/{tag_id}", response_model=AssetTag)
-def update_tag(tag_id: int, tag: AssetTagUpdate):
-    """태그 정보 수정"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        # 태그 존재 확인
-        cursor.execute("SELECT id FROM asset_tags WHERE id = ?", (tag_id,))
-        if not cursor.fetchone():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Tag with id {tag_id} not found"
-            )
-        
-        update_data = tag.dict(exclude_unset=True)
-        if not update_data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No fields to update"
-            )
-        
-        # 이름 변경 시 중복 체크
-        if 'name' in update_data:
-            cursor.execute("SELECT id FROM asset_tags WHERE name = ? AND id != ?", 
-                          (update_data['name'], tag_id))
-            if cursor.fetchone():
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Tag name '{update_data['name']}' already exists"
-                )
-        
-        # 업데이트 쿼리 생성
-        set_clause, params = build_update_clause(update_data)
-        params.append(tag_id)
-
-        cursor.execute(f"""
-            UPDATE asset_tags
-            SET {set_clause}
-            WHERE id = ?
-        """, params)
-        
-        cursor.execute("""
-            SELECT id, name, description, color, is_active, usage_count, created_at
-            FROM asset_tags WHERE id = ?
-        """, (tag_id,))
-        
-        return dict(cursor.fetchone())
-
-@router.delete("/tags/{tag_id}")
-def delete_tag(tag_id: int, force: bool = Query(False, description="강제 삭제")):
-    """태그 삭제 (또는 비활성화)"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        # 태그 존재 확인
-        cursor.execute("SELECT * FROM asset_tags WHERE id = ?", (tag_id,))
-        tag = cursor.fetchone()
-        if not tag:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Tag with id {tag_id} not found"
-            )
-        
-        # 사용 중인 거래 개수 확인
-        cursor.execute("""
-            SELECT COUNT(*) FROM asset_tag_relations WHERE tag_id = ?
-        """, (tag_id,))
-        usage_count = cursor.fetchone()[0]
-        
-        if usage_count > 0 and not force:
-            # 사용 중이면 비활성화만
-            cursor.execute("""
-                UPDATE asset_tags 
-                SET is_active = FALSE 
-                WHERE id = ?
-            """, (tag_id,))
-            message = f"Tag '{tag[1]}' deactivated ({usage_count} transactions using it)"
-        else:
-            # 사용하지 않거나 강제 삭제 시
-            cursor.execute("DELETE FROM asset_tag_relations WHERE tag_id = ?", (tag_id,))
-            cursor.execute("DELETE FROM asset_tags WHERE id = ?", (tag_id,))
-            message = f"Tag '{tag[1]}' deleted permanently"
-        
-        return {
-            "message": message,
-            "tag": dict(tag)
         }
 
 @router.get("/search")

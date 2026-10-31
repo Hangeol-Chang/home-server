@@ -121,7 +121,7 @@ class AssetTransactionBase(BaseModel):
     tier_id: Optional[int] = Field(None, description="티어 ID (하위 카테고리 기반 자동 설정)")
     date: date_type = Field(default_factory=date_type.today, description="거래 날짜")
     description: Optional[str] = None
-    tags: Optional[List[str]] = Field(default=None, description="태그 목록")
+    merchant: Optional[str] = Field(None, description="가맹점명")
 
 class AssetTransactionCreate(AssetTransactionBase):
     pass
@@ -134,7 +134,7 @@ class AssetTransactionUpdate(BaseModel):
     tier_id: Optional[int] = None
     date: Optional[date_type] = None
     description: Optional[str] = None
-    tags: Optional[List[str]] = None
+    merchant: Optional[str] = None
 
 class AssetTransaction(AssetTransactionBase):
     id: int
@@ -151,7 +151,7 @@ class AssetTransactionDetail(BaseModel):
     cost: float
     date: date_type
     description: Optional[str]
-    tags: Optional[List[str]]
+    merchant: Optional[str] = None
     class_id: int
     class_name: str
     class_display_name: str
@@ -288,26 +288,3 @@ class RecurringPaymentDetail(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-# ===== Tags (태그) =====
-class AssetTagBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=50, description="태그명")
-    description: Optional[str] = None
-    color: str = Field(default="#6366f1", description="태그 색상")
-    is_active: bool = True
-
-class AssetTagCreate(AssetTagBase):
-    pass
-
-class AssetTagUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=50)
-    description: Optional[str] = None
-    color: Optional[str] = None
-    is_active: Optional[bool] = None
-
-class AssetTag(AssetTagBase):
-    id: int
-    usage_count: int = 0
-    created_at: datetime
-
-    class Config:
-        from_attributes = True

@@ -10,10 +10,6 @@
 		getTiers,
 		createTier,
 		deleteTier,
-		getTags,
-		createTag,
-		updateTag,
-		deleteTag,
 		getUnclassifiedTransactions,
 		updateTransaction
 	} from '$lib/api/asset-manager.js';
@@ -26,7 +22,6 @@
 	let categories = $state([]);
 	let subCategories = $state([]);
 	let tiers = $state([]);
-	let tags = $state([]);
 	let unclassifiedTransactions = $state([]);
 	let loading = $state(true);
 	let error = $state('');
@@ -36,8 +31,7 @@
 		unclassified: false,
 		category: false,
 		subCategory: false,
-		tier: false,
-		tag: false
+		tier: false
 	});
 
 	// 선택된 분류
@@ -49,8 +43,6 @@
 	let showCategoryForm = $state(false);
 	let showSubCategoryForm = $state(false);
 	let showTierForm = $state(false);
-	let showTagForm = $state(false);
-	let editingTag = $state(null);
 
 	// 미분류 거래 수정 상태
 	let editingTransactionId = $state(null);
@@ -88,14 +80,6 @@
 		sort_order: 0
 	});
 
-	// 태그 폼
-	let tagForm = $state({
-		name: '',
-		description: '',
-		color: '#6366f1',
-		is_active: true
-	});
-
 	const classTypes = [
 		{ id: 1, name: 'spend', label: '지출', color: '#f44336' },
 		{ id: 2, name: 'earn', label: '수익', color: '#4caf50' },
@@ -110,12 +94,11 @@
 		loading = true;
 		error = '';
 		try {
-			[classes, categories, subCategories, tiers, tags, unclassifiedTransactions] = await Promise.all([
+			[classes, categories, subCategories, tiers, unclassifiedTransactions] = await Promise.all([
 				getClasses(),
 				getCategories(),
 				getSubCategories(),
 				getTiers(),
-				getTags(false), // 모든 태그 조회 (비활성 포함)
 				getUnclassifiedTransactions()
 			]);
 		} catch (err) {
@@ -290,56 +273,6 @@
 		return classTypes.find(c => c.id === classId)?.color || '#6366f1';
 	}
 
-	// 태그 관련
-	async function handleCreateOrUpdateTag(e) {
-		e.preventDefault();
-		try {
-			if (editingTag) {
-				await updateTag(editingTag.id, tagForm);
-			} else {
-				await createTag(tagForm);
-			}
-			await loadData();
-			resetTagForm();
-			showTagForm = false;
-			editingTag = null;
-		} catch (err) {
-			alert('태그 저장 실패: ' + err.message);
-		}
-	}
-
-	async function handleDeleteTag(tagId) {
-		const tag = tags.find(t => t.id === tagId);
-		if (!confirm(`'${tag.name}' 태그를 삭제하시겠습니까?\n사용 중이면 비활성화됩니다.`)) return;
-		try {
-			const result = await deleteTag(tagId, false);
-			alert(result.message);
-			await loadData();
-		} catch (err) {
-			alert('태그 삭제 실패: ' + err.message);
-		}
-	}
-
-	function startEditTag(tag) {
-		editingTag = tag;
-		tagForm = {
-			name: tag.name,
-			description: tag.description || '',
-			color: tag.color,
-			is_active: tag.is_active
-		};
-		showTagForm = true;
-	}
-
-	function resetTagForm() {
-		tagForm = {
-			name: '',
-			description: '',
-			color: '#6366f1',
-			is_active: true
-		};
-		editingTag = null;
-	}
 </script>
 
 <svelte:head>
@@ -866,151 +799,6 @@
 			</div>
 					</div>
 				{/if}
-			</section>			<!-- 태그 관리 -->
-			<section class="manage-section">
-				<div class="section-header" onclick={() => toggleSection('tag')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSection('tag')}>
-					<h2>태그 관리</h2>
-					<div class="header-actions">
-						<button class="add-btn" onclick={(e) => { 
-							e.stopPropagation();
-							resetTagForm();
-							showTagForm = !showTagForm;
-							if(showTagForm) expandedSections.tag = true;
-						}}>
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-								<line x1="12" y1="5" x2="12" y2="19"></line>
-								<line x1="5" y1="12" x2="19" y2="12"></line>
-							</svg>
-							{showTagForm ? '닫기' : '새 태그'}
-						</button>
-						<span class="toggle-icon">{expandedSections.tag ? '▼' : '▶'}</span>
-					</div>
-				</div>
-
-				{#if expandedSections.tag}
-					<div class="section-content">
-						<!-- 태그 추가/수정 폼 -->
-						{#if showTagForm}
-					<div class="form-container">
-						<form class="admin-form" onsubmit={handleCreateOrUpdateTag}>
-							<h3>{editingTag ? '태그 수정' : '새 태그 추가'}</h3>
-							<div class="form-row">
-								<div class="form-group">
-									<label for="tag-name">태그명 *</label>
-									<input
-										id="tag-name"
-										type="text"
-										bind:value={tagForm.name}
-										placeholder="예: 차량, 데이트, 카페"
-										required
-									/>
-								</div>
-								<div class="form-group">
-									<label for="tag-color">색상</label>
-									<input
-										id="tag-color"
-										type="color"
-										bind:value={tagForm.color}
-									/>
-								</div>
-							</div>
-							<div class="form-group">
-								<label for="tag-description">설명</label>
-								<input
-									id="tag-description"
-									type="text"
-									bind:value={tagForm.description}
-									placeholder="태그 설명 (선택)"
-								/>
-							</div>
-							<div class="form-group">
-								<label>
-									<input type="checkbox" bind:checked={tagForm.is_active} />
-									활성화
-								</label>
-							</div>
-							<div class="form-actions">
-								<button type="button" class="btn-cancel" onclick={() => { 
-									showTagForm = false; 
-									resetTagForm(); 
-								}}>
-									취소
-								</button>
-								<button type="submit" class="btn-submit">
-									{editingTag ? '수정' : '생성'}
-								</button>
-							</div>
-						</form>
-					</div>
-				{/if}
-
-				<!-- 태그 리스트 -->
-				{#if tags.length > 0}
-					<div class="tag-stats">
-						<p>총 <strong>{tags.length}개</strong>의 태그 (사용 중: <strong>{tags.filter(t => t.is_active).length}개</strong>)</p>
-					</div>
-					<div class="table-wrapper">
-						<table class="data-table">
-							<thead>
-								<tr>
-									<th style="width: 40px;"></th>
-									<th>태그명</th>
-									<th>설명</th>
-									<th class="text-center">사용 횟수</th>
-									<th class="text-center">상태</th>
-									<th class="text-center">작업</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each tags as tag}
-									<tr>
-										<td style="padding: 0;">
-											<div style="width: 4px; height: 100%; background: {tag.color}; margin-left: 8px;"></div>
-										</td>
-										<td><strong>{tag.name}</strong></td>
-										<td>{tag.description || '-'}</td>
-										<td class="text-center">{tag.usage_count}</td>
-										<td class="text-center">
-											<span class="badge" class:active={tag.is_active}>
-												{tag.is_active ? '활성' : '비활성'}
-											</span>
-										</td>
-										<td class="text-center">
-											<div style="display: flex; gap: 8px; justify-content: center;">
-												<button
-													class="edit-btn"
-													onclick={() => startEditTag(tag)}
-													title="수정"
-													aria-label="태그 수정"
-												>
-													<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-														<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-														<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-													</svg>
-												</button>
-												<button
-													class="delete-btn"
-													onclick={() => handleDeleteTag(tag.id)}
-													title="삭제"
-													aria-label="태그 삭제"
-												>
-													<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-														<polyline points="3 6 5 6 21 6" />
-														<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-													</svg>
-												</button>
-											</div>
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-				{:else}
-					<p class="empty-message">아직 태그가 없습니다</p>
-				{/if}
-					</div>
-				{/if}
 			</section>
 		</div>
 	{/if}
@@ -1321,24 +1109,6 @@
 	.text-muted {
 		color: var(--text-tertiary);
 		font-style: italic;
-	}
-
-	.tag-stats {
-		margin-top: 20px;
-		padding: 16px;
-		background: var(--bg-tertiary);
-		border-radius: 8px;
-		text-align: center;
-	}
-
-	.tag-stats p {
-		margin: 0;
-		color: var(--text-secondary);
-	}
-
-	.tag-stats strong {
-		color: var(--primary-color);
-		font-size: 1.1rem;
 	}
 
 	.badge.active {

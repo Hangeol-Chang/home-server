@@ -1,6 +1,6 @@
 <script>
 	import { tabNav } from '$lib/tabNav.js';
-	import { createTransaction, updateTransaction, deleteTransaction, getCategories, getSubCategories, getTiers, getTags } from '$lib/api/asset-manager.js';
+	import { createTransaction, updateTransaction, deleteTransaction, getCategories, getSubCategories, getTiers } from '$lib/api/asset-manager.js';
 	import { onMount, untrack } from 'svelte';
 	import { device } from '$lib/stores/device';
 	import TransactionTypeIcon from '$lib/components/ui/TransactionTypeIcon.svelte';
@@ -19,7 +19,6 @@
 	let categories = $state([]);
 	let subCategories = $state([]);
 	let tiers = $state([]);
-	let availableTags = $state([]);
 
 	// 폼 데이터
 	let formData = $state({
@@ -29,12 +28,7 @@
 		sub_category_id: '',
 		date: initialDate || new Date().toISOString().split('T')[0],
 		description: '',
-		tags: []
 	});
-
-	let tagInput = $state('');
-	let showTagSuggestions = $state(false);
-	let filteredTagSuggestions = $state([]);
 
 	let isSubmitting = $state(false);
 	let isDeleting = $state(false);
@@ -45,29 +39,6 @@
 		{ id: 2, name: 'earn', label: '수익', color: '#4caf50' },
 		{ id: 3, name: 'save', label: '저축', color: '#2196f3' }
 	];
-
-	// 태그 목록 로드
-	async function loadTags() {
-		try {
-			const tags = await getTags();
-			// 태그 데이터가 객체 배열인지 문자열 배열인지 확인
-			if (tags && tags.length > 0) {
-				if (typeof tags[0] === 'string') {
-					// 문자열 배열인 경우 객체로 변환
-					availableTags = tags.map(tag => ({ name: tag }));
-				} else {
-					// 이미 객체 배열인 경우 그대로 사용
-					availableTags = tags;
-				}
-			} else {
-				availableTags = [];
-			}
-			console.log('태그 로드 완료:', availableTags);
-		} catch (err) {
-			console.error('태그 로드 실패:', err);
-			availableTags = [];
-		}
-	}
 
 	// 카테고리와 티어 로드
 	async function loadCategoriesAndTiers() {
@@ -129,7 +100,6 @@
 					formData.cost = String(Math.abs(initialTransaction.cost));
 					formData.date = initialTransaction.date;
 					formData.description = initialTransaction.description || '';
-					formData.tags = initialTransaction.tags ? [...initialTransaction.tags] : [];
 					formData.category_id = initialTransaction.category_id;
 					formData.sub_category_id = initialTransaction.sub_category_id || '';
 					
@@ -141,50 +111,8 @@
 					loadCategoriesAndTiers();
 				}
 			});
-			// 태그는 폼 열릴때마다 로드
-			untrack(() => loadTags());
 		}
 	});
-
-	// 태그 입력 변경 시 필터링
-	$effect(() => {
-		if (tagInput.trim()) {
-			const input = tagInput.toLowerCase();
-			filteredTagSuggestions = availableTags.filter(
-				tag => tag.name.toLowerCase().includes(input) && !formData.tags.includes(tag.name)
-			);
-			showTagSuggestions = filteredTagSuggestions.length > 0;
-		} else {
-			showTagSuggestions = false;
-			filteredTagSuggestions = [];
-		}
-	});
-
-	function addTag(tagToAdd = null) {
-		const tag = (tagToAdd || tagInput).trim();
-		if (tag && !formData.tags.includes(tag)) {
-			formData.tags = [...formData.tags, tag];
-			tagInput = '';
-			showTagSuggestions = false;
-		}
-	}
-
-	function removeTag(tagToRemove) {
-		formData.tags = formData.tags.filter(tag => tag !== tagToRemove);
-	}
-
-	function handleTagKeydown(e) {
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			addTag();
-		} else if (e.key === 'Escape') {
-			showTagSuggestions = false;
-		}
-	}
-
-	function selectSuggestion(tag) {
-		addTag(tag.name);
-	}
 
 	async function handleSubmit(e) {
 		e.preventDefault();
@@ -200,7 +128,6 @@
 				sub_category_id: formData.sub_category_id ? parseInt(formData.sub_category_id) : undefined,
 				date: formData.date,
 				description: formData.description || undefined,
-				tags: formData.tags.length > 0 ? formData.tags : undefined
 			};
 
 			if (initialTransaction && initialTransaction.id) {
@@ -271,9 +198,7 @@
 			sub_category_id: '',
 			date: initialDate || new Date().toISOString().split('T')[0],
 			description: '',
-			tags: []
 		};
-		tagInput = '';
 		if (formData.category_id) {
 			loadSubCategories(formData.category_id);
 		}
@@ -410,55 +335,6 @@
 				placeholder="추가 설명을 입력하세요"
 				rows="3"
 			></textarea>
-		</div>
-
-		<!-- 태그 -->
-		<div class="form-group">
-			<label for="tags">태그 (선택)</label>
-			<div class="tag-input-container">
-				<div class="tag-input-wrapper">
-					<input
-						id="tags"
-						type="text"
-						bind:value={tagInput}
-						placeholder="태그 입력 후 Enter (예: 차량, 데이트, 카페)"
-						onkeydown={handleTagKeydown}
-						onfocus={() => {
-							if (tagInput.trim() && filteredTagSuggestions.length > 0) {
-								showTagSuggestions = true;
-							}
-						}}
-					/>
-					<button type="button" class="btn-add-tag" onclick={() => addTag()} disabled={!tagInput.trim()}>
-						추가
-					</button>
-				</div>
-				{#if showTagSuggestions}
-					<div class="tag-suggestions">
-						{#each filteredTagSuggestions as suggestion}
-							<button
-								type="button"
-								class="tag-suggestion-item"
-								onclick={() => selectSuggestion(suggestion)}
-							>
-								{suggestion.name}
-							</button>
-						{/each}
-					</div>
-				{/if}
-			</div>
-			{#if formData.tags.length > 0}
-				<div class="tag-list">
-					{#each formData.tags as tag}
-						<span class="tag">
-							{tag}
-							<button type="button" class="tag-remove" onclick={() => removeTag(tag)} aria-label="태그 제거">
-								×
-							</button>
-						</span>
-					{/each}
-				</div>
-			{/if}
 		</div>
 
 		<!-- 버튼 -->

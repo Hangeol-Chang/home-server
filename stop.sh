@@ -7,7 +7,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # 프로젝트 루트 디렉토리
-PROJECT_ROOT="/home/pi/workspace/home-server"
+PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 echo -e "${BLUE}Stopping Home Server...${NC}"
 

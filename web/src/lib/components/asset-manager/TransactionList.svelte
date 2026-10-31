@@ -12,6 +12,19 @@
 		onEditTransaction = () => {}
 	} = $props();
 
+	let hidden = $state([]);
+	let categories = $derived([...new Set(transactions.map((t) => t.category_display_name))]);
+	let visible = $derived(transactions.filter((t) => !hidden.includes(t.category_display_name)));
+	let allChecked = $derived(categories.every((c) => !hidden.includes(c)));
+
+	function toggleAll() {
+		hidden = allChecked ? [...categories] : [];
+	}
+
+	function toggleCategory(c) {
+		hidden = hidden.includes(c) ? hidden.filter((h) => h !== c) : [...hidden, c];
+	}
+
 	async function handleDelete(e, transactionId) {
 		e.stopPropagation();
 		if (!confirm('이 거래를 삭제하시겠습니까?')) return;
@@ -41,8 +54,19 @@
 <section class="asset-manager-card transactions-section" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="section-header">
 		<h2>거래 내역</h2>
-		<span class="transaction-count">{transactions.length}건</span>
+		<span class="transaction-count">{visible.length}건</span>
 	</div>
+
+	{#if categories.length > 0}
+		<div class="category-filter">
+			<label class="filter-item"><input type="checkbox" checked={allChecked} onchange={toggleAll} />전체</label>
+			{#each categories as c (c)}
+				<label class="filter-item">
+					<input type="checkbox" checked={!hidden.includes(c)} onchange={() => toggleCategory(c)} />{c}
+				</label>
+			{/each}
+		</div>
+	{/if}
 
 	{#if loading}
 		<div class="loading">
@@ -69,7 +93,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each transactions as transaction (transaction.id)}
+					{#each visible as transaction (transaction.id)}
 						<tr
 							class:row-earn={transaction.class_name === 'earn'}
 							class:row-spend={transaction.class_name === 'spend'}
@@ -186,6 +210,50 @@
 		font-size: 0.9rem;
 		font-weight: 400;
 		color: var(--text-secondary);
+	}
+
+	.category-filter {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-bottom: 16px;
+	}
+
+	.filter-item {
+		position: relative;
+		padding: 6px 14px;
+		border: 1px solid var(--border-color);
+		border-radius: 999px;
+		background: var(--bg-white);
+		font-size: 0.85rem;
+		color: var(--text-tertiary);
+		cursor: pointer;
+		user-select: none;
+		transition:
+			background-color 0.15s,
+			color 0.15s,
+			border-color 0.15s;
+	}
+
+	.filter-item:hover {
+		border-color: var(--text-secondary);
+	}
+
+	.filter-item:has(input:checked) {
+		background: var(--text-primary);
+		border-color: var(--text-primary);
+		color: var(--bg-white);
+	}
+
+	.filter-item:has(input:focus-visible) {
+		outline: 2px solid var(--text-info);
+		outline-offset: 2px;
+	}
+
+	.filter-item input {
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
 	}
 
 	/* 테이블 스크롤 래퍼 */

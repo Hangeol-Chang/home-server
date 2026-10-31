@@ -2,13 +2,19 @@
 	import { getFolders, getFiles } from '$lib/api/notebook.js';
 	import FileTreeNode from './FileTreeNode.svelte';
 
-	let { item, level = 0, onSelectFile, onSelectFolder, currentPath, selectedFilePath, onContextMenu, showHidden = false, onDrop } = $props();
+	let { item, level = 0, onSelectFile, onSelectFolder, currentPath, selectedFilePath, onContextMenu, showHidden = false, onDrop, version = 0 } = $props();
 
 	let expanded = $state(false);
 	let children = $state([]);
 	let loading = $state(false);
 	let loaded = $state(false);
 	let dragOver = $state(false);
+
+	// 트리 갱신 신호: 이미 펼쳐서 로드한 폴더는 다시 불러옴
+	$effect(() => {
+		version;
+		if (loaded) loadChildren();
+	});
 
 	async function toggle() {
 		if (item.type === 'file') {
@@ -134,10 +140,10 @@
 	</button>
 
 	{#if expanded}
-		{#if loading}
+		{#if loading && !loaded}
 			<div class="loading-item" style="padding-left: {(level + 1) * 12 + 24}px">Loading...</div>
 		{:else}
-			{#each children as child}
+			{#each children as child (child.path)}
 				<FileTreeNode
 					item={child}
 					level={level + 1}
@@ -148,6 +154,7 @@
 					{onContextMenu}
 					{showHidden}
 					{onDrop}
+					{version}
 				/>
 			{/each}
 			{#if children.length === 0}

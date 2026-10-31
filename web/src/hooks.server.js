@@ -8,7 +8,6 @@ import Google from '@auth/core/providers/google';
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AUTH_SECRET } from '$env/static/private';
 import { isEmailAllowed } from '$lib/auth-utils';
 import { redirect } from '@sveltejs/kit';
-import { dev } from '$app/environment';
 import { sequence } from '@sveltejs/kit/hooks';
 
 const secret = AUTH_SECRET;
@@ -26,7 +25,9 @@ function getRememberMe(cookies) {
 	return rememberMeCookie === 'true';
 }
 
-const authHandler = SvelteKitAuth(async ({ cookies }) => {
+const authHandler = SvelteKitAuth(async ({ cookies, url, request }) => {
+	// http로 접속하면 secure 쿠키가 버려져 로그인 루프가 생김 -> 실제 프로토콜 기준
+	const isHttps = url.protocol === 'https:' || request.headers.get('x-forwarded-proto') === 'https';
 	const rememberMe = getRememberMe(cookies);
 	const maxAge = rememberMe ? SESSION_MAX_AGE_REMEMBER : SESSION_MAX_AGE_DEFAULT;
 
@@ -50,7 +51,7 @@ const authHandler = SvelteKitAuth(async ({ cookies }) => {
 					httpOnly: true,
 					sameSite: 'lax',
 					path: '/',
-					secure: !dev, // 프로덕션에서만 secure
+					secure: isHttps,
 					maxAge: maxAge
 				}
 			}

@@ -2,12 +2,10 @@
  * API 공통 설정
  */
 
-import { dev } from '$app/environment';
-import { env } from '$env/dynamic/public';
 
 // 환경별 API 베이스 URL
 export const API_CONFIG = {
-	baseUrl: dev ? '/api' : (env.PUBLIC_API_URL || 'http://localhost:5005'),
+	baseUrl: '/api',
 	timeout: 30000
 };
 

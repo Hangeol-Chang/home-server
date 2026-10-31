@@ -1,6 +1,7 @@
 <script>
 	import { getFolders, getFiles, getFileContent, searchNotes, getVaultStats, saveNote, createFolder, pullRepository, deleteFile, deleteFolder, moveItem, renameItem, transcribeVoice } from '$lib/api/notebook.js';
 	import { onMount } from 'svelte';
+	const DRAFT_KEY = 'notebook-draft';
 	import { device } from '$lib/stores/device';
 	import FileTreeNode from '$lib/components/notebook/FileTreeNode.svelte';
 	import TuiEditor from '$lib/components/notebook/TuiEditor.svelte';
@@ -28,6 +29,8 @@
 	let editContent = $state('');
 	let newFileName = $state('');
 	let isSaving = $state(false);
+	let fullscreen = $state(false);
+	let treeVersion = $state(0);
 	let autoSaveStatus = $state(''); // '' | 'saving' | 'saved'
 	let autoSaveTimer = null;
 
@@ -53,7 +56,39 @@
 
 		await loadStats();
 		await loadRoot();
+		await restoreDraft();
 	});
+
+	// 새로고침/탭 폐기로 날아간 미저장 편집 복구
+	async function restoreDraft() {
+		try {
+			const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+			if (!d?.path) return;
+			const result = await getFileContent(d.path);
+			fileContent = result.content;
+			selectedFile = { name: d.name, path: d.path };
+			editContent = d.content;
+		} catch (err) {
+			console.error('초안 복구 실패:', err);
+		}
+	}
+
+	// 미저장 내용은 localStorage에 보관, 저장되면 삭제
+	$effect(() => {
+		if (!selectedFile || isCreating) return;
+		try {
+			if (editContent !== fileContent) {
+				localStorage.setItem(DRAFT_KEY, JSON.stringify({ name: selectedFile.name, path: selectedFile.path, content: editContent }));
+			} else {
+				localStorage.removeItem(DRAFT_KEY);
+			}
+		} catch {}
+	});
+
+	// 앱 전환/화면 잠금 시 바로 저장
+	function handleVisibility() {
+		if (document.visibilityState === 'hidden') autoSaveIfNeeded();
+	}
 
 	async function loadStats() {
 		try {
@@ -78,6 +113,7 @@
 				...files.map(f => ({ ...f, type: 'file' }))
 			];
 
+			treeVersion++;
 			viewMode = 'browse';
 		} catch (err) {
 			error = '폴더를 불러오는데 실패했습니다: ' + err.message;
@@ -430,7 +466,8 @@
 </svelte:head>
 
 <!-- 컨텍스트 메뉴 닫기 (전역 클릭) -->
-<svelte:window onclick={closeContextMenu} oncontextmenu={closeContextMenu} />
+<svelte:window onkeydown={(e) => e.key === 'Escape' && (fullscreen = false)} onclick={closeContextMenu} oncontextmenu={closeContextMenu} />
+<svelte:document onvisibilitychange={handleVisibility} />
 
 <div class="notebook-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<header class="page-header">
@@ -496,7 +533,7 @@
 					ondrop={handleRootDrop}
 				>
 					{#key showHidden}
-						{#each rootItems as item}
+						{#each rootItems as item (item.path)}
 							<FileTreeNode
 								{item}
 								onSelectFile={handleFileSelect}
@@ -506,6 +543,7 @@
 								onContextMenu={handleTreeContextMenu}
 								{showHidden}
 								onDrop={handleDrop}
+								version={treeVersion}
 							/>
 						{/each}
 					{/key}
@@ -547,7 +585,7 @@
 			{:else if error}
 				<div class="error-message"><p>{error}</p></div>
 			{:else if selectedFile}
-				<div class="editor-container">
+				<div class="editor-container" class:fullscreen>
 					<div class="editor-header">
 						{#if isCreating}
 							<input
@@ -580,16 +618,19 @@
 							{:else if autoSaveStatus === 'saved'}
 								<span class="autosave-status saved">✓ 자동 저장됨</span>
 							{/if}
+							<button onclick={() => (fullscreen = !fullscreen)} title={fullscreen ? '전체화면 종료 (Esc)' : '전체화면 편집'}>
+								{fullscreen ? '⤡ 축소' : '⤢ 전체화면'}
+							</button>
 							<button class="btn-primary" onclick={handleSave} disabled={isSaving}>
 								{isSaving ? '저장 중...' : '저장'}
 							</button>
 						</div>
 					</div>
 					<div class="markdown-editor-wrapper">
-						{#key selectedFile?.path || 'new'}
+						{#key (selectedFile?.path || 'new') + fullscreen}
 							<TuiEditor
 								bind:value={editContent}
-								height="calc(100vh - 120px)"
+								height={fullscreen ? '100%' : 'calc(100vh - 120px)'}
 								previewStyle="tab"
 								initialEditType="markdown"
 							/>
@@ -666,7 +707,7 @@
 		display: flex;
 		flex-direction: column;
 		background: var(--bg-primary);
-		overflow: hidden;
+		overflow: clip;
 	}
 
 	.page-header {
@@ -725,7 +766,7 @@
 		flex: 1;
 		display: grid;
 		grid-template-columns: 260px 1fr;
-		overflow: hidden;
+		overflow: clip;
 	}
 
 	.sidebar {
@@ -837,7 +878,7 @@
 		background: var(--bg-primary);
 		display: flex;
 		flex-direction: column;
-		overflow: hidden;
+		overflow: clip;
 	}
 
 	.loading {
@@ -897,7 +938,19 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		overflow: hidden;
+		overflow: clip;
+	}
+
+	.editor-container.fullscreen {
+		position: fixed;
+		inset: 0;
+		height: 100dvh;
+		z-index: 100;
+		background: var(--bg-primary);
+	}
+
+	.editor-container.fullscreen .markdown-editor-wrapper {
+		min-height: 0;
 	}
 
 	.editor-header {
@@ -907,6 +960,10 @@
 		padding: 6px 12px;
 		border-bottom: 1px solid var(--border-color);
 		flex-shrink: 0;
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		background: var(--bg-primary);
 	}
 
 	.editor-header h2, .editable-title {

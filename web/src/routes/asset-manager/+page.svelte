@@ -33,18 +33,23 @@
 	let budgetYear = $state(new Date().getFullYear());
 	let budgetMonth = $state(new Date().getMonth() + 1);
 
-	function changeBudgetMonth(delta) {
-		const newMonth = budgetMonth + delta;
-		if (newMonth > 12) {
-			budgetMonth = 1;
-			budgetYear += 1;
-		} else if (newMonth < 1) {
-			budgetMonth = 12;
-			budgetYear -= 1;
-		} else {
-			budgetMonth = newMonth;
-		}
+	let budgetPeriod = $state('month'); // month | quarter | half | year
+	const PERIOD_STEP = { month: 1, quarter: 3, half: 6, year: 12 };
+	const PERIOD_LABELS = { month: '월', quarter: '분기', half: '반기', year: '년' };
+
+	function changeBudgetMonth(dir) {
+		const total = budgetYear * 12 + (budgetMonth - 1) + dir * PERIOD_STEP[budgetPeriod];
+		budgetYear = Math.floor(total / 12);
+		budgetMonth = (total % 12) + 1;
 	}
+
+	const budgetLabel = $derived.by(() => {
+		const y = budgetYear, m = budgetMonth;
+		if (budgetPeriod === 'quarter') return `${y} ${Math.ceil(m / 3)}분기`;
+		if (budgetPeriod === 'half') return `${y} ${m <= 6 ? '상반기' : '하반기'}`;
+		if (budgetPeriod === 'year') return `${y}`;
+		return `${y}-${String(m).padStart(2, '0')}`;
+	});
 
 	// 날짜 범위 계산
 	const startDate = $derived(`${currentYear}-${String(currentMonth).padStart(2, '0')}-01`);
@@ -151,24 +156,34 @@
 	<hr>
 
 	
+	<div class="budget-nav">
 	<div class="month-nav">
-		<button class="nav-btn" onclick={() => changeBudgetMonth(-1)} aria-label="이전 달">
+		<button class="nav-btn" onclick={() => changeBudgetMonth(-1)} aria-label="이전">
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<polyline points="15 18 9 12 15 6"></polyline>
 			</svg>
 		</button>
-		<h3>{budgetYear}-{String(budgetMonth).padStart(2, '0')}</h3>
-		<button class="nav-btn" onclick={() => changeBudgetMonth(1)} aria-label="다음 달">
+		<h3>{budgetLabel}</h3>
+		<button class="nav-btn" onclick={() => changeBudgetMonth(1)} aria-label="다음">
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<polyline points="9 18 15 12 9 6"></polyline>
 			</svg>
 		</button>
 	</div>
+	<div class="period-tabs">
+		{#each Object.entries(PERIOD_LABELS) as [key, label]}
+			<button class="nav-btn" class:active={budgetPeriod === key} onclick={() => (budgetPeriod = key)}>{label}별</button>
+		{/each}
+	</div>
+	</div>
 
 	<!-- 예산 대비 지출 차트 -->
-	<BudgetComparisonChart year={budgetYear} month={budgetMonth} />
+	<BudgetComparisonChart year={budgetYear} month={budgetMonth} period={budgetPeriod} />
 
-	<BudgetEditor year={budgetYear} month={budgetMonth} />
+	<!-- 예산 수정은 월 단위 -->
+	{#if budgetPeriod === 'month'}
+		<BudgetEditor year={budgetYear} month={budgetMonth} />
+	{/if}
 
 	<hr>
 	<button class="part-btn">
@@ -251,6 +266,36 @@
 </div>
 
 <style>
+	.budget-nav {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 8px;
+	}
+
+	.period-tabs {
+		display: flex;
+	}
+
+	.period-tabs .nav-btn {
+		height: 32px;
+		padding: 0 12px;
+		border: 1px solid var(--border-color);
+		margin-left: -1px;
+		border-radius: 0;
+		background: none;
+		color: var(--text-primary);
+		cursor: pointer;
+	}
+
+	.period-tabs .nav-btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; }
+	.period-tabs .nav-btn:last-child { border-radius: 0 4px 4px 0; }
+
+	.period-tabs .nav-btn.active {
+		background: var(--color-impact-3);
+		color: #fff;
+	}
+
 	.asset-manager-page {
 		max-width: 1400px;
 		margin: 0 auto;

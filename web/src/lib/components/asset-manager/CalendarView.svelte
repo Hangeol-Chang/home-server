@@ -34,11 +34,25 @@
 		return Array.from(tiers.values()).sort((a, b) => a.level - b.level);
 	});
 
+	// 카테고리 필터 (거래 내역과 동일)
+	let hidden = $state([]);
+	let categories = $derived([...new Set(transactions.map((t) => t.category_display_name))]);
+	let visible = $derived(transactions.filter((t) => !hidden.includes(t.category_display_name)));
+	let allChecked = $derived(categories.every((c) => !hidden.includes(c)));
+
+	function toggleAll() {
+		hidden = allChecked ? [...categories] : [];
+	}
+
+	function toggleCategory(c) {
+		hidden = hidden.includes(c) ? hidden.filter((h) => h !== c) : [...hidden, c];
+	}
+
 	// 날짜별 거래 집계 데이터
 	let dailyData = $derived.by(() => {
 		const daily = {};
 
-		transactions.forEach((trans) => {
+		visible.forEach((trans) => {
 			// 티어 필터링 (undefined면 true로 취급)
 			if (tierFilters[trans.tier_display_name] === false) return;
 
@@ -288,6 +302,17 @@
 		</div>
 	</div>
 
+	{#if categories.length > 0}
+		<div class="category-filter">
+			<label class="filter-item"><input type="checkbox" checked={allChecked} onchange={toggleAll} />전체</label>
+			{#each categories as c (c)}
+				<label class="filter-item">
+					<input type="checkbox" checked={!hidden.includes(c)} onchange={() => toggleCategory(c)} />{c}
+				</label>
+			{/each}
+		</div>
+	{/if}
+
 	{#if loading}
 		<div class="loading">
 			<div class="spinner"></div>
@@ -391,7 +416,7 @@
 	<TransactionDropdown
 		bind:selectedDate
 		bind:visible={dropdownVisible}
-		{transactions}
+		transactions={visible}
 		{dailyData}
 		onAddTransaction={handleAddTransaction}
 		onEditTransaction={handleEditTransaction}
@@ -482,6 +507,50 @@
 		justify-content: center;
 		width: 14px;
 		height: 14px;
+	}
+
+	.category-filter {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-bottom: 16px;
+	}
+
+	.filter-item {
+		position: relative;
+		padding: 6px 14px;
+		border: 1px solid var(--border-color);
+		border-radius: 999px;
+		background: var(--bg-white);
+		font-size: 0.85rem;
+		color: var(--text-tertiary);
+		cursor: pointer;
+		user-select: none;
+		transition:
+			background-color 0.15s,
+			color 0.15s,
+			border-color 0.15s;
+	}
+
+	.filter-item:hover {
+		border-color: var(--text-secondary);
+	}
+
+	.filter-item:has(input:checked) {
+		background: var(--text-primary);
+		border-color: var(--text-primary);
+		color: var(--bg-white);
+	}
+
+	.filter-item:has(input:focus-visible) {
+		outline: 2px solid var(--text-info);
+		outline-offset: 2px;
+	}
+
+	.filter-item input {
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
 	}
 
 	.calendar-container {

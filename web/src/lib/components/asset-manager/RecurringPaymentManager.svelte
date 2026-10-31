@@ -1,4 +1,5 @@
 <script>
+	import { tabNav } from '$lib/tabNav.js';
 	import {
 		getRecurringPayments,
 		createRecurringPayment,
@@ -214,53 +215,64 @@
 		{:else if payments.length === 0}
 			<div class="no-data">등록된 정기 결제가 없습니다.</div>
 		{:else}
-			<div class="items-list">
-			{#each payments as p (p.id)}
-				{@const classType = classTypes.find(c => c.id === p.class_id)}
-				<div class="item-card" class:inactive={!p.is_active}>
-					<div class="recurring-left">
-						<div class="day-badge">{p.day_of_month}일</div>
-						<div class="recurring-info">
-							<span class="recurring-name">{p.name}</span>
-							<span class="recurring-meta">
-								{p.category_display_name}{p.sub_category_name ? ` · ${p.sub_category_name}` : ''}
-							</span>
-						</div>
-					</div>
-					<div class="recurring-right">
-						<span class="recurring-cost">{p.cost.toLocaleString()}원</span>
-						<span class="badge" style="background: {classType?.color}22; color: {classType?.color}">
-							{classType?.label}
-						</span>
-						<div class="recurring-actions">
-							<button
-								class="icon-btn"
-								class:danger={false}
-								onclick={() => handleToggleActive(p)}
-								title={p.is_active ? '비활성화' : '활성화'}
-							>
-								{#if p.is_active}
-									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-										<rect x="6" y="4" width="4" height="16"></rect>
-										<rect x="14" y="4" width="4" height="16"></rect>
-									</svg>
-								{:else}
-									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-										<polygon points="5 3 19 12 5 21 5 3"></polygon>
-									</svg>
-								{/if}
-							</button>
-							<button class="icon-btn" onclick={() => openEdit(p)} title="수정">
-								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-									<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-								</svg>
-							</button>
-						</div>
-					</div>
-				</div>
-			{/each}
-		</div>
+			<div class="table-wrapper">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>결제일</th>
+							<th>결제명</th>
+							<th>분류</th>
+							<th class="text-right">금액</th>
+							<th class="text-center">작업</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each payments as p (p.id)}
+							{@const classType = classTypes.find((c) => c.id === p.class_id)}
+							<tr class:inactive={!p.is_active}>
+								<td>매월 {p.day_of_month}일</td>
+								<td>{p.name}</td>
+								<td>
+									<span class="badge" style="background: {classType?.color}22; color: {classType?.color}">
+										{classType?.label}
+									</span>
+									<span class="recurring-meta">
+										{p.category_display_name}{p.sub_category_name ? ` · ${p.sub_category_name}` : ''}
+									</span>
+								</td>
+								<td class="text-right"><span class="cell-amount">{p.cost.toLocaleString()}원</span></td>
+								<td class="text-center">
+									<div class="recurring-actions">
+										<button
+											class="icon-btn"
+											onclick={() => handleToggleActive(p)}
+											title={p.is_active ? '비활성화' : '활성화'}
+											aria-label={p.is_active ? '비활성화' : '활성화'}
+										>
+											{#if p.is_active}
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+													<rect x="6" y="4" width="4" height="16"></rect>
+													<rect x="14" y="4" width="4" height="16"></rect>
+												</svg>
+											{:else}
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+													<polygon points="5 3 19 12 5 21 5 3"></polygon>
+												</svg>
+											{/if}
+										</button>
+										<button class="icon-btn" onclick={() => openEdit(p)} title="수정" aria-label="수정">
+											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+												<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+												<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+											</svg>
+										</button>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		{/if}
 	{/if}
 </div>
@@ -269,7 +281,7 @@
 {#if isFormOpen}
 	<div class="modal-overlay" onclick={closeForm} role="presentation">
 		<div class="modal-container" onclick={(e) => e.stopPropagation()} role="presentation">
-			<form onsubmit={handleSubmit}>
+			<form use:tabNav onsubmit={handleSubmit}>
 				<div class="chart-header">
 					<h3>{editTarget ? '정기결제 수정' : '정기결제 추가'}</h3>
 					<button type="button" class="icon-btn" onclick={closeForm} aria-label="닫기">
@@ -437,75 +449,19 @@
 		color: var(--text-tertiary);
 	}
 
-	/* 카드 레이아웃 */
-	.item-card {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 16px;
-		transition: opacity 0.2s;
-	}
-
-	.item-card.inactive {
+	tr.inactive {
 		opacity: 0.4;
 	}
 
-	.recurring-left {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		min-width: 0;
-	}
-
-	.day-badge {
-		min-width: 48px;
-		text-align: center;
-		font-size: 1rem;
-		font-weight: 600;
-		color: var(--text-primary);
-		background: var(--accent);
-		border-radius: 8px;
-		padding: 6px 4px;
-		flex-shrink: 0;
-	}
-
-	.recurring-info {
-		display: flex;
-		flex-direction: column;
-		gap: 3px;
-		min-width: 0;
-	}
-
-	.recurring-name {
-		font-weight: 400;
-		font-size: 0.95rem;
-		color: var(--text-primary);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
 	.recurring-meta {
+		margin-left: 6px;
 		font-size: 0.8rem;
 		color: var(--text-tertiary);
 	}
 
-	.recurring-right {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		flex-shrink: 0;
-	}
-
-	.recurring-cost {
-		font-weight: 600;
-		font-size: 0.95rem;
-		color: var(--text-primary);
-		white-space: nowrap;
-	}
-
 	.recurring-actions {
 		display: flex;
+		justify-content: center;
 		gap: 4px;
 	}
 

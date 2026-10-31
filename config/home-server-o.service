@@ -11,7 +11,6 @@ Restart=always
 RestartSec=10
 User=ubuntu
 Environment=PYTHONUNBUFFERED=1
-ubuntuDFile=/home/ubuntu/workspace/home-server/logs/web.ubuntud
 KillMode=control-group
 RemainAfterExit=no
 

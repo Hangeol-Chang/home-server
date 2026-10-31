@@ -1,4 +1,5 @@
 <script>
+	import { tabNav } from '$lib/tabNav.js';
 	import { createTransaction, updateTransaction, deleteTransaction, getCategories, getSubCategories, getTiers, getTags } from '$lib/api/asset-manager.js';
 	import { onMount, untrack } from 'svelte';
 	import { device } from '$lib/stores/device';
@@ -290,7 +291,7 @@
 </script>
 
 {#snippet formContent()}
-	<form class="transaction-form" onsubmit={handleSubmit}>
+	<form class="transaction-form" use:tabNav onsubmit={handleSubmit}>
 		<div class="chart-header">
 			<h3>{initialTransaction ? '거래 수정' : '거래 등록'}</h3>
 			<button type="button" class="icon-btn" onclick={handleCancel} aria-label="닫기">

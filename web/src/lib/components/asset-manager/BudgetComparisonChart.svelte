@@ -1,19 +1,51 @@
 <script>
 	import { Chart, registerables } from 'chart.js';
-	import { getBudgets, getPeriodComparison, getCategories } from '$lib/api/asset-manager.js';
+	import { getBudgets, getPeriodComparison, getCategories, getTransactions } from '$lib/api/asset-manager.js';
 	import { device } from '$lib/stores/device';
+	import TransactionDropdown from './TransactionDropdown.svelte';
 
 	Chart.register(...registerables);
 
-	let { year, month } = $props();
+	let { year, month, period = 'month' } = $props();
+
+	// 기간 단위별 [시작 월, 개월 수]
+	function periodRange(p, m) {
+		if (p === 'quarter') return [Math.floor((m - 1) / 3) * 3 + 1, 3];
+		if (p === 'half') return [m <= 6 ? 1 : 7, 6];
+		if (p === 'year') return [1, 12];
+		return [m, 1];
+	}
 
 	let chartCanvas = $state(null);
 	let chartInstance = null;
 	let loading = $state(false);
 	let error = $state(null);
 
+	let categoryIds = [];
+	let dropdownVisible = $state(false);
+	let dropdownTitle = $state('');
+	let dropdownList = $state([]);
+
+	async function openCategory(index) {
+		const [startMonth, n] = periodRange(period, month);
+		const endMonth = startMonth + n - 1;
+		const pad = (v) => String(v).padStart(2, '0');
+		try {
+			dropdownList = await getTransactions({
+				category_id: categoryIds[index],
+				start_date: `${year}-${pad(startMonth)}-01`,
+				end_date: `${year}-${pad(endMonth)}-${new Date(year, endMonth, 0).getDate()}`,
+				limit: 10000
+			});
+			dropdownTitle = `${chartInstance.data.labels[index]} 지출 내역`;
+			dropdownVisible = true;
+		} catch (err) {
+			console.error('Failed to load category transactions:', err);
+		}
+	}
+
 	$effect(() => {
-		if (year && month) {
+		if (year && month && period) {
 			loadData();
 		}
 	});
@@ -25,14 +57,18 @@
 		error = null;
 
 		try {
-			const lastDay = new Date(year, month, 0).getDate();
-			const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+			const [startMonth, n] = periodRange(period, month);
+			const endMonth = startMonth + n - 1;
+			const lastDay = new Date(year, endMonth, 0).getDate();
+			const endDate = `${year}-${String(endMonth).padStart(2, '0')}-${lastDay}`;
 
-			const [budgets, periodStats, categories] = await Promise.all([
-				getBudgets(year, month),
-				getPeriodComparison('month', 1, endDate),
+			// 예산은 월 단위로 저장되므로 기간 내 월별 예산을 합산 (period-comparison은 최대 8기간 → 연은 year 단위 사용)
+			const [budgetLists, periodStats, categories] = await Promise.all([
+				Promise.all(Array.from({ length: n }, (_, i) => getBudgets(year, startMonth + i))),
+				period === 'year' ? getPeriodComparison('year', 1, endDate) : getPeriodComparison('month', n, endDate),
 				getCategories() // 카테고리 이름 매핑용
 			]);
+			const budgets = budgetLists.flat();
 
 			// 데이터 가공
 			const categoryMap = new Map();
@@ -51,24 +87,22 @@
 			// 2. 예산 정보 매핑
 			budgets.forEach(b => {
 				if (categoryMap.has(b.category_id)) {
-					categoryMap.get(b.category_id).budget = b.budget_amount;
+					categoryMap.get(b.category_id).budget += b.budget_amount;
 				}
 			});
 
 			// 3. 지출 정보 매핑
-			if (periodStats && periodStats.periods && periodStats.periods.length > 0) {
-				const currentPeriod = periodStats.periods[0]; // 가장 최근 기간 (이번 달)
-				if (currentPeriod.by_category) {
-					currentPeriod.by_category.forEach(cat => {
-						if (categoryMap.has(cat.category_id)) {
-							categoryMap.get(cat.category_id).spent = Math.abs(cat.total_cost);
-						}
-					});
-				}
-			}
+			(periodStats?.periods ?? []).forEach(p => {
+				(p.by_category ?? []).forEach(cat => {
+					if (categoryMap.has(cat.category_id)) {
+						categoryMap.get(cat.category_id).spent += Math.abs(cat.total_cost);
+					}
+				});
+			});
 
 			// 차트 데이터 생성
 			const labels = [];
+			categoryIds = [];
 			const budgetData = [];
 			const spentData = [];
 
@@ -77,6 +111,7 @@
 			for (const [id, data] of categoryMap.entries()) {
 				if (data.budget > 0 || data.spent > 0) {
 					labels.push(data.name);
+					categoryIds.push(id);
 					budgetData.push(data.budget);
 					spentData.push(data.spent);
 				}
@@ -138,6 +173,10 @@
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
+				onClick: (_, elements) => elements.length && openCategory(elements[0].index),
+				onHover: (e, elements) => {
+					e.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+				},
 				interaction: {
 					mode: 'index',
 					intersect: false,
@@ -231,6 +270,13 @@
 		{/if}
 	</div>
 </div>
+
+<TransactionDropdown
+	bind:visible={dropdownVisible}
+	mode="list"
+	title={dropdownTitle}
+	transactions={dropdownList}
+/>
 
 <style>
 	.module-container {

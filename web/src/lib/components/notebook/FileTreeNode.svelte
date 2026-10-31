@@ -1,4 +1,5 @@
 <script>
+	import { FileText, FileSpreadsheet, FileCog, FileCode, Image, FileArchive, ChevronRight, Folder, FolderOpen } from '@lucide/svelte';
 	import { getFolders, getFiles } from '$lib/api/notebook.js';
 	import FileTreeNode from './FileTreeNode.svelte';
 
@@ -54,18 +55,16 @@
 	function getFileIcon(name) {
 		const ext = name.split('.').pop()?.toLowerCase();
 		const icons = {
-			md: '📝', markdown: '📝',
-			txt: '📄',
-			csv: '📊', tsv: '📊',
-			json: '🔧', yaml: '🔧', yml: '🔧', toml: '🔧',
-			js: '🟨', ts: '🟦', jsx: '🟨', tsx: '🟦',
-			py: '🐍', sh: '⚙️', bash: '⚙️',
-			html: '🌐', css: '🎨', scss: '🎨',
-			png: '🖼️', jpg: '🖼️', jpeg: '🖼️', gif: '🖼️', svg: '🖼️', webp: '🖼️',
-			pdf: '📕',
-			zip: '📦', tar: '📦', gz: '📦',
+			md: FileText, markdown: FileText, txt: FileText,
+			csv: FileSpreadsheet, tsv: FileSpreadsheet,
+			json: FileCog, yaml: FileCog, yml: FileCog, toml: FileCog,
+			js: FileCode, ts: FileCode, jsx: FileCode, tsx: FileCode, py: FileCode, sh: FileCode, bash: FileCode,
+			html: FileCode, css: FileCode, scss: FileCode,
+			png: Image, jpg: Image, jpeg: Image, gif: Image, svg: Image, webp: Image,
+			pdf: FileText,
+			zip: FileArchive, tar: FileArchive, gz: FileArchive,
 		};
-		return icons[ext] ?? '📄';
+		return icons[ext] ?? FileText;
 	}
 
 	function handleContextMenu(e) {
@@ -129,11 +128,11 @@
 	>
 		<span class="icon">
 			{#if item.type === 'folder'}
-				<span class="folder-arrow" class:expanded={expanded}>▶</span>
-				{expanded ? '📂' : '📁'}
+				<span class="folder-arrow" class:expanded={expanded}><ChevronRight size={12} strokeWidth={1.75} /></span>
+				{#if expanded}<FolderOpen size={16} strokeWidth={1.75} />{:else}<Folder size={16} strokeWidth={1.75} />{/if}
 			{:else}
 				<span class="spacer"></span>
-				{getFileIcon(item.name)}
+				<svelte:component this={getFileIcon(item.name)} size={16} strokeWidth={1.75} />
 			{/if}
 		</span>
 		<span class="name">{item.name}</span>

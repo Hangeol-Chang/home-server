@@ -1,4 +1,5 @@
 <script>
+	import { ChevronDown, ChevronRight } from '@lucide/svelte';
 	import { 
 		getClasses, 
 		getCategories, 
@@ -329,7 +330,7 @@
 			<section class="manage-section">
 				<div class="section-header" onclick={() => toggleSection('unclassified')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSection('unclassified')}>
 					<h2>미분류 거래 관리 ({unclassifiedTransactions.length})</h2>
-					<span class="toggle-icon">{expandedSections.unclassified ? '▼' : '▶'}</span>
+					<span class="toggle-icon">{#if expandedSections.unclassified}<ChevronDown size={16} strokeWidth={1.75} />{:else}<ChevronRight size={16} strokeWidth={1.75} />{/if}</span>
 				</div>
 				
 				{#if expandedSections.unclassified}
@@ -414,7 +415,7 @@
 							</svg>
 							{showCategoryForm ? '닫기' : '새 카테고리'}
 						</button>
-						<span class="toggle-icon">{expandedSections.category ? '▼' : '▶'}</span>
+						<span class="toggle-icon">{#if expandedSections.category}<ChevronDown size={16} strokeWidth={1.75} />{:else}<ChevronRight size={16} strokeWidth={1.75} />{/if}</span>
 					</div>
 				</div>
 
@@ -553,7 +554,7 @@
 						</svg>
 						{showSubCategoryForm ? '닫기' : '새 세부 분류'}
 					</button>
-					<span class="toggle-icon">{expandedSections.subCategory ? '▼' : '▶'}</span>
+					<span class="toggle-icon">{#if expandedSections.subCategory}<ChevronDown size={16} strokeWidth={1.75} />{:else}<ChevronRight size={16} strokeWidth={1.75} />{/if}</span>
 				</div>
 			</div>
 
@@ -677,7 +678,7 @@
 							</svg>
 							{showTierForm ? '닫기' : '새 티어'}
 						</button>
-						<span class="toggle-icon">{expandedSections.tier ? '▼' : '▶'}</span>
+						<span class="toggle-icon">{#if expandedSections.tier}<ChevronDown size={16} strokeWidth={1.75} />{:else}<ChevronRight size={16} strokeWidth={1.75} />{/if}</span>
 					</div>
 				</div>
 

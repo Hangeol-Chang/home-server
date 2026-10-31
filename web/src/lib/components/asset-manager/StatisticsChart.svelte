@@ -1,4 +1,5 @@
 <script>
+	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import { Chart, registerables } from 'chart.js';
 	import { getPeriodStatistics } from '$lib/api/asset-manager.js';
 
@@ -157,22 +158,8 @@
 				</span>
 			{/if}
 		</h3>
-		<div class="view-toggle">
-			<button
-				class="toggle-btn"
-				class:active={viewType === 'category'}
-				onclick={() => (viewType = 'category')}
-			>
-				카테고리별
-			</button>
-			<button
-				class="toggle-btn"
-				class:active={viewType === 'tier'}
-				onclick={() => (viewType = 'tier')}
-			>
-				분류별
-			</button>
-		</div>
+		<SegmentedControl options={[{ value: 'category', label: '카테고리별' }, { value: 'tier', label: '분류별' }]} bind:value={viewType} aria-label="보기 기준" />
+
 	</div>
 
 	{#if loading}

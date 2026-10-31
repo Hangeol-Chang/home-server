@@ -1,4 +1,5 @@
 <script>
+	import { Folder, FileText, FileSpreadsheet, Presentation, Image, Film, Music, FileArchive, Paperclip, Download, X } from '@lucide/svelte';
 	import { listFiles, getFileMeta, getFileContentUrl, getBreadcrumb } from '$lib/api/gdrive.js';
 	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
@@ -25,25 +26,25 @@
 	let lastBufferSample = $state(null); // { t, bytes }
 
 	const ICON_MAP = {
-		'application/vnd.google-apps.folder': '📁',
-		'application/vnd.google-apps.document': '📄',
-		'application/vnd.google-apps.spreadsheet': '📊',
-		'application/vnd.google-apps.presentation': '📑',
-		'application/pdf': '📕',
-		'image/jpeg': '🖼️',
-		'image/png': '🖼️',
-		'image/gif': '🖼️',
-		'image/webp': '🖼️',
-		'video/mp4': '🎬',
-		'video/quicktime': '🎬',
-		'audio/mpeg': '🎵',
-		'audio/wav': '🎵',
-		'text/plain': '📃',
-		'application/zip': '🗜️',
+		'application/vnd.google-apps.folder': Folder,
+		'application/vnd.google-apps.document': FileText,
+		'application/vnd.google-apps.spreadsheet': FileSpreadsheet,
+		'application/vnd.google-apps.presentation': Presentation,
+		'application/pdf': FileText,
+		'image/jpeg': Image,
+		'image/png': Image,
+		'image/gif': Image,
+		'image/webp': Image,
+		'video/mp4': Film,
+		'video/quicktime': Film,
+		'audio/mpeg': Music,
+		'audio/wav': Music,
+		'text/plain': FileText,
+		'application/zip': FileArchive,
 	};
 
 	function getIcon(mimeType) {
-		return ICON_MAP[mimeType] ?? '📎';
+		return ICON_MAP[mimeType] ?? Paperclip;
 	}
 
 	function formatSize(bytes) {
@@ -317,7 +318,7 @@
 							<td class="col-name">
 								{#if item.isFolder}
 									<button class="item-btn folder-btn" onclick={() => openFolder(item)}>
-										<span class="item-icon">{getIcon(item.mimeType)}</span>
+										<span class="item-icon"><svelte:component this={getIcon(item.mimeType)} size={16} strokeWidth={1.75} /></span>
 										<span class="item-name">{item.name}</span>
 									</button>
 								{:else}
@@ -326,7 +327,7 @@
 										onclick={() => openPreview(item)}
 										disabled={!isPreviewable(item.mimeType)}
 									>
-										<span class="item-icon">{getIcon(item.mimeType)}</span>
+										<span class="item-icon"><svelte:component this={getIcon(item.mimeType)} size={16} strokeWidth={1.75} /></span>
 										<span class="item-name">{item.name}</span>
 									</button>
 								{/if}
@@ -340,7 +341,7 @@
 										download={item.name}
 										class="download-btn"
 										title="다운로드"
-									>⬇</a>
+									aria-label="다운로드"><Download size={16} strokeWidth={1.75} /></a>
 								{/if}
 							</td>
 						</tr>
@@ -374,7 +375,7 @@
 				<span class="preview-title">{previewFile.name}</span>
 				<div class="preview-actions">
 					<a href={previewUrl} download={previewFile.name} class="preview-download-btn">다운로드</a>
-					<button class="preview-close-btn" onclick={closePreview}>✕</button>
+					<button class="preview-close-btn" onclick={closePreview} aria-label="닫기"><X size={16} strokeWidth={1.75} /></button>
 				</div>
 			</div>
 			<div class="preview-body">

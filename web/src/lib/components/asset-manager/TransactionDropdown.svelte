@@ -1,4 +1,5 @@
 <script>
+	import { X } from '@lucide/svelte';
 	import TransactionTypeIcon from '$lib/components/ui/TransactionTypeIcon.svelte';
 
 	let {
@@ -64,7 +65,7 @@
 					</svg>
 				</button>
 				{/if}
-				<button class="close-btn" onclick={close} aria-label="닫기">✕</button>
+				<button class="close-btn" onclick={close} aria-label="닫기"><X size={16} strokeWidth={1.75} /></button>
 			</div>
 		</div>
 		<div class="dropdown-content">

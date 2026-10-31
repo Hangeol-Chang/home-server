@@ -1,4 +1,5 @@
 <script>
+	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import TransactionForm from '$lib/components/asset-manager/TransactionForm.svelte';
 	import LLMReportGenerator from '$lib/components/asset-manager/LLMReportGenerator.svelte';
 	import MonthlyReport from '$lib/components/asset-manager/MonthlyReport.svelte';
@@ -170,11 +171,7 @@
 			</svg>
 		</button>
 	</div>
-	<div class="period-tabs">
-		{#each Object.entries(PERIOD_LABELS) as [key, label]}
-			<button class="nav-btn" class:active={budgetPeriod === key} onclick={() => (budgetPeriod = key)}>{label}별</button>
-		{/each}
-	</div>
+	<SegmentedControl options={Object.entries(PERIOD_LABELS).map(([value, label]) => ({ value, label: label + '별' }))} bind:value={budgetPeriod} aria-label="예산 기간" />
 	</div>
 
 	<!-- 예산 대비 지출 차트 -->

@@ -4,6 +4,7 @@
 	import { getPeriodComparison } from '$lib/api/asset-manager.js';
 	import { device } from '$lib/stores/device';
 	import { getChartColor } from '$lib/constants.js';
+	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 
 	Chart.register(...registerables);
 
@@ -70,11 +71,6 @@
 	function getTrendColor(value) {
 		if (value === null || value === undefined) return 'var(--ink-muted)';
 		return value >= 0 ? 'var(--success)' : 'var(--danger)';
-	}
-
-	function getTrendIcon(value) {
-		if (value === null || value === undefined) return '━';
-		return value >= 0 ? '▲' : '▼';
 	}
 
 	// 지출 카테고리별 차트 데이터 생성
@@ -339,17 +335,7 @@
 
 <div class="module-container" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="chart-header">
-		<div class="tab-buttons">
-			{#each units as unitOption}
-				<button
-					class="tab-btn"
-					class:active={selectedUnit === unitOption.value}
-					onclick={() => handleUnitChange(unitOption.value)}
-				>
-					<span>{unitOption.label}</span>
-				</button>
-			{/each}
-		</div>
+		<SegmentedControl options={units} bind:value={selectedUnit} onchange={loadData} aria-label="기간 단위" />
 
         <button class="refresh-btn" onclick={loadData} disabled={loading} aria-label="새로고침">
             <svg
@@ -410,7 +396,7 @@
 		{/if}
 
 		<!-- 저축 추이 차트 -->
-        <!-- <h3>💰 SAVE</h3>
+        <!-- <h3>SAVE</h3>
 		<div class="chart-section">
             <table class="data-table compact">
                 <thead>

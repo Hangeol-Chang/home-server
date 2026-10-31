@@ -1,4 +1,5 @@
 <script>
+	import { Folder, FileText } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import {
 		getTopFolders,
@@ -568,7 +569,7 @@
 						tabindex="0"
 					>
 						<div class="node-circle" style="background: {statusInfo(node.status).color};">
-							{node.type === 'folder' ? '📁' : '📄'}
+							{#if node.type === 'folder'}<Folder size={16} strokeWidth={1.75} />{:else}<FileText size={16} strokeWidth={1.75} />{/if}
 						</div>
 						<span class="node-name">{node.name}</span>
 						<div class="node-meta-tooltip">
@@ -609,7 +610,7 @@
 	<div class="side-panel">
 		<div class="side-panel-header">
 			<h2>
-				<span class="node-icon">{panelNode.type === 'folder' ? '📁' : '📄'}</span>
+				<span class="node-icon">{#if panelNode.type === 'folder'}<Folder size={16} strokeWidth={1.75} />{:else}<FileText size={16} strokeWidth={1.75} />{/if}</span>
 				{panelNode.name}
 			</h2>
 			<button class="btn-secondary" onclick={savePanel} disabled={panelSaving}>닫기</button>

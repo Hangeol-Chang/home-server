@@ -1,4 +1,6 @@
 <script>
+	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
+	const modes = [{ value: 'weekly', label: '주간' }, { value: 'monthly', label: '월간' }, { value: 'custom', label: '커스텀' }];
 	import { generateMonthlyReport, generateWeeklyReport, generateCustomReport } from '$lib/api/test.js';
 
 	let mode = $state('monthly');
@@ -89,11 +91,7 @@
 <div class="llm-report">
 	<div class="report-header">
 		<h3 class="report-title">AI 재무 리포트</h3>
-		<div class="mode-tabs">
-			<button class="mode-tab" class:active={mode === 'weekly'}  onclick={() => setMode('weekly')}>주간</button>
-			<button class="mode-tab" class:active={mode === 'monthly'} onclick={() => setMode('monthly')}>월간</button>
-			<button class="mode-tab" class:active={mode === 'custom'}  onclick={() => setMode('custom')}>커스텀</button>
-		</div>
+		<SegmentedControl options={modes} value={mode} onchange={setMode} aria-label="리포트 종류" />
 	</div>
 
 	{#if mode === 'custom'}

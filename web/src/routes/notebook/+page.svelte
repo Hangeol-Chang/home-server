@@ -1,4 +1,5 @@
 <script>
+	import { Search, Eye, EyeOff, Mic, Square, Loader, Check, X } from '@lucide/svelte';
 	import { getFolders, getFiles, getFileContent, searchNotes, getVaultStats, saveNote, createFolder, pullRepository, deleteFile, deleteFolder, moveItem, renameItem, transcribeVoice } from '$lib/api/notebook.js';
 	import { onMount } from 'svelte';
 	const DRAFT_KEY = 'notebook-draft';
@@ -488,10 +489,10 @@
 					onkeydown={handleSearchKeydown}
 				/>
 				<button class="btn-primary" onclick={handleSearch} disabled={isSearching || !searchQuery.trim()}>
-					{isSearching ? '검색중...' : '🔍'}
+					{#if isSearching}검색중...{:else}<Search size={16} strokeWidth={1.75} />{/if}
 				</button>
 				{#if viewMode === 'search'}
-					<button class="icon-btn" onclick={clearSearch}>×</button>
+					<button class="icon-btn" onclick={clearSearch} aria-label="검색 해제"><X size={16} strokeWidth={1.75} /></button>
 				{/if}
 			</div>
 		</div>
@@ -508,18 +509,18 @@
 					class:active={showHidden}
 					title={showHidden ? '숨김 파일 숨기기' : '숨김 파일 표시'}
 					onclick={async () => { showHidden = !showHidden; await loadRoot(); }}
-				>👁</button>
+				 aria-label="숨김 파일 표시 전환">{#if showHidden}<Eye size={16} strokeWidth={1.75} />{:else}<EyeOff size={16} strokeWidth={1.75} />{/if}</button>
 				{#if voiceState === 'idle'}
-					<button class="voice-btn" onclick={startRecording} title="음성 녹음 시작">🎙</button>
+					<button class="voice-btn" onclick={startRecording} title="음성 녹음 시작" aria-label="음성 녹음 시작"><Mic size={16} strokeWidth={1.75} /></button>
 				{:else if voiceState === 'recording'}
 					<span class="recording-indicator" title="녹음 중..."></span>
-					<button class="voice-btn recording" onclick={stopRecording} title="녹음 중지">⏹</button>
+					<button class="voice-btn recording" onclick={stopRecording} title="녹음 중지" aria-label="녹음 중지"><Square size={16} strokeWidth={1.75} /></button>
 				{:else if voiceState === 'processing'}
-					<span class="voice-processing" title="변환 중...">⏳</span>
+					<span class="voice-processing" title="변환 중..."><Loader size={16} strokeWidth={1.75} /></span>
 				{/if}
 			</div>
 			{#if voiceError}
-				<div class="voice-error">{voiceError}<button class="voice-error-close" onclick={() => voiceError = ''}>×</button></div>
+				<div class="voice-error">{voiceError}<button class="voice-error-close" onclick={() => voiceError = ''} aria-label="닫기"><X size={16} strokeWidth={1.75} /></button></div>
 			{/if}
 
 			{#if viewMode === 'browse'}
@@ -616,7 +617,7 @@
 							{#if autoSaveStatus === 'saving'}
 								<span class="autosave-status saving">저장 중...</span>
 							{:else if autoSaveStatus === 'saved'}
-								<span class="autosave-status saved">✓ 자동 저장됨</span>
+								<span class="autosave-status saved"><Check size={16} strokeWidth={1.75} /> 자동 저장됨</span>
 							{/if}
 							<button onclick={() => (fullscreen = !fullscreen)} title={fullscreen ? '전체화면 종료 (Esc)' : '전체화면 편집'}>
 								{fullscreen ? '⤡ 축소' : '⤢ 전체화면'}

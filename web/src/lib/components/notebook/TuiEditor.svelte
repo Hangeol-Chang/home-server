@@ -68,7 +68,7 @@
         width: 100%;
         height: 100%;
         background: white; /* TUI Editor needs white bg by default */
-        border-radius: 4px;
+        border-radius: var(--radius-md);
     }
     
     /* Global overrides for TUI Editor to match our theme if needed */

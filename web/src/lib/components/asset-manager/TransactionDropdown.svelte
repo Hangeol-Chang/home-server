@@ -168,7 +168,7 @@
 		left: 50%;
 		transform: translate(-50%, -50%);
 		background: white;
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 		z-index: 999;
 		width: 90%;
@@ -217,7 +217,7 @@
 	.add-btn {
 		background: var(--bg-primary-dark);
 		border: none;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		width: 28px;
 		height: 28px;
 		display: flex;
@@ -244,7 +244,7 @@
 		color: var(--text-secondary);
 		padding: 4px 8px;
 		transition: all 0.2s;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		line-height: 1;
 	}
 

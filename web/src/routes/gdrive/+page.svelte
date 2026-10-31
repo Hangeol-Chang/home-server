@@ -459,7 +459,7 @@
 		color: var(--primary-color);
 		cursor: pointer;
 		padding: 2px 4px;
-		border-radius: 2px;
+		border-radius: var(--radius-sm);
 		font-size: inherit;
 	}
 	.crumb-btn:hover { text-decoration: underline; }
@@ -471,7 +471,7 @@
 	.error-banner {
 		background: var(--bg-danger);
 		border: 1px solid color-mix(in srgb, var(--text-danger), white 65%);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		padding: 12px 16px;
 		color: var(--text-danger);
 		margin-bottom: 16px;
@@ -534,7 +534,7 @@
 		text-decoration: none;
 		font-size: 1rem;
 		padding: 2px 6px;
-		border-radius: 2px;
+		border-radius: var(--radius-sm);
 	}
 	.download-btn:hover { background: var(--bg-tertiary); }
 
@@ -543,7 +543,7 @@
 	.load-more-btn {
 		padding: 8px 24px;
 		border: 1px solid var(--border-color);
-		border-radius: 2px;
+		border-radius: var(--radius-sm);
 		background: var(--bg-white);
 		color: var(--text-primary);
 		cursor: pointer;
@@ -571,7 +571,7 @@
 
 	.preview-modal {
 		background: var(--bg-white);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		width: 90vw;
 		max-width: 1000px;
 		height: 85vh;
@@ -609,7 +609,7 @@
 		padding: 6px 14px;
 		background: var(--button-bg);
 		color: var(--button-text);
-		border-radius: 2px;
+		border-radius: var(--radius-sm);
 		text-decoration: none;
 		font-size: 0.85rem;
 	}
@@ -621,7 +621,7 @@
 		cursor: pointer;
 		color: var(--text-secondary);
 		padding: 4px 8px;
-		border-radius: 2px;
+		border-radius: var(--radius-sm);
 	}
 	.preview-close-btn:hover { background: var(--bg-tertiary); }
 
@@ -658,7 +658,7 @@
 	.buffer-bar {
 		position: relative;
 		height: 8px;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		background: var(--bg-tertiary-dark);
 		overflow: hidden;
 	}

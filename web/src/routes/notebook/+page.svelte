@@ -738,7 +738,7 @@
 		padding: 2px 8px;
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		font-size: 0.8rem;
 		color: var(--text-secondary);
 		white-space: nowrap;
@@ -756,7 +756,7 @@
 		flex: 1;
 		padding: 4px 10px;
 		border: 1px solid var(--border-color);
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		background: var(--bg-secondary);
 		color: var(--text-primary);
 		font-size: 0.9rem;
@@ -796,7 +796,7 @@
 		padding: 4px 8px !important;
 		background: none;
 		border: 1px solid var(--border-color);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		cursor: pointer;
 		color: var(--text-tertiary);
 		font-size: 0.9rem;
@@ -908,7 +908,7 @@
 		padding: 12px;
 		background: var(--bg-danger);
 		border: 1px solid var(--text-danger);
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		color: var(--text-danger);
 	}
 
@@ -981,7 +981,7 @@
 		max-width: 280px;
 		padding: 4px 10px;
 		border: 1px solid var(--border-color);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		background: var(--bg-secondary);
 		color: var(--text-primary);
 		font-size: 0.95rem;
@@ -1002,7 +1002,7 @@
 	.autosave-status {
 		font-size: 0.8rem;
 		padding: 2px 8px;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 	}
 
 	.autosave-status.saving {
@@ -1024,7 +1024,7 @@
 		z-index: 1000;
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 		padding: 4px;
 		min-width: 180px;
@@ -1038,7 +1038,7 @@
 		padding: 6px 10px;
 		background: none;
 		border: none;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		cursor: pointer;
 		text-align: left;
 		font-size: 0.875rem;
@@ -1051,7 +1051,7 @@
 	}
 
 	.ctx-item.danger {
-		color: var(--text-danger, #e74c3c);
+		color: var(--text-danger, var(--danger));
 	}
 
 	.ctx-item.danger:hover {
@@ -1069,7 +1069,7 @@
 		background: none;
 		border: none;
 		padding: 2px 4px;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		cursor: text;
 		text-align: left;
 		font-size: 1rem;
@@ -1089,7 +1089,7 @@
 		flex: 1;
 		padding: 2px 8px;
 		border: 1px solid var(--color-impact-3);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		background: var(--bg-primary);
 		color: var(--text-primary);
 		font-size: 1rem;
@@ -1113,7 +1113,7 @@
 		z-index: 1001;
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		padding: 20px;
 		min-width: 320px;
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
@@ -1130,7 +1130,7 @@
 		width: 100%;
 		padding: 8px 12px;
 		border: 1px solid var(--border-color);
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		background: var(--bg-primary);
 		color: var(--text-primary);
 		font-size: 0.95rem;
@@ -1155,7 +1155,7 @@
 		padding: 4px 8px !important;
 		background: none;
 		border: 1px solid var(--border-color);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		cursor: pointer;
 		font-size: 0.9rem;
 		color: var(--text-tertiary);
@@ -1168,8 +1168,8 @@
 	}
 
 	.voice-btn.recording {
-		border-color: #e74c3c;
-		color: #e74c3c;
+		border-color: var(--danger);
+		color: var(--danger);
 	}
 
 	.voice-btn.recording:hover {
@@ -1181,7 +1181,7 @@
 		width: 8px;
 		height: 8px;
 		border-radius: 50%;
-		background: #e74c3c;
+		background: var(--danger);
 		flex-shrink: 0;
 		animation: pulse-rec 1s ease-in-out infinite;
 	}
@@ -1207,9 +1207,9 @@
 		padding: 6px 10px;
 		background: rgba(231, 76, 60, 0.1);
 		border: 1px solid rgba(231, 76, 60, 0.4);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		font-size: 0.8rem;
-		color: var(--text-danger, #e74c3c);
+		color: var(--text-danger, var(--danger));
 	}
 
 	.voice-error-close {

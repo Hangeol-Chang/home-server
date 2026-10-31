@@ -66,7 +66,7 @@
 		justify-content: center;
 		gap: 8px;
 		padding: 20px 12px;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		border: 1px solid transparent;
 		background: var(--bg-primary-dark);
 		text-decoration: none;

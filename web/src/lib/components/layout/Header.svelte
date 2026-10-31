@@ -164,7 +164,7 @@
 		color: var(--text-primary);
 		font-size: 1rem;
 		transition: background-color 0.2s;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 	}
 
 	.menu-dropdown {
@@ -173,7 +173,7 @@
 		min-width: 200px;
 		background: var(--bg-primary);
 		border: 1px solid var(--border-color);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		box-shadow: var(--shadow-lg);
 		overflow: hidden;
 		z-index: 1000;
@@ -253,7 +253,7 @@
 		min-width: 240px;
 		background: var(--bg-primary);
 		border: 1px solid var(--border-color);
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		box-shadow: var(--shadow-lg);
 		overflow: hidden;
 		z-index: 1000;

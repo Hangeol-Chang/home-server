@@ -68,8 +68,8 @@
 	}
 
 	function getTrendColor(value) {
-		if (value === null || value === undefined) return '#666';
-		return value >= 0 ? '#4caf50' : '#f44336';
+		if (value === null || value === undefined) return 'var(--ink-muted)';
+		return value >= 0 ? 'var(--success)' : 'var(--danger)';
 	}
 
 	function getTrendIcon(value) {
@@ -491,7 +491,7 @@
 		background: var(--bg-primary);
 		box-shadow: var(--shadow-md);
 		padding: 24px;
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 	}
 
 	.chart-container {

@@ -387,7 +387,7 @@
 	.slide-tab {
 		padding: 5px 14px;
 		border: 1px solid var(--border-color);
-		border-radius: 20px;
+		border-radius: var(--radius-md);
 		background: transparent;
 		color: var(--text-secondary);
 		font-size: 0.85rem;

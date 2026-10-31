@@ -5,65 +5,81 @@
     --tablet: 768px;
     --desktop: 1024px;
 
-    /* Palette - Main (Achromatic/Muted) */
-    --color-main-1: #363538; /* Darkest */
-    --color-main-2: #43455C; /* Dark Blue-Gray */
-    --color-main-3: #8D8C8A; /* Medium Gray */
-    --color-main-4: #CFCFCF; /* Light Gray */
-    --color-main-5: #F6F6F6; /* Lightest Gray */
+    /* DESIGN.md tokens */
+    --surface: #ffffff;
+    --ink: #3E4C59;
+    --ink-muted: #6B7782;
+    --line: #E4E7E6;
+    --primary: #AEBCB8;
+    --primary-foreground: #3E4C59;
+    --primary-weak: #EEF2F1;
+    --danger: #B3635A;
+    --success: #5F8466;
+    --accent-warm: #DFD0BA;
+    --accent-warm-foreground: #5B4A33;
+    --secondary: #7D5A54;
 
-    /* Palette - Impact */
-    --color-impact-2: #BADFE7; /* Light Blue */
-    --color-impact-1: #C2EDCE; /* Light Green */
-    --color-impact-3: #3BBA9C; /* Teal */
+    --radius-sm: 2px;
+    --radius-md: 4px;
+
+    /* Legacy palette names -> tokens */
+    --color-main-1: var(--ink);
+    --color-main-2: var(--ink);
+    --color-main-3: var(--ink-muted);
+    --color-main-4: var(--line);
+    --color-main-5: var(--surface);
+    --color-impact-1: var(--primary);
+    --color-impact-2: var(--primary-weak);
+    --color-impact-3: var(--success);
 
     /* Semantic Colors */
-    --bg-white: #ffffff;
-    --bg-primary: var(--color-main-5); /* Main Background */
-    --bg-secondary: var(--color-main-4); /* Card/Container Background */
-    --bg-tertiary: #e8e8e8; /* Hover/Active Background */
+    --bg-white: var(--surface);
+    --bg-primary: var(--surface);
+    --bg-secondary: var(--surface);
+    --bg-tertiary: var(--primary-weak); /* Hover/Active Background */
 
-    --bg-primary-dark: #e0e0e0;
-    --bg-secondary-dark: #f5f5f5;
-    --bg-tertiary-dark: #d4d4d4;
+    --bg-primary-dark: var(--line);
+    --bg-secondary-dark: var(--primary-weak);
+    --bg-tertiary-dark: var(--line);
 
     /* Colored Backgrounds */
-    --bg-danger: #ffebee;
-    --bg-success: var(--color-impact-2);
-    --bg-info: var(--color-impact-3);
-    --bg-warning: #fff3e0;
+    --bg-danger: color-mix(in srgb, var(--danger), white 88%);
+    --bg-success: color-mix(in srgb, var(--success), white 88%);
+    --bg-info: var(--primary-weak);
+    --bg-warning: var(--accent-warm);
 
     /* Text Colors */
-    --text-primary: var(--color-main-1);
-    --text-secondary: var(--color-main-2);
-    --text-tertiary: var(--color-main-3);
+    --text-primary: var(--ink);
+    --text-secondary: var(--ink);
+    --text-tertiary: var(--ink-muted);
 
     /* Colored Text */
-    --text-danger: #d32f2f;
-    --text-success: #2e7d32;
-    --text-info: #0277bd;
-    --text-warning: #ef6c00;
+    --text-danger: var(--danger);
+    --text-success: var(--success);
+    --text-info: var(--ink);
+    --text-warning: var(--accent-warm-foreground);
 
     /* Borders */
-    --border-color: #e0e0e0;
-    --border-color-light: #f1f1f1;
-    --border-color-dark: var(--color-main-3);
+    --border-color: var(--line);
+    --border-color-light: var(--line);
+    --border-color-dark: var(--ink-muted);
 
     /* Buttons & Interactive */
-    --button-bg: var(--color-impact-1);
+    --button-bg: var(--ink);
     --button-hover: color-mix(in srgb, var(--button-bg), black 10%);
-    --button-text: var(--text-primary);
+    --button-text: var(--surface);
 
-    --accent: var(--color-impact-1);
+    --accent: var(--primary);
     --accent-hover: color-mix(in srgb, var(--accent), black 10%);
+    --accent-color: var(--ink);
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.05);
+    /* Shadows (removed) */
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
 
     /* Compatibility / Aliases */
-    --primary-color: var(--color-impact-1);
+    --primary-color: var(--primary);
 }
 
 /* 전역 스타일 */
@@ -76,9 +92,7 @@
 }
 
 body {
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue',
-    'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji',
-    'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
     font-size: 16px;
     line-height: 1.6;
     color: var(--text-primary);

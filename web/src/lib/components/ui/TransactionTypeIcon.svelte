@@ -26,14 +26,14 @@
 	}
 
 	.type-earn {
-		color: #4caf50;
+		color: var(--success);
 	}
 
 	.type-spend {
-		color: #f44336;
+		color: var(--danger);
 	}
 
 	.type-save {
-		color: #2196f3;
+		color: var(--ink);
 	}
 </style>

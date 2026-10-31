@@ -748,7 +748,7 @@
 
 	.node-meta-tooltip .badge {
 		padding: 1px 6px;
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		font-size: 0.6rem;
 	}
 
@@ -779,7 +779,7 @@
 		min-width: 140px;
 		background: var(--bg-primary);
 		border: 1px solid var(--border-color);
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		box-shadow: var(--shadow-lg);
 		padding: 4px;
 	}
@@ -789,7 +789,7 @@
 		border: none;
 		text-align: left;
 		padding: 8px 10px;
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		font-size: 0.9rem;
 		color: var(--text-primary);
 		cursor: pointer;

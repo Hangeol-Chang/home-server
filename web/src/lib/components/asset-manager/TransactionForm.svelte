@@ -35,9 +35,9 @@
 	let error = $state('');
 
 	const classTypes = [
-		{ id: 1, name: 'spend', label: '지출', color: '#f44336' },
-		{ id: 2, name: 'earn', label: '수익', color: '#4caf50' },
-		{ id: 3, name: 'save', label: '저축', color: '#2196f3' }
+		{ id: 1, name: 'spend', label: '지출', color: 'var(--danger)' },
+		{ id: 2, name: 'earn', label: '수익', color: 'var(--success)' },
+		{ id: 3, name: 'save', label: '저축', color: 'var(--ink)' }
 	];
 
 	// 카테고리와 티어 로드

@@ -453,7 +453,7 @@
 		width: 32px;
 		height: 32px;
 		border: 1px solid var(--border-color);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		background: var(--bg-secondary);
 		color: var(--text-secondary);
 		cursor: pointer;
@@ -477,7 +477,7 @@
 		align-items: center;
 		gap: 6px;
 		padding: 4px 12px;
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		border: transparent 1px solid;
 		background: var(--bg-primary);
 		color: var(--text-primary);
@@ -521,7 +521,7 @@
 		position: relative;
 		padding: 6px 14px;
 		border: 1px solid var(--border-color);
-		border-radius: 999px;
+		border-radius: var(--radius-md);
 		background: var(--bg-white);
 		font-size: 0.85rem;
 		color: var(--text-tertiary);
@@ -567,7 +567,7 @@
 		gap: 0; 
 		flex-shrink: 0;
         border: 1px solid var(--border-color);
-        border-radius: 4px;
+        border-radius: var(--radius-md);
         overflow: hidden;
         background: var(--bg-secondary);
 	}
@@ -600,7 +600,7 @@
 		text-align: center;
 		font-weight: 400;
 		padding: 2px 4px;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		overflow: hidden;
 		margin: 2px 4px;
 	}
@@ -614,12 +614,12 @@
 	}
 
 	.amount.earn {
-		color: #4caf50;
+		color: var(--success);
 		background: rgba(76, 175, 80, 0.1);
 	}
 
 	.amount.spend {
-		color: #f44336;
+		color: var(--danger);
 		background: rgba(244, 67, 54, 0.1);
 	}
 

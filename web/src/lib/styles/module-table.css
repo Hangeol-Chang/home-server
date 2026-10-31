@@ -76,7 +76,7 @@
 /* 테이블 컨테이너 (그림자와 배경) */
 .table-container {
 	background: var(--bg-primary);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	overflow: hidden;
 	box-shadow: var(--shadow-md);
 }
@@ -107,7 +107,7 @@
 .cell-badge {
 	font-size: 0.75rem;
 	padding: 3px 8px;
-	border-radius: 4px;
+	border-radius: var(--radius-md);
 	font-weight: 400;
 	background: var(--bg-tertiary);
 	color: var(--text-secondary);
@@ -116,7 +116,7 @@
 /* 퍼센트 표시 */
 .cell-percent {
 	padding: 6px 12px;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	font-weight: 400;
 	font-size: 0.9rem;
 	display: inline-block;

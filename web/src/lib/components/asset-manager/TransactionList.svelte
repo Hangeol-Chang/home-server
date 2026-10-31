@@ -196,7 +196,7 @@
 	.transaction-count {
 		padding: 6px 16px;
 		background: var(--bg-secondary);
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		font-size: 0.9rem;
 		font-weight: 400;
 		color: var(--text-secondary);
@@ -213,7 +213,7 @@
 		position: relative;
 		padding: 6px 14px;
 		border: 1px solid var(--border-color);
-		border-radius: 999px;
+		border-radius: var(--radius-md);
 		background: var(--bg-white);
 		font-size: 0.85rem;
 		color: var(--text-tertiary);
@@ -252,7 +252,7 @@
 		overflow-y: auto;
 		overflow-x: auto;
 		border: 1px solid var(--border-color);
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		background: var(--bg-white);
 	}
 

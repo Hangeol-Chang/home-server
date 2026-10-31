@@ -10,8 +10,8 @@
 
 <style>
 	.app-footer {
-		background: #f8f9fa;
-		border-top: 1px solid #e0e0e0;
+		background: var(--surface);
+		border-top: 1px solid var(--line);
 		margin-top: auto;
 	}
 
@@ -25,7 +25,7 @@
 	.footer-content p {
 		margin: 0;
 		font-size: 0.85rem;
-		color: #666;
+		color: var(--ink-muted);
 	}
 
 	/* Tablet/Mobile (< 768px) */

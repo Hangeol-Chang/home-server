@@ -37,9 +37,9 @@
 	let formError = $state('');
 
 	const classTypes = [
-		{ id: 1, label: '지출', color: '#f44336', type: 'spend' },
-		{ id: 2, label: '수익', color: '#4caf50', type: 'earn' },
-		{ id: 3, label: '저축', color: '#2196f3', type: 'save' }
+		{ id: 1, label: '지출', color: 'var(--danger)', type: 'spend' },
+		{ id: 2, label: '수익', color: 'var(--success)', type: 'earn' },
+		{ id: 3, label: '저축', color: 'var(--ink)', type: 'save' }
 	];
 
 	async function load() {
@@ -233,7 +233,7 @@
 								<td>매월 {p.day_of_month}일</td>
 								<td>{p.name}</td>
 								<td>
-									<span class="badge" style="background: {classType?.color}22; color: {classType?.color}">
+									<span class="badge" style="background: color-mix(in srgb, {classType?.color} 13%, transparent); color: {classType?.color}">
 										{classType?.label}
 									</span>
 									<span class="recurring-meta">

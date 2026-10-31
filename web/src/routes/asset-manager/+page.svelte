@@ -58,10 +58,10 @@
 	);
 
 	const classTypes = [
-		{ id: null, name: 'all', label: '전체', color: '#6366f1' },
-		{ id: 1, name: 'spend', label: '지출', color: '#f44336' },
-		{ id: 2, name: 'earn', label: '수익', color: '#4caf50' },
-		{ id: 3, name: 'save', label: '저축', color: '#2196f3' }
+		{ id: null, name: 'all', label: '전체', color: 'var(--ink)' },
+		{ id: 1, name: 'spend', label: '지출', color: 'var(--danger)' },
+		{ id: 2, name: 'earn', label: '수익', color: 'var(--success)' },
+		{ id: 3, name: 'save', label: '저축', color: 'var(--ink)' }
 	];
 
 	async function loadTransactions() {
@@ -288,8 +288,8 @@
 		cursor: pointer;
 	}
 
-	.period-tabs .nav-btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; }
-	.period-tabs .nav-btn:last-child { border-radius: 0 4px 4px 0; }
+	.period-tabs .nav-btn:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); margin-left: 0; }
+	.period-tabs .nav-btn:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
 
 	.period-tabs .nav-btn.active {
 		background: var(--color-impact-3);
@@ -311,7 +311,7 @@
 		width: 100%;
 		background-color: var(--bg-primary);
 		border: transparent;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		padding: 8px;
 		margin: 8px 0;
 		text-align: left;

@@ -205,7 +205,7 @@
 		z-index: 1000;
 		background: var(--bg-primary);
 		border: 1px solid var(--border-color);
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		padding: 12px;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		pointer-events: none;

@@ -139,7 +139,7 @@
                 {#each budgetDistribution.items as item}
                     <div 
                         class="progress-segment" 
-                        style="width: {item.percentage}%; background-color: color-mix(in srgb, {item.color}, #e0e0e0 60%);"
+                        style="width: {item.percentage}%; background-color: color-mix(in srgb, {item.color}, var(--line) 60%);"
                     >
                         {#if item.percentage > 5}
                             <span class="segment-label">{item.name} {item.percentage.toFixed(0)}%</span>
@@ -194,7 +194,7 @@
                                     left: 0;
                                     width: 100%;
                                     height: 4px;
-                                    background-color: #FF5252;
+                                    background-color: var(--danger);
                                 "
                             ></div>
                         {/if}
@@ -272,8 +272,8 @@
     .progress-bar {
         display: flex;
         height: 24px;
-        background: #e0e0e0;
-        border-radius: 4px;
+        background: var(--line);
+        border-radius: var(--radius-md);
         overflow: hidden;
     }
 
@@ -323,7 +323,7 @@
         background: rgba(0, 0, 0, 0.85);
         color: white;
         padding: 12px;
-        border-radius: 8px;
+        border-radius: var(--radius-md);
         font-size: 0.85rem;
         width: max-content;
         max-width: 250px;
@@ -370,7 +370,7 @@
 
     .tooltip-amount {
         font-weight: 300;
-        color: #4ECDC4;
+        color: var(--ink);
     }
 
     .tooltip-percent {

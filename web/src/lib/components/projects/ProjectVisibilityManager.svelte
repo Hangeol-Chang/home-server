@@ -50,7 +50,7 @@
 		overflow-y: auto;
 		background: var(--bg-primary);
 		border: 1px solid var(--border-color);
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		box-shadow: var(--shadow-lg);
 		padding: 8px;
 		z-index: 1000;
@@ -61,7 +61,7 @@
 		align-items: center;
 		gap: 8px;
 		padding: 8px 10px;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		cursor: pointer;
 	}
 

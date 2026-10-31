@@ -81,9 +81,9 @@
 	});
 
 	const classTypes = [
-		{ id: 1, name: 'spend', label: '지출', color: '#f44336' },
-		{ id: 2, name: 'earn', label: '수익', color: '#4caf50' },
-		{ id: 3, name: 'save', label: '저축', color: '#2196f3' }
+		{ id: 1, name: 'spend', label: '지출', color: 'var(--danger)' },
+		{ id: 2, name: 'earn', label: '수익', color: 'var(--success)' },
+		{ id: 3, name: 'save', label: '저축', color: 'var(--ink)' }
 	];
 
 	onMount(async () => {
@@ -270,7 +270,7 @@
 	}
 
 	function getClassColor(classId) {
-		return classTypes.find(c => c.id === classId)?.color || '#6366f1';
+		return classTypes.find(c => c.id === classId)?.color || 'var(--ink)';
 	}
 
 </script>
@@ -819,7 +819,7 @@
 		padding: 10px 20px;
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		color: var(--text-primary);
 		text-decoration: none;
 		font-weight: 400;
@@ -840,7 +840,7 @@
 	.manage-section {
 		background: var(--bg-primary);
 		border: 1px solid var(--border-color);
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		padding: 24px;
 	}
 
@@ -853,7 +853,7 @@
 	.class-card {
 		background: var(--bg-secondary);
 		border: 2px solid var(--border-color);
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		padding: 8px 12px;
 	}
 	.class-info {
@@ -877,9 +877,9 @@
 		display: flex;
 		max-width: 400px;
 		gap: 8px;
-		background: #f5f5f5;
+		background: var(--primary-weak);
 		padding: 4px;
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		margin-bottom: 20px;
 	}
 
@@ -912,7 +912,7 @@
 		padding: 8px;
 		background: transparent;
 		border: 1px solid var(--border-color);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		color: var(--text-tertiary);
 		cursor: pointer;
 		transition: all 0.2s;
@@ -920,16 +920,16 @@
 	}
 
 	.delete-btn:hover {
-		background: #fee;
-		border-color: #fcc;
-		color: #c33;
+		background: var(--bg-danger);
+		border-color: var(--danger);
+		color: var(--danger);
 	}
 
 	.edit-btn {
 		padding: 8px;
 		background: transparent;
 		border: 1px solid var(--border-color);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		color: var(--text-tertiary);
 		cursor: pointer;
 		transition: all 0.2s;
@@ -937,9 +937,9 @@
 	}
 
 	.edit-btn:hover {
-		background: #e3f2fd;
-		border-color: #90caf9;
-		color: #1976d2;
+		background: var(--primary-weak);
+		border-color: var(--primary);
+		color: var(--ink);
 	}
 
 	/* 테이블 래퍼 - 스크롤 지원 */
@@ -947,7 +947,7 @@
 		max-height: 600px;
 		overflow-y: auto;
 		overflow-x: auto;
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		border: 1px solid var(--border-color);
 	}
 
@@ -958,12 +958,12 @@
 
 	.table-wrapper::-webkit-scrollbar-track {
 		background: var(--bg-secondary);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 	}
 
 	.table-wrapper::-webkit-scrollbar-thumb {
 		background: var(--border-color-dark);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 	}
 
 	.table-wrapper::-webkit-scrollbar-thumb:hover {
@@ -1001,7 +1001,7 @@
 		background: var(--text-primary);
 		color: white;
 		padding: 8px 12px;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		font-size: 13px;
 		white-space: nowrap;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -1078,7 +1078,7 @@
 	.edit-row select {
 		padding: 6px;
 		border: 1px solid var(--border-color);
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		font-size: 0.9rem;
 	}
 
@@ -1090,7 +1090,7 @@
 
 	.save-btn, .cancel-btn {
 		padding: 6px 12px;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		font-size: 0.85rem;
 		cursor: pointer;
 		border: none;
@@ -1112,8 +1112,8 @@
 	}
 
 	.badge.active {
-		background: #d4edda;
-		color: #155724;
+		background: var(--bg-success);
+		color: var(--success);
 		font-weight: 400;
 	}
 

@@ -161,7 +161,7 @@
 <style>
 	.llm-report {
 		border: 1px solid var(--border-color);
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		padding: 16px 24px;
 		margin-bottom: 32px;
 		background-color: var(--bg-primary);
@@ -187,14 +187,14 @@
 		display: flex;
 		gap: 4px;
 		background: var(--bg-secondary);
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		padding: 3px;
 	}
 
 	.mode-tab {
 		padding: 5px 14px;
 		border: none;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		background: transparent;
 		color: var(--text-secondary);
 		font-size: 0.85rem;
@@ -223,7 +223,7 @@
 		width: 30px;
 		height: 30px;
 		border: 1px solid var(--border-color);
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		background: var(--bg-secondary);
 		color: var(--text-secondary);
 		cursor: pointer;
@@ -249,10 +249,10 @@
 		gap: 6px;
 		margin-left: auto;
 		padding: 7px 18px;
-		background: var(--accent-color, #6366f1);
+		background: var(--accent-color, var(--ink));
 		color: white;
 		border: none;
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		font-size: 0.88rem;
 		font-weight: 600;
 		cursor: pointer;
@@ -278,17 +278,17 @@
 		margin: 10px 0 0;
 		font-size: 0.85rem;
 		padding: 8px 12px;
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 	}
 
 	.status-msg.success {
 		background: rgba(76, 175, 80, 0.1);
-		color: var(--text-success, #4caf50);
+		color: var(--text-success, var(--success));
 	}
 
 	.status-msg.error {
 		background: rgba(244, 67, 54, 0.08);
-		color: var(--text-danger, #f44336);
+		color: var(--text-danger, var(--danger));
 	}
 
 	.custom-area {
@@ -301,7 +301,7 @@
 		width: 100%;
 		padding: 10px 12px;
 		border: 1px solid var(--border-color);
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		background: var(--bg-secondary);
 		color: var(--text-primary);
 		font-size: 0.9rem;
@@ -314,7 +314,7 @@
 
 	.custom-input:focus {
 		outline: none;
-		border-color: var(--accent-color, #6366f1);
+		border-color: var(--accent-color, var(--ink));
 	}
 
 	.custom-input::placeholder {
@@ -336,7 +336,7 @@
 	.custom-result {
 		margin-top: 12px;
 		border: 1px solid var(--border-color);
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		overflow: hidden;
 	}
 

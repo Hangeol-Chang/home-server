@@ -48,10 +48,10 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		background: var(--text-success, #4caf50);
+		background: var(--text-success, var(--success));
 		color: white;
 		padding: 12px 16px;
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		margin-bottom: 16px;
 		font-size: 0.95rem;
 		animation: slideDown 0.3s ease-out;
@@ -59,7 +59,7 @@
 
 	.count-badge {
 		background: rgba(255, 255, 255, 0.3);
-		border-radius: 12px;
+		border-radius: var(--radius-md);
 		padding: 1px 8px;
 		font-size: 0.85rem;
 		font-weight: 600;

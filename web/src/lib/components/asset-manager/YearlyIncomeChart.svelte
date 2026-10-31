@@ -293,7 +293,7 @@
 						class="color-dot"
 						style="background: {categoryVisibility[cat.display_name]
 							? getChartColor(index)
-							: '#ccc'}"
+							: 'var(--line)'}"
 					></span>
 					<span>{cat.display_name}</span>
 				</button>
@@ -333,11 +333,11 @@
 	}
 
 	.summary-value.total {
-		color: #4caf50;
+		color: var(--success);
 	}
 
 	.summary-value.average {
-		color: #2196f3;
+		color: var(--ink);
 	}
 
 	/* 카테고리 토글 */
@@ -354,7 +354,7 @@
 		gap: 4px;
 		padding: 2px 8px;
 		border: none;
-		border-radius: 4px;
+		border-radius: var(--radius-md);
 		background: transparent;
 		cursor: pointer;
 		font-size: 0.8rem;

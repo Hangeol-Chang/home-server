@@ -274,7 +274,7 @@
 
     .category-select {
         padding: 8px 12px;
-        border-radius: 4px;
+        border-radius: var(--radius-md);
         border: 1px solid var(--border-color);
         background: var(--bg-secondary);
         color: var(--text-primary);
@@ -284,7 +284,7 @@
 
     .budget-detail-card {
         background: var(--bg-secondary);
-        border-radius: 8px;
+        border-radius: var(--radius-md);
         padding: 20px;
     }
 
@@ -362,7 +362,7 @@
         width: 100%;
         padding: 8px 12px;
         border: 1px solid var(--border-color);
-        border-radius: 4px;
+        border-radius: var(--radius-md);
         background: var(--bg-primary);
         color: var(--text-primary);
         font-size: 1rem;

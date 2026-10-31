@@ -511,6 +511,7 @@
 
 	.category-filter {
 		display: flex;
+		justify-content: flex-end;
 		flex-wrap: wrap;
 		gap: 8px;
 		margin-bottom: 16px;

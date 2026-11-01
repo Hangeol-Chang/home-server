@@ -1,4 +1,5 @@
 <script>
+	import FilterChip from '$lib/components/ui/FilterChip.svelte';
 	import { onMount } from 'svelte';
 	import { Chart, registerables } from 'chart.js';
 	import { getTransactions, getCategories } from '$lib/api/asset-manager.js';
@@ -284,19 +285,11 @@
 		<!-- 카테고리 토글 버튼 -->
 		<div class="category-toggles">
 			{#each categories as cat, index}
-				<button
-					class="category-toggle-btn"
-					class:active={categoryVisibility[cat.display_name]}
+				<FilterChip
+					active={categoryVisibility[cat.display_name]}
+					color={getChartColor(index)}
 					onclick={() => toggleCategory(cat.display_name)}
-				>
-					<span
-						class="color-dot"
-						style="background: {categoryVisibility[cat.display_name]
-							? getChartColor(index)
-							: 'var(--line)'}"
-					></span>
-					<span>{cat.display_name}</span>
-				</button>
+				>{cat.display_name}</FilterChip>
 			{/each}
 		</div>
 
@@ -344,32 +337,12 @@
 	.category-toggles {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 6px;
+		gap: 4px;
 		margin-bottom: 12px;
 	}
 
-	.category-toggle-btn {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-		padding: 2px 8px;
-		border: none;
-		border-radius: var(--radius-md);
-		background: transparent;
-		cursor: pointer;
-		font-size: 0.8rem;
-		color: var(--text-tertiary);
-	}
 
-	.category-toggle-btn.active {
-		color: var(--text-primary);
-	}
 
-	.color-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-	}
 
 	/* 차트 영역 */
 	.chart-container {
@@ -401,10 +374,6 @@
 			gap: 4px;
 		}
 
-		.category-toggle-btn {
-			padding: 2px 6px;
-			font-size: 0.75rem;
-		}
 
 		.chart-container {
 			height: 220px;

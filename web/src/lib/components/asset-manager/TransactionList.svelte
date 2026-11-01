@@ -1,4 +1,5 @@
 <script>
+	import FilterChip from '$lib/components/ui/FilterChip.svelte';
 	import { deleteTransaction } from '$lib/api/asset-manager.js';
 	import { device } from '$lib/stores/device';
 	import TransactionTypeIcon from '$lib/components/ui/TransactionTypeIcon.svelte';
@@ -59,11 +60,9 @@
 
 	{#if categories.length > 0}
 		<div class="category-filter">
-			<label class="filter-item"><input type="checkbox" checked={allChecked} onchange={toggleAll} />전체</label>
+			<FilterChip active={allChecked} onclick={toggleAll}>전체</FilterChip>
 			{#each categories as c (c)}
-				<label class="filter-item">
-					<input type="checkbox" checked={!hidden.includes(c)} onchange={() => toggleCategory(c)} />{c}
-				</label>
+				<FilterChip active={!hidden.includes(c)} onclick={() => toggleCategory(c)}>{c}</FilterChip>
 			{/each}
 		</div>
 	{/if}
@@ -205,46 +204,14 @@
 	.category-filter {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 8px;
+		gap: 4px;
 		margin-bottom: 16px;
 	}
 
-	.filter-item {
-		position: relative;
-		padding: 6px 14px;
-		border-top: 1px solid var(--line);
-		border-bottom: 1px solid var(--line);
-		background: var(--bg-white);
-		font-size: 0.85rem;
-		color: var(--text-tertiary);
-		cursor: pointer;
-		user-select: none;
-		transition:
-			background-color 0.15s,
-			color 0.15s,
-			border-color 0.15s;
-	}
 
-	.filter-item:hover {
-		border-color: var(--text-secondary);
-	}
 
-	.filter-item:has(input:checked) {
-		background: var(--text-primary);
-		border-color: var(--text-primary);
-		color: var(--bg-white);
-	}
 
-	.filter-item:has(input:focus-visible) {
-		outline: 2px solid var(--text-info);
-		outline-offset: 2px;
-	}
 
-	.filter-item input {
-		position: absolute;
-		opacity: 0;
-		pointer-events: none;
-	}
 
 	/* 테이블 스크롤 래퍼 */
 	.table-scroll-wrapper {

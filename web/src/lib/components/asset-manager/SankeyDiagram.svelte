@@ -1,4 +1,5 @@
 <script>
+	import FilterChip from '$lib/components/ui/FilterChip.svelte';
 	import { Chart, registerables } from 'chart.js';
 	import { SankeyController, Flow } from 'chartjs-chart-sankey';
 	import { CHART_COLORS } from '$lib/constants.js';
@@ -328,16 +329,12 @@
 		<div class="cat-filters">
 			{#each allCats as cat (cat.id)}
 				{@const isOff = disabledCatIds.includes(cat.id)}
-				<button
-					class="cat-btn"
-					class:off={isOff}
-					style="--cc: {cat.color}"
-					onclick={() => toggleCat(cat.id)}
+				<FilterChip
+					active={!isOff}
+					color={cat.color}
 					title={isOff ? `${cat.name} 켜기` : `${cat.name} 끄기`}
-				>
-					<span class="cat-dot"></span>
-					{cat.name}
-				</button>
+					onclick={() => toggleCat(cat.id)}
+				>{cat.name}</FilterChip>
 			{/each}
 		</div>
 	{/if}
@@ -386,51 +383,14 @@
 	.cat-filters {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 6px;
+		gap: 4px;
 		margin-bottom: 14px;
 	}
 
-	.cat-btn {
-		display: flex;
-		align-items: center;
-		gap: 5px;
-		padding: 4px 10px;
-		border-radius: var(--radius-md);
-		border: 1.5px solid var(--cc);
-		background: transparent;
-		color: var(--text-primary);
-		font-size: 0.8rem;
-		cursor: pointer;
-		transition:
-			background 0.15s,
-			border-color 0.15s,
-			opacity 0.15s;
-		font-family: Pretendard, sans-serif;
-		line-height: 1.4;
-	}
 
-	.cat-btn:hover:not(.off) {
-		background: color-mix(in srgb, var(--cc) 16%, transparent);
-	}
 
-	.cat-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		background: var(--cc);
-		flex-shrink: 0;
-		transition: background 0.15s;
-	}
 
-	.cat-btn.off {
-		border-color: var(--border-color);
-		color: var(--text-secondary);
-		opacity: 0.5;
-	}
 
-	.cat-btn.off .cat-dot {
-		background: var(--border-color);
-	}
 
 	/* ── Sankey chart ───────────────────────────────────────────── */
 	.sankey-wrap {

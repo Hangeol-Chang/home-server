@@ -1,4 +1,5 @@
 <script>
+	import FilterChip from '$lib/components/ui/FilterChip.svelte';
 	import { onMount } from 'svelte';
 	import { getTransactions } from '$lib/api/asset-manager.js';
 	import TransactionDropdown from './TransactionDropdown.svelte';
@@ -283,32 +284,19 @@
 		</div>
 		<div class="filters">
 			{#each availableTiers as tier}
-				<button 
-					class="filter-chip" 
-					class:active={tierFilters[tier.name] !== false}
+				<FilterChip
+					active={tierFilters[tier.name] !== false}
 					onclick={() => toggleTierFilter(tier.name)}
-					aria-pressed={tierFilters[tier.name] !== false}
-				>
-					<span class="check-icon">
-						{#if tierFilters[tier.name] !== false}
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-								<polyline points="20 6 9 17 4 12"></polyline>
-							</svg>
-						{/if}
-					</span>
-					{tier.name}
-				</button>
+				>{tier.name}</FilterChip>
 			{/each}
 		</div>
 	</div>
 
 	{#if categories.length > 0}
 		<div class="category-filter">
-			<label class="filter-item"><input type="checkbox" checked={allChecked} onchange={toggleAll} />전체</label>
+			<FilterChip active={allChecked} onclick={toggleAll}>전체</FilterChip>
 			{#each categories as c (c)}
-				<label class="filter-item">
-					<input type="checkbox" checked={!hidden.includes(c)} onchange={() => toggleCategory(c)} />{c}
-				</label>
+				<FilterChip active={!hidden.includes(c)} onclick={() => toggleCategory(c)}>{c}</FilterChip>
 			{/each}
 		</div>
 	{/if}
@@ -468,91 +456,26 @@
     /* 2. Asset Manager 전용 필터 스타일 */
 	.filters {
 		display: flex;
-		gap: 8px;
+		gap: 4px;
 		flex-wrap: wrap;
 	}
 
-	.filter-chip {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 4px 12px;
-		border-radius: var(--radius-md);
-		border: transparent 1px solid;
-		background: var(--bg-primary);
-		color: var(--text-primary);
-		font-size: 0.8rem;
-		font-weight: 300;
-		cursor: pointer;
-		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-		user-select: none;
-	}
 
-	.filter-chip:hover {
-		background: var(--bg-primary);
-		transform: translateY(-1px);
-	}
 
-	.filter-chip.active {
-		background: var(--bg-primary);
-		color: var(--text-primary);
-		border-color: var(--color-main-4);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-		padding-left: 12px;
-	}
 
-	.check-icon {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 14px;
-		height: 14px;
-	}
 
 	.category-filter {
 		display: flex;
 		justify-content: flex-end;
 		flex-wrap: wrap;
-		gap: 8px;
+		gap: 4px;
 		margin-bottom: 16px;
 	}
 
-	.filter-item {
-		position: relative;
-		padding: 6px 14px;
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-md);
-		background: var(--bg-white);
-		font-size: 0.85rem;
-		color: var(--text-tertiary);
-		cursor: pointer;
-		user-select: none;
-		transition:
-			background-color 0.15s,
-			color 0.15s,
-			border-color 0.15s;
-	}
 
-	.filter-item:hover {
-		border-color: var(--text-secondary);
-	}
 
-	.filter-item:has(input:checked) {
-		background: var(--text-primary);
-		border-color: var(--text-primary);
-		color: var(--bg-white);
-	}
 
-	.filter-item:has(input:focus-visible) {
-		outline: 2px solid var(--text-info);
-		outline-offset: 2px;
-	}
 
-	.filter-item input {
-		position: absolute;
-		opacity: 0;
-		pointer-events: none;
-	}
 
 	.calendar-container {
 		display: flex;

@@ -23,6 +23,7 @@ export const ENDPOINTS = {
 	projects: '/projects',
 	chat: '/chat',
 	gdrive: '/gdrive',
+	filebrowser: '/filebrowser',
 		test: '/test',
 	// 추가 모듈들...
 };

@@ -14,3 +14,4 @@ beautifulsoup4
 duckduckgo_search
 faster-whisper
 matplotlib
+httpx

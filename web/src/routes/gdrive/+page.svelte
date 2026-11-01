@@ -1,10 +1,23 @@
 <script>
-	import { Folder, FileText, FileSpreadsheet, Presentation, Image, Film, Music, FileArchive, Paperclip, Download, X } from '@lucide/svelte';
-	import { listFiles, getFileMeta, getFileContentUrl, getBreadcrumb } from '$lib/api/gdrive.js';
+	import { Folder, FileText, FileSpreadsheet, Presentation, Image, Film, Music, FileArchive, Paperclip, Download, X, Upload, FolderPlus, Trash2 } from '@lucide/svelte';
+	import { listFiles, getFileMeta, getFileContentUrl } from '$lib/api/gdrive.js';
+	import { listFbFiles, getFbContentUrl, uploadFbFile, mkdirFb, deleteFb } from '$lib/api/filebrowser.js';
+	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import { onMount } from 'svelte';
 	import { device } from '$lib/stores/device';
 	import '$lib/styles/module.css';
 	import '$lib/styles/module-common.css';
+
+	// 'gdrive' | 'fb' (File Browser)
+	let source = $state('gdrive');
+	let uploads = $state([]); // { name, progress, error }
+	let fileInput = $state(null);
+	const SOURCES = [
+		{ value: 'gdrive', label: 'Google Drive' },
+		{ value: 'fb', label: 'File Browser' }
+	];
+	const contentUrl = (file, download = false) =>
+		source === 'fb' ? getFbContentUrl(file.id, download) : getFileContentUrl(file.id);
 
 	let items = $state([]);
 	let breadcrumb = $state([{ id: null, name: '홈' }]);
@@ -161,7 +174,7 @@
 		currentFolderId = folderId;
 
 		try {
-			const res = await listFiles(folderId);
+			const res = source === 'fb' ? await listFbFiles(folderId ?? '/') : await listFiles(folderId);
 			items = res.items;
 			nextPageToken = res.nextPageToken ?? null;
 
@@ -187,6 +200,56 @@
 		await loadFolder(crumb.id);
 	}
 
+	const fbPath = (name) => `${(currentFolderId ?? '/').replace(/\/$/, '')}/${name}`;
+
+	async function newFolder() {
+		const name = prompt('새 폴더 이름')?.trim();
+		if (!name) return;
+		try {
+			await mkdirFb(fbPath(name));
+			await loadFolder(currentFolderId);
+		} catch (e) {
+			error = e.message;
+		}
+	}
+
+	async function removeItem(item) {
+		if (!confirm(`'${item.name}' ${item.isFolder ? '폴더와 하위 파일을 모두 ' : ''}삭제할까요?`)) return;
+		try {
+			await deleteFb(item.id);
+			await loadFolder(currentFolderId);
+		} catch (e) {
+			error = e.message;
+		}
+	}
+
+	function switchSource() {
+		closePreview();
+		breadcrumb = [{ id: null, name: '홈' }];
+		loadFolder(null);
+	}
+
+	async function handleUpload(e) {
+		const files = [...e.target.files];
+		e.target.value = '';
+		const base = (currentFolderId ?? '/').replace(/\/$/, '');
+		await Promise.all(
+			files.map(async (f) => {
+				const u = { name: f.name, progress: 0, error: '' };
+				uploads = [...uploads, u];
+				const patch = (o) => (uploads = uploads.map((x) => (x === u ? Object.assign(u, o) : x)));
+				try {
+					await uploadFbFile(`${base}/${f.name}`, f, (p) => patch({ progress: p }));
+					patch({ progress: 1 });
+				} catch (err) {
+					patch({ error: err.message });
+				}
+			})
+		);
+		uploads = uploads.filter((u) => u.error);
+		await loadFolder(currentFolderId);
+	}
+
 	async function loadMore() {
 		if (!nextPageToken) return;
 		loading = true;
@@ -203,7 +266,7 @@
 
 	async function openPreview(file) {
 		previewFile = file;
-		previewUrl = getFileContentUrl(file.id);
+		previewUrl = contentUrl(file);
 		previewAspectRatio = 16 / 9;
 		videoEl = null;
 		bufferedRanges = [];
@@ -217,7 +280,7 @@
 			updateImageAspectRatio(previewUrl);
 		}
 
-		if (!file?.size) {
+		if (!file?.size && source === 'gdrive') {
 			try {
 				const meta = await getFileMeta(file.id);
 				if (meta?.size) previewFile = { ...previewFile, size: meta.size };
@@ -271,12 +334,22 @@
 </script>
 
 <svelte:head>
-	<title>Google Drive - Home Server</title>
+	<title>Drive - Home Server</title>
 </svelte:head>
 
 <div class="module-page" class:mobile={$device.isMobile} class:tablet={$device.isTablet}>
 	<div class="module-header">
-		<h1 class="module-title">Google Drive</h1>
+		<h1 class="module-title">Drive</h1>
+		<SegmentedControl options={SOURCES} bind:value={source} onchange={switchSource} aria-label="저장소" />
+		{#if source === 'fb'}
+			<input type="file" multiple hidden bind:this={fileInput} onchange={handleUpload} />
+			<button class="upload-btn first" onclick={newFolder}>
+				<FolderPlus size={16} strokeWidth={1.75} /> 새 폴더
+			</button>
+			<button class="upload-btn" onclick={() => fileInput.click()}>
+				<Upload size={16} strokeWidth={1.75} /> 업로드
+			</button>
+		{/if}
 	</div>
 
 	<!-- Breadcrumb -->
@@ -290,6 +363,13 @@
 			{/if}
 		{/each}
 	</nav>
+
+	{#each uploads as u (u)}
+		<div class="upload-row" class:failed={u.error}>
+			<span class="upload-name">{u.name}</span>
+			{#if u.error}<span>{u.error}</span>{:else}<progress value={u.progress} max="1"></progress>{/if}
+		</div>
+	{/each}
 
 	<!-- Error -->
 	{#if error}
@@ -337,11 +417,14 @@
 							<td class="col-action">
 								{#if !item.isFolder}
 									<a
-										href={getFileContentUrl(item.id)}
+										href={contentUrl(item, true)}
 										download={item.name}
 										class="download-btn"
 										title="다운로드"
 									aria-label="다운로드"><Download size={16} strokeWidth={1.75} /></a>
+								{/if}
+								{#if source === 'fb'}
+									<button class="download-btn" title="삭제" aria-label="삭제" onclick={() => removeItem(item)}><Trash2 size={16} strokeWidth={1.75} /></button>
 								{/if}
 							</td>
 						</tr>
@@ -374,7 +457,7 @@
 			<div class="preview-header">
 				<span class="preview-title">{previewFile.name}</span>
 				<div class="preview-actions">
-					<a href={previewUrl} download={previewFile.name} class="preview-download-btn">다운로드</a>
+					<a href={contentUrl(previewFile, true)} download={previewFile.name} class="preview-download-btn">다운로드</a>
 					<button class="preview-close-btn" onclick={closePreview} aria-label="닫기"><X size={16} strokeWidth={1.75} /></button>
 				</div>
 			</div>
@@ -433,7 +516,34 @@
 
 	.module-header {
 		margin-bottom: 16px;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		flex-wrap: wrap;
 	}
+	.upload-btn.first { margin-left: auto; }
+	.upload-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 14px;
+		background: var(--button-bg);
+		color: var(--button-text);
+		border: none;
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+		font-size: 0.85rem;
+	}
+	.upload-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		font-size: 0.85rem;
+		margin-bottom: 8px;
+	}
+	.upload-row.failed { color: var(--text-danger); }
+	.upload-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+	.upload-row progress { flex: 1; }
 
 	.module-title {
 		font-size: 1.5rem;
@@ -531,6 +641,9 @@
 	.item-icon { font-size: 1.1rem; flex-shrink: 0; }
 
 	.download-btn {
+		background: none;
+		border: none;
+		cursor: pointer;
 		color: var(--text-secondary);
 		text-decoration: none;
 		font-size: 1rem;
